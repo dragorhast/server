@@ -15,7 +15,10 @@ async def handle(request):
 
 
 APP = web.Application()
-APP.add_routes([web.get('/', handle),
-                web.get('/{name}', handle)])
+
+APP.add_routes([
+    web.get('/', handle),
+    web.get('/{name}', handle)
+])
 
 web.run_app(APP)

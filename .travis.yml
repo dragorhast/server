@@ -1,6 +1,8 @@
 language: python
 python: 3.6
+cache: pip
 sudo: false
+
 jobs:
   include:
   - stage: lint
@@ -21,13 +23,12 @@ jobs:
   - stage: security
     name: Safety Dependency Check
     script: safety check
-  - stage: deploy
-    name: Deploy To Fake
-    script: echo "(fake) deployed!"
+
 stages:
 - lint
 - test
 - security
+
 deploy:
   provider: heroku
   api_key:
