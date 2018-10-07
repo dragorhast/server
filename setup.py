@@ -15,7 +15,7 @@ setup(
     description='todo',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=find_packages(),
+    packages=find_packages(exclude=("tests",)),
     py_modules=['server'],
     install_requires=[
         'aiohttp',
@@ -23,11 +23,7 @@ setup(
         'aiobreaker',
         'hyperion-cli'
     ],
-    tests_require=[
-        'tox',
-    ],
-    entry_points='''
-        [console_scripts]
-        server=server.__main__:run
-    ''',
+    entry_points={
+        'console_scripts': ['server=server.cli:run'],
+    },
 )
