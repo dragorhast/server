@@ -20,19 +20,21 @@ async def get_price(start_postcode, start_date: datetime, end_postcode, end_date
     :return: The final price.
     """
 
-    price = 0
+    price = 0.0
     delta = end_date - start_date
+    days = delta.days
+    hours = delta.seconds // 60 // 60
 
-    while delta.days > 30:
-        delta.days -= 30
+    while days > 30:
+        days -= 30
         price += 30
 
-    while delta.days > 7:
-        delta.days -= 7
+    while days > 7:
+        days -= 7
         price += 10
 
-    price += 2 * delta.days
-    price += 0.1 * (delta.seconds // 60 // 60)
+    price += 2 * days
+    price += 0.1 * hours
 
     source = await postcode.fetch_postcode_from_string(start_postcode)
     destination = await postcode.fetch_postcode_from_string(end_postcode)
