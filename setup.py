@@ -8,7 +8,7 @@ with open(os.path.join(os.path.dirname(__file__), "readme.md"), "r") as fh:
 setup(
     name='server',
     version='1.0.0',
-    url='https://github.com/arlyon/dragorhast',
+    url='https://github.com/dragorhast/server',
     license='MIT',
     author='arlyon',
     author_email='arlyon@me.com',
@@ -20,10 +20,11 @@ setup(
     install_requires=[
         'aiohttp',
         'uvloop',
-        'aiobreaker'
+        'aiobreaker',
+        'hyperion-cli'
     ],
     tests_require=[
-        'pytest',
+        'tox',
     ],
     entry_points='''
         [console_scripts]
