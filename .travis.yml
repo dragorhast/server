@@ -5,29 +5,32 @@ sudo: false
 jobs:
   include:
   - stage: lint
-    install: pip install pylint
+    name: PyLint
     script: pylint server
   - stage: lint
-    install: pip install flake8
+    name: Flake8
     script: flake8 server
   - stage: test
-    install: pip install tox
+    name: PyTest Runner
     script: tox
   - stage: test
-    install: pip install mypy
+    name: MyPy Type Analysis
     script: mypy server
   - stage: security
-    install: pip install bandit
+    name: Bandit Security Check
     script: bandit -r server
   - stage: security
-    install: pip install safety
+    name: Safety Dependency Check
     script: safety check
   - stage: deploy
-    script: skip && echo "(fake) deployed!"
+    name: Deploy To Fake
+    script: echo "(fake) deployed!"
 
 stages:
-  - lint
-  - test
+  - name: lint
+    if: branch != master
+  - name: test
+    if: branch != master
   - name: security
     if: branch != master
   - name: deploy
