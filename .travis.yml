@@ -1,0 +1,34 @@
+language: python
+python: 3.6
+sudo: false
+
+jobs:
+  include:
+  - stage: lint
+    install: pip install pylint
+    script: pylint server
+  - stage: lint
+    install: pip install flake8
+    script: flake8 server
+  - stage: test
+    install: pip install tox
+    script: tox
+  - stage: test
+    install: pip install mypy
+    script: mypy server
+  - stage: security
+    install: pip install bandit
+    script: bandit -r server
+  - stage: security
+    install: pip install safety
+    script: safety check
+  - stage: deploy
+    script: skip && echo "(fake) deployed!"
+
+stages:
+  - lint
+  - test
+  - name: security
+    if: branch != master
+  - name: deploy
+    if: branch = master
