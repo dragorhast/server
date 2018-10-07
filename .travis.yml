@@ -1,33 +1,26 @@
 language: python
 python: 3.6
 sudo: false
-before_install: pip install -r requirements.txt
 
 jobs:
   include:
   - stage: lint
     name: PyLint
-    install: pip install pylint
     script: pylint server
   - stage: lint
     name: Flake8
-    install: pip install flake8
     script: flake8 server
   - stage: test
     name: PyTest Runner
-    install: pip install tox
     script: tox
   - stage: test
     name: MyPy Type Analysis
-    install: pip install mypy
     script: mypy server
   - stage: security
     name: Bandit Security Check
-    install: pip install bandit
     script: bandit -r server
   - stage: security
     name: Safety Dependency Check
-    install: pip install safety
     script: safety check
   - stage: deploy
     name: Deploy To Fake
