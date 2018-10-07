@@ -1,7 +1,6 @@
 language: python
 python: 3.6
 sudo: false
-
 jobs:
   include:
   - stage: lint
@@ -25,13 +24,11 @@ jobs:
   - stage: deploy
     name: Deploy To Fake
     script: echo "(fake) deployed!"
-
 stages:
-  - name: lint
-    if: branch != master
-  - name: test
-    if: branch != master
-  - name: security
-    if: branch != master
-  - name: deploy
-    if: branch = master
+- lint
+- test
+- security
+deploy:
+  provider: heroku
+  api_key:
+    secure: cwvOZn8JRJkYHyF0NJ2+OjzbkLQ8NRtGva7CAmhp6C5WSM4ruT2yPhLo6sa9d3Ee9aGmuWhA7NdV8O62dWYvIuXfgcRFKPfKLMhrITOoCBWolV5Fsw7cRoPVfXtz4boOdufIwkYGRAz38tGWIqbVIFH/VKif32/mjWYEntkaWIpMM7m7lpJTKhuCXRSlC7vpn3Bts3wLATgp/Exs+pdV2jawT8xrV+DZYi+BZ0znP9TtZapyrUj6FQp6YKpPV0oEIVkG7fIWRpQMc8Od7oKdtgyYSO9Q87PCWD7OASlE0vFBmPwl5WMik8J/vot/Qv/spOY2pl++nDjl0knx81Ckr6T3/PuXw+jqaaxhu+HHjGevdit9rEbgv/p4WhK8Zq3K4fjSjz+JAVVY0PyYqp7Z2MMSeiyDIee58iBgT4z9A3pGhaEMyEm25Tqt+fWZZ0dLhR8bNzlutNdV073jmy8FrWbzhppyRZyvBtLxiOm33ASvS3IoMQ+q/uHs+Z8DvJU/QB6BZH0zNxsJoC05zlK3CKByQbEketO+k25BitJs6KyO3QLJeGIJU7y5AH1INKMqHsIP+2uqDTlur81hCbmBr1acw0RefdEeR3G0/HjMql6+BFUIPmNWpo9cxgdWXBXufVteP+iD3xlCIl85lRsf+hyBiEU4kXAkTVpXg4vheRs=
