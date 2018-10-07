@@ -12,17 +12,17 @@ jobs:
     name: Flake8
     script: flake8 server
   - stage: test
-    name: PyTest Runner
+    name: Test Runner
     script: tox
   - stage: test
-    name: MyPy Type Analysis
+    name: Type Analysis
     script: mypy server
   - stage: secure
-    name: Bandit Security Check
-    script: bandit -r server
-  - stage: secure
-    name: Safety Dependency Check
+    name: Dependency Warnings
     script: safety check
+  - stage: secure
+    name: Security Warnings
+    script: bandit -r server
 
 stages:
 - test
