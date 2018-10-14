@@ -5,6 +5,8 @@
 ![Python Version](https://img.shields.io/badge/python-3.5%2B-blue.svg?style=flat-square)
 [![GitHub issues](https://img.shields.io/github/issues/dragorhast/server.svg?style=flat-square)](https://github.com/dragorhast/server/issues)
 
+<p align="center"><img src="./graphic.png" /></p>
+
 The server repository contains the APIs for the other components (mobile app, hardware payload) as well as
 the pricing module to determine the correct prices for each rental. This server provides a range of endpoints
 that facilitate all the functionality of the app from rental bookings to admin management.
