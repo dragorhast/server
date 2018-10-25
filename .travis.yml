@@ -3,6 +3,8 @@ python: 3.6
 cache: pip
 sudo: false
 
+install: pip install -e ".[testing]"
+
 jobs:
   include:
   - stage: test
