@@ -23,7 +23,9 @@ async def price(request):
     """
     postcode = request.match_info.get('postcode', "EH47BL")
     hours = int(request.match_info.get('hours', "1"))
-    return web.Response(text=await get_price("eh47bl", datetime.now() - timedelta(hours=hours), postcode, datetime.now()))
+    return web.Response(
+        text=str(await get_price("eh47bl", datetime.now() - timedelta(hours=hours), postcode, datetime.now()))
+    )
 
 
 APP = web.Application()
