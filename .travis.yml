@@ -13,7 +13,9 @@ jobs:
     script: flake8 server
   - stage: test
     name: Test Runner
-    script: tox
+    script:
+    - python -m pytest --cov=server tests
+    - codecov
   - stage: test
     name: Type Analysis
     script: mypy server

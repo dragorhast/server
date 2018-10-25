@@ -17,6 +17,10 @@ Installing the server is easy. Assuming you have a recent version of python (3.5
 
     > git clone https://github.com/dragorhast/server.git
     > cd server
+    > pip install .
+
+Alternatively, for development,
+
     > pip install -e .
 
 ## Usage
@@ -41,17 +45,17 @@ The server is equipped for testing with a range of tools:
 5. **safety:** dependency vulnerability warnings
 6. **bandit:** security warnings
 
-To make sure they're all installed, use pip to install the
-development requirements:
+To make sure they're all installed, install the additional development
+dependencies:
 
-    pip install -r requirements.txt
+    pip install -e ".[testing]"
 
 Then, you can run the lot like so:
 
+    pytest
     flake8 server
     pylint server
     mypy server
-    tox
     safety check
     bandit -r server
 
@@ -60,8 +64,15 @@ on Travis CI before being deployed.
 
 ## Tooling
 
-In addition to the CI / CD above, the repository is monitored by a number of tools to automate the development process. As well as being able to know the build status of any pull request at a glance, we use codecov, hound, and codeclimate to track various metrics about the history of the codebase such as general code quality, unit test coverage, and design errors or antipatterns.
+In addition to the CI / CD above, the repository is monitored by a number of tools to automate the development process.
+As well as being able to know the build status of any pull request at a glance, we use codecov, hound, and codeclimate
+to track various metrics about the history of the codebase such as general code quality, unit test coverage, and design
+errors or antipatterns.
 
-1. **codecov** takes reports generated from the CI process and displays the total coverage as well as the change in coverage. This is a good way to tell if someone adds a feature with minimal unit testing.
-2. **codeclimate** scans the codebase for code smells, complex functions, and other high level problems assigning a score to the project. We can tell, based on the report generated, if there are any issues with a branch before it is merged into master.
-3. **hound** does automated code review on pull requests to automatically highlight the most obvious errors without human intervention allowing us to focus on the content itself.
+1. [**codecov**](https://codeclimate.com/github/dragorhast/server) takes reports generated from the CI process and displays the total coverage as well as the change in
+coverage. This is a good way to tell if someone adds a feature with minimal unit testing.
+2. **codeclimate** scans the codebase for code smells, complex functions, and other high level problems assigning a
+score to the project. We can tell, based on the report generated, if there are any issues with a branch before it is
+merged into master.
+3. **hound** does automated code review on pull requests to automatically highlight the most obvious errors without
+human intervention allowing us to focus on the content itself.

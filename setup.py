@@ -23,6 +23,19 @@ setup(
         'aiobreaker',
         'hyperion-cli'
     ],
+    extras_require={
+        'testing': [
+            'pytest',
+            'pytest-asyncio',
+            'pytest-cov',
+            'flake8',
+            'pylint',
+            'mypy',
+            'safety',
+            'bandit',
+            'codecov',  # sends tests coverage to codecov.io
+        ],
+    },
     entry_points={
         'console_scripts': ['server=server.cli:run'],
     },
