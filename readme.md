@@ -57,3 +57,11 @@ Then, you can run the lot like so:
 
 All code submitted to the repo will have to pass all the tests
 on Travis CI before being deployed.
+
+## Tooling
+
+In addition to the CI / CD above, the repository is monitored by a number of tools to automate the development process. As well as being able to know the build status of any pull request at a glance, we use codecov, hound, and codeclimate to track various metrics about the history of the codebase such as general code quality, unit test coverage, and design errors or antipatterns.
+
+1. **codecov** takes reports generated from the CI process and displays the total coverage as well as the change in coverage. This is a good way to tell if someone adds a feature with minimal unit testing.
+2. **codeclimate** scans the codebase for code smells, complex functions, and other high level problems assigning a score to the project. We can tell, based on the report generated, if there are any issues with a branch before it is merged into master.
+3. **hound** does automated code review on pull requests to automatically highlight the most obvious errors without human intervention allowing us to focus on the content itself.
