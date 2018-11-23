@@ -4,12 +4,12 @@ The entry point for the CLI tool
 
 from aiohttp import web
 
-from server import APP
+from server import app
 
 
 def run():
     """Simply runs the imported app."""
-    web.run_app(APP)
+    web.run_app(app)
 
 
 if __name__ == '__main__':
