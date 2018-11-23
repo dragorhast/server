@@ -3,19 +3,18 @@ Handles all the bike CRUD
 """
 from collections import namedtuple
 from datetime import datetime
+from typing import Dict
 
+from aiohttp import web, WSMsgType
+from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
-from typing import Tuple, Dict
-
-from aiohttp import web, BasicAuth, WSMsgType
-from nacl.encoding import HexEncoder, RawEncoder
 from nacl.signing import VerifyKey
 from nacl.utils import random
 
 from server.store import Store
 from server.views.base import BaseView
 
-store = Store()
+STORE = Store()
 
 
 class BikesView(BaseView):
@@ -26,7 +25,7 @@ class BikesView(BaseView):
     cors_allowed = True
 
     async def get(self):
-        return web.json_response(store.get_bikes())
+        return web.json_response(list(STORE.get_bikes()))
 
     async def post(self):
         pass
@@ -40,7 +39,11 @@ class BikeView(BaseView):
     cors_allowed = True
 
     async def get(self):
-        pass
+        bike_id = int(self.request.match_info.get('id', 0))
+        bike = STORE.get_bikes(bike_id=bike_id)
+        if bike is None:
+            raise web.HTTPNotFound(reason="No bike with that id")
+        return web.json_response(bike)
 
     async def delete(self):
         pass
@@ -69,19 +72,25 @@ class BikeSocketView(BaseView):
 
     url = "/bikes/connect"
 
-    current_challenges: Dict[str, BikeTicket] = {}
-    """Keeps track of the currently issued auth tickets by remote."""
+    open_tickets: Dict[str, BikeTicket] = {}
+    """Keeps track of the currently issued auth tickets."""
 
     async def get(self):
+        """
+        Initiates the websocket connection between the
+        bike and the server. Requires an open ticket
+        (which can be created by posting) to succeed.
+        """
         ws = web.WebSocketResponse()
         await ws.prepare(self.request)
+        remote = self.request.remote
 
-        if self.request.remote not in self.current_challenges:
+        if remote not in self.open_tickets:
             await ws.close(code=1008, message="No current challenge, please generate one")
             return ws
 
         signed_message = await ws.receive_bytes(timeout=0.5)
-        ticket = self.current_challenges[self.request.remote]
+        ticket = self.open_tickets[remote]
 
         # verify the signed challenge
         try:
@@ -94,6 +103,8 @@ class BikeSocketView(BaseView):
         if not ticket.challenge == challenge:
             await ws.close(code=1008, message="Signed wrong message")
             return ws
+
+        del self.open_tickets[remote]
 
         # handle messages
         async for msg in ws:
@@ -115,11 +126,11 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        if not any(bike["pub"] == public_key for bike in store.get_bikes()):
+        if not any(bike["pub"] == public_key for bike in STORE.get_bikes()):
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
 
         challenge = random(64)
-        self.current_challenges[self.request.remote] = BikeTicket(public_key, challenge, datetime.now())
+        self.open_tickets[self.request.remote] = BikeTicket(public_key, challenge, datetime.now())
         return web.Response(body=challenge)
 
 
