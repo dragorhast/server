@@ -1,32 +1,40 @@
 language: python
-python: 3.6
+python:
+  - 3.7
 cache: pip
-sudo: false
+sudo: required
+dist: xenial
+env:
+  global:
+    - PIPENV_VENV_IN_PROJECT=1
+    - PIPENV_IGNORE_VIRTUALENVS=1
 
-install: pip install -e ".[testing]"
+install:
+  - pip install git+https://github.com/pypa/pipenv.git
+  - pipenv install --dev --three
 
 jobs:
   include:
   - stage: test
     name: PyLint
-    script: pylint server
+    script: pipenv run pylint server
   - stage: test
     name: Flake8
-    script: flake8 server
+    script: pipenv run flake8 server
   - stage: test
     name: Test Runner
     script:
-    - python -m pytest --cov=server tests
-    - codecov
+    - pipenv run test
+    - pipenv run codecov
   - stage: test
     name: Type Analysis
-    script: mypy server
+    script: pipenv run mypy server
   - stage: secure
     name: Dependency Warnings
-    script: safety check
+    script: pipenv run safety check
   - stage: secure
     name: Security Warnings
-    script: bandit -r server
+    script: pipenv run bandit -r server
 
 stages:
 - test

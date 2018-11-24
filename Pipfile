@@ -16,10 +16,11 @@ pytest-asyncio = "*"
 aiohttp = "*"
 hyperion-cli = "*"
 pynacl = "*"
+codecov = "*"
 
 [requires]
 python_version = "3.7"
 
 [scripts]
 server = "python -m server"
-test = "python -m pytest tests/"
+test = "python -m pytest --cov=server tests"
