@@ -3,6 +3,10 @@ from typing import Optional
 from aiohttp.web import View, UrlDispatcher
 
 
+class ViewURLException(Exception):
+    pass
+
+
 class BaseView(View):
     """
     The base view that all other views extend. Contains some useful
@@ -17,7 +21,12 @@ class BaseView(View):
 
     @classmethod
     def register(cls, router: UrlDispatcher, base: Optional[str] = None):
-        """Registers the view with an router."""
-        assert cls.url is not None
+        """
+        Registers the view with an router.
+
+        :raises
+        """
+        if cls.url is None:
+            raise ViewURLException("No url provided!")
         url = base + cls.url if base is not None else cls.url
         router.add_view(url, cls)
