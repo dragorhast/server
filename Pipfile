@@ -4,8 +4,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-tox = "*"
 pytest = "*"
+flake8 = "*"
+pylint = "*"
+mypy = "*"
+safety = "*"
+bandit = "*"
+pytest-asyncio = "*"
 
 [packages]
 aiohttp = "*"
@@ -17,3 +22,4 @@ python_version = "3.7"
 
 [scripts]
 server = "python -m server"
+test = "python -m pytest tests/"

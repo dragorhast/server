@@ -17,17 +17,17 @@ Installing the server is easy. Assuming you have a recent version of python (3.5
 
     > git clone https://github.com/dragorhast/server.git
     > cd server
-    > pip install .
+    > pipenv install
 
 Alternatively, for development,
 
-    > pip install -e .
+    > pipenv install --dev
 
 ## Usage
 
 Running the server, once the requirements are installed, is simple:
 
-    > server
+    > pipenv run server
     ======== Running on http://0.0.0.0:8080 ========
     (Press CTRL+C to quit)
 
@@ -38,21 +38,16 @@ Then, simply navigate to the API docs to get started.
 
 The server is equipped for testing with a range of tools:
 
-1. **flake8:** simple PEP8 violation checker
-2. **pylint:** more in-depth bug checking
-3. **tox:** unit testing
+1. **pytest:** unit testing
+2. **flake8:** simple PEP8 violation checker
+3. **pylint:** more in-depth bug checking
 4. **mypy:** static type checking
 5. **safety:** dependency vulnerability warnings
 6. **bandit:** security warnings
 
-To make sure they're all installed, install the additional development
-dependencies:
+You can run the lot like so:
 
-    pip install -e ".[testing]"
-
-Then, you can run the lot like so:
-
-    pytest
+    pipenv run test
     flake8 server
     pylint server
     mypy server
