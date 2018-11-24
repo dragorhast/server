@@ -26,7 +26,7 @@ class BikesView(BaseView):
     cors_allowed = True
 
     async def get(self):
-        return web.json_response(list(STORE.get_bikes()))
+        return web.json_response(list(bike.serialize() for bike in STORE.get_bikes()))
 
     async def post(self):
         pass
@@ -42,7 +42,7 @@ class BikeView(BaseView):
 
     @bike_getter
     async def get(self, bike):
-        return web.json_response(bike)
+        return web.json_response(bike.serialize())
 
     @bike_getter
     async def delete(self, bike):
@@ -50,7 +50,12 @@ class BikeView(BaseView):
 
     @bike_getter
     async def patch(self, bike):
-        pass
+        data = await self.request.json()
+
+        if "locked" in data:
+            await bike.set_locked(data["locked"])
+
+        return web.Response(text="updated")
 
     @bike_getter
     async def put(self, bike):
@@ -61,12 +66,15 @@ class BikeRentalsView(BaseView):
     """
     Gets the rentals for a single bike.
     """
-    url = "/bikes/{id}/rentals"
+    url = "/bikes/{id:[0-9]+}/rentals"
+    bike_getter = getter(STORE.get_bike, 'id')
 
-    async def get(self):
+    @bike_getter
+    async def get(self, bike):
         pass
 
-    async def post(self):
+    @bike_getter
+    async def post(self, bike):
         """
         Starts a new rental.
 
@@ -77,11 +85,12 @@ class BikeRentalsView(BaseView):
         """
         pass
 
-    async def patch(self):
+    @bike_getter
+    async def patch(self, bike):
         pass
 
 
-BikeTicket = namedtuple('BikeTicket', ['pub_key', 'challenge', 'timestamp'])
+BikeTicket = namedtuple('BikeTicket', ['pub_key', 'challenge', 'timestamp', 'bike'])
 
 
 class BikeSocketView(BaseView):
@@ -131,7 +140,7 @@ class BikeSocketView(BaseView):
             return ws
 
         del self.open_tickets[remote]
-        STORE.get_bikes(public_key=verify_key)
+        ticket.bike.socket = ws
 
         # handle messages
         async for msg in ws:
@@ -153,9 +162,9 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        if not any(bike["pub"] == public_key for bike in STORE.get_bikes()):
+        if not any(bike.pub == public_key for bike in STORE.get_bikes()):
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
 
         challenge = random(64)
-        self.open_tickets[self.request.remote] = BikeTicket(public_key, challenge, datetime.now())
+        self.open_tickets[self.request.remote] = BikeTicket(public_key, challenge, datetime.now(), STORE.get_bike(public_key=public_key))
         return web.Response(body=challenge)
