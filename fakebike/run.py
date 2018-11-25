@@ -1,7 +1,9 @@
-from asyncio import get_event_loop
+from asyncio import get_event_loop, sleep
+from datetime import timedelta
 
 import aiohttp
-from aiohttp import ClientSession
+from aiobreaker import CircuitBreaker, CircuitBreakerError
+from aiohttp import ClientSession, ClientConnectorError
 from nacl.encoding import RawEncoder
 
 from fakebike import logger
@@ -16,6 +18,11 @@ class AuthException(Exception):
     pass
 
 
+ServerBreaker = CircuitBreaker(fail_max=10, timeout_duration=timedelta(seconds=30))
+"""If a connection is dropped, try 10 times then once every 30 seconds."""
+
+
+@ServerBreaker
 async def get_challenge(session, public_key):
     """
     Gets the challenge from the server.
@@ -29,6 +36,7 @@ async def get_challenge(session, public_key):
         return await resp.read()
 
 
+@ServerBreaker
 async def start_handler(session, signed_challenge):
     """
     Opens an authenticated web socket session with the server.
@@ -41,6 +49,7 @@ async def start_handler(session, signed_challenge):
 
         # handle messages
         async for msg in ws:
+            logger.info("Message %s", msg)
             if msg.type == aiohttp.WSMsgType.TEXT:
                 if msg.data == 'close cmd':
                     await ws.close()
@@ -48,13 +57,6 @@ async def start_handler(session, signed_challenge):
                     break
                 elif msg.data in bike.commands:
                     await bike.commands[msg.data](msg, ws)
-                else:
-                    print(msg)
-
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                print(msg)
-                logger.info("connection error")
-                break
 
 
 async def start_session():
@@ -66,13 +68,21 @@ async def start_session():
     logger.info(f"Initializing connection with {URL}")
 
     async with ClientSession() as session:
-        try:
-            signed_challenge = bike.sign(await get_challenge(session, bike.public_key))
-        except AuthException as e:
-            print(e)
-            exit(1)
-        else:
-            await start_handler(session, signed_challenge)
+        while True:
+            try:
+                signed_challenge = bike.sign(await get_challenge(session, bike.public_key))
+                await start_handler(session, signed_challenge)
+            except AuthException as e:
+                logger.error("%s, quitting...", e)
+                return
+            except ClientConnectorError as e:
+                logger.error("Connection lost, retrying..")
+                await sleep(1)
+                continue
+            except CircuitBreakerError as e:
+                logger.debug("Circuit Breaker open after too many retrys")
+                await sleep(10)
+                continue
 
 
 loop = get_event_loop()

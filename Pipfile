@@ -17,6 +17,7 @@ aiohttp = "*"
 hyperion-cli = "*"
 pynacl = "*"
 codecov = "*"
+aiobreaker = "*"
 
 [requires]
 python_version = "3.7"
