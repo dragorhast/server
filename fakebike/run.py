@@ -1,4 +1,4 @@
-from asyncio import get_event_loop, sleep
+from asyncio import get_event_loop, sleep, gather
 from datetime import timedelta
 
 import aiohttp
@@ -9,7 +9,13 @@ from nacl.encoding import RawEncoder
 from fakebike import logger
 from fakebike.bike import Bike
 
-bike = Bike(bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55"))
+bikes = {
+    0: Bike(bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55")),
+    1: Bike(bytes.fromhex("1e163e14b5a7d6e8914489d76ed17a52d16aba49357f3eeef7f1d5a4dc3d57b5")),
+    2: Bike(bytes.fromhex("4af429ad536e92d791ed3137c382b0ae48520867119654c8c10d8e81d9b65f0e")),
+    3: Bike(bytes.fromhex("a68f921cab9631842f6c4d2e792fc163a978c47dbba685eb5b88b0fb54b23939"))
+}
+
 URL = "http://localhost:8080/api/v1/bikes/connect"
 
 
@@ -37,7 +43,7 @@ async def get_challenge(session, public_key):
 
 
 @ServerBreaker
-async def start_handler(session, signed_challenge):
+async def start_handler(session, signed_challenge, commands):
     """
     Opens an authenticated web socket session with the server.
     :return: None
@@ -55,11 +61,11 @@ async def start_handler(session, signed_challenge):
                     await ws.close()
                     logger.info("closing connection")
                     break
-                elif msg.data in bike.commands:
-                    await bike.commands[msg.data](msg, ws)
+                elif msg.data in commands:
+                    await commands[msg.data](msg, ws)
 
 
-async def start_session():
+async def start_session(bike):
     """
     Posts the public key to the server, and
     returns the signing key required to start
@@ -71,7 +77,7 @@ async def start_session():
         while True:
             try:
                 signed_challenge = bike.sign(await get_challenge(session, bike.public_key))
-                await start_handler(session, signed_challenge)
+                await start_handler(session, signed_challenge, bike.commands)
             except AuthException as e:
                 logger.error("%s, quitting...", e)
                 return
@@ -86,4 +92,4 @@ async def start_session():
 
 
 loop = get_event_loop()
-loop.run_until_complete(start_session())
+loop.run_until_complete(gather(*[start_session(bike) for bike in bikes.values()]))

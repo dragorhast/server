@@ -10,8 +10,10 @@ class MemoryStore(Store):
     """
 
     bikes: Dict[int, Bike] = {
-        0: Bike(0,
-                b'\xf7\xfc\xc1\x81\xb7\xf7\x05P\x1a@\xf7K\xd8aa\xd9\xf4\x03\x85K\xca\x92\x14\xd2\x11\xd0\xa9\xf0\x9f\xc9\x04\xb6')
+        0: Bike(0, bytes.fromhex("f7fcc181b7f705501a40f74bd86161d9f403854bca9214d211d0a9f09fc904b6")),
+        1: Bike(1, bytes.fromhex("3cfa82043bec8d96045782be8eedf900fe14e392ee5cd16c645ff69c2a8748ac")),
+        2: Bike(2, bytes.fromhex("a3eb292b3b73452f8886d5c47b3936f7d8d3815d266fb3419322893e180364e9")),
+        3: Bike(3, bytes.fromhex("8861b3d855f52fd9791a9204e1a6553de287abb3433acee66cc3064687455892")),
     }
 
     def get_bikes(self, *,
