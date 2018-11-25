@@ -2,6 +2,7 @@
 Handles all the bike CRUD
 """
 from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict
 
@@ -11,6 +12,8 @@ from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 from nacl.utils import random
 
+from server import logger
+from server.models.bike import Bike
 from server.store import Store
 from server.views.base import BaseView
 from server.views.utils import getter
@@ -90,7 +93,12 @@ class BikeRentalsView(BaseView):
         pass
 
 
-BikeTicket = namedtuple('BikeTicket', ['pub_key', 'challenge', 'timestamp', 'bike'])
+@dataclass
+class BikeTicket:
+    pub_key: bytes
+    challenge: bytes
+    timestamp: datetime
+    bike: Bike
 
 
 class BikeSocketView(BaseView):
@@ -140,17 +148,24 @@ class BikeSocketView(BaseView):
             return ws
 
         del self.open_tickets[remote]
-        ticket.bike.socket = ws
 
-        # handle messages
-        async for msg in ws:
-            if msg.type == WSMsgType.TEXT:
-                if msg.data == 'close':
-                    await ws.close()
-                else:
-                    await ws.send_str(msg.data + '/answer')
-            elif msg.type == WSMsgType.ERROR:
-                print(f'ws connection closed with exception {ws.exception()}')
+        try:
+            # handle messages
+            logger.info(f"Bike {ticket.bike.bid} connected")
+            self.request.app['bike_connections'].add(ws)
+            ticket.bike.socket = ws
+
+            async for msg in ws:
+                if msg.type == WSMsgType.TEXT:
+                    if msg.data == 'close':
+                        await ws.close()
+                    else:
+                        await ws.send_str(msg.data + '/answer')
+                elif msg.type == WSMsgType.ERROR:
+                    print(f'ws connection closed with exception {ws.exception()}')
+        finally:
+            logger.info(f"Bike {ticket.bike.bid} disconnected")
+            self.request.app['bike_connections'].discard(ws)
 
         return ws
 
@@ -166,5 +181,6 @@ class BikeSocketView(BaseView):
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
 
         challenge = random(64)
-        self.open_tickets[self.request.remote] = BikeTicket(public_key, challenge, datetime.now(), STORE.get_bike(public_key=public_key))
+        self.open_tickets[self.request.remote] = BikeTicket(public_key, challenge, datetime.now(),
+                                                            STORE.get_bike(public_key=public_key))
         return web.Response(body=challenge)
