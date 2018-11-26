@@ -1,8 +1,5 @@
-server.pricing package
-======================
-
-Module contents
----------------
+Pricing Package
+===============
 
 .. automodule:: server.pricing
     :members:

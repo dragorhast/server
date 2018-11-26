@@ -11,6 +11,10 @@ mypy = "*"
 safety = "*"
 bandit = "*"
 pytest-asyncio = "*"
+sphinx = "*"
+sphinx-autobuild = "*"
+sphinx-rtd-theme = "*"
+sphinxcontrib-mermaid = "*"
 
 [packages]
 aiohttp = "*"

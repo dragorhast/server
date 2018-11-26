@@ -3,13 +3,23 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to tap2go server's documentation!
-=========================================
+tap2go Server
+=============
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Design
 
+   auth
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Code
+
+   server/models
+   server/pricing
+   server/store
+   server/views
 
 
 Indices and tables

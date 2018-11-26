@@ -71,3 +71,13 @@ score to the project. We can tell, based on the report generated, if there are a
 merged into master.
 3. **hound** does automated code review on pull requests to automatically highlight the most obvious errors without
 human intervention allowing us to focus on the content itself.
+
+## Documentation
+
+Documentation is included. You may build it by installing the dev dependencies and running `sphinx-autobuild`.
+
+```bash
+
+pipenv install --dev
+pipenv run sphinx-autobuild
+```

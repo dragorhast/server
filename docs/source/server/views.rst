@@ -1,10 +1,12 @@
-server.views package
+Views
 ====================
 
-Submodules
-----------
+.. automodule:: server.views
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-server.views.base module
+Base
 ------------------------
 
 .. automodule:: server.views.base
@@ -12,7 +14,7 @@ server.views.base module
     :undoc-members:
     :show-inheritance:
 
-server.views.bikes module
+Bike Related
 -------------------------
 
 .. automodule:: server.views.bikes
@@ -20,7 +22,7 @@ server.views.bikes module
     :undoc-members:
     :show-inheritance:
 
-server.views.issues module
+Issue Related
 --------------------------
 
 .. automodule:: server.views.issues
@@ -28,7 +30,7 @@ server.views.issues module
     :undoc-members:
     :show-inheritance:
 
-server.views.pickups module
+Pick-up Related
 ---------------------------
 
 .. automodule:: server.views.pickups
@@ -36,7 +38,7 @@ server.views.pickups module
     :undoc-members:
     :show-inheritance:
 
-server.views.rentals module
+Rental Related
 ---------------------------
 
 .. automodule:: server.views.rentals
@@ -44,7 +46,7 @@ server.views.rentals module
     :undoc-members:
     :show-inheritance:
 
-server.views.reservations module
+Reservation Related
 --------------------------------
 
 .. automodule:: server.views.reservations
@@ -52,7 +54,7 @@ server.views.reservations module
     :undoc-members:
     :show-inheritance:
 
-server.views.users module
+User Related
 -------------------------
 
 .. automodule:: server.views.users
@@ -60,11 +62,11 @@ server.views.users module
     :undoc-members:
     :show-inheritance:
 
+Utilities
+-------------------------
 
-Module contents
----------------
-
-.. automodule:: server.views
+.. automodule:: server.views.utils
     :members:
     :undoc-members:
     :show-inheritance:
+

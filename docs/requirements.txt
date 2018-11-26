@@ -1,2 +1,0 @@
-git+git://github.com/sphinx-doc/sphinx.git
-sphinx-rtd-theme==0.4.2
