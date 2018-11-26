@@ -2,10 +2,12 @@ from nacl.signing import SigningKey
 
 
 class Bike:
+    bid: int
     seed: bytes
     locked: bool = False
 
-    def __init__(self, seed):
+    def __init__(self, bid, seed):
+        self.bid = bid
         self.seed = seed
         self.signing_key = SigningKey(seed)
         self.commands = {
