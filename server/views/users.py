@@ -11,7 +11,6 @@ class UsersView(BaseView):
     Gets or adds to the list of users.
     """
     url = "/users"
-    cors_allowed = True
 
     async def get(self):
         return web.json_response([])
@@ -25,7 +24,6 @@ class UserView(BaseView):
     Gets, updates or deletes a single user.
     """
     url = "/users/{id}"
-    cors_allowed = True
 
     async def get(self):
         pass

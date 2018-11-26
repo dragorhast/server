@@ -1,9 +1,17 @@
+"""
+The base view for the API. This view contains functionality
+required in all other views.
+"""
+
 from typing import Optional
 
 from aiohttp.web import View, UrlDispatcher
 
 
 class ViewURLException(Exception):
+    """
+    Raised if the view doesn't provide a URL.
+    """
     pass
 
 
@@ -12,19 +20,18 @@ class BaseView(View):
     The base view that all other views extend. Contains some useful
     helper functions that the extending classes can use.
 
-    todo: allow CORS per-basis on each view
-    todo: more granular permissions
+    .. todo:: Add CORS configuration to each view. Currently CORS is disabled.
+    .. todo:: Add permissions so that views may limit functionality as needed.
     """
 
     url = None
-    cors_allowed = False
 
     @classmethod
     def register(cls, router: UrlDispatcher, base: Optional[str] = None):
         """
-        Registers the view with an router.
+        Registers the view with the given router.
 
-        :raises
+        :raises ViewURLException: If the URL hasn't been set on the given view.
         """
         if cls.url is None:
             raise ViewURLException("No url provided!")

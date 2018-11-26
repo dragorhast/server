@@ -13,7 +13,6 @@ class PickupsView(BaseView):
     Gets or adds to the list of all pick-up points.
     """
     url = "/pickups"
-    cors_allowed = True
 
     async def get(self):
         pass
@@ -27,7 +26,6 @@ class PickupView(BaseView):
     Gets, updates or deletes a single pick-up point.
     """
     url = "/pickups/{id}"
-    cors_allowed = True
 
     async def get(self):
         pass

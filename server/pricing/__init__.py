@@ -17,6 +17,7 @@ MONTHLY_PRICE = 30
 async def get_price(start_postcode, start_date: datetime, end_postcode, end_date: datetime) -> float:
     """
     Given a start location and end location, returns the price for a given ride.
+
     :return: The final price.
     """
 

@@ -10,7 +10,6 @@ class IssuesView(BaseView):
     Gets the list of issues or adds a new issue.
     """
     url = "/issues"
-    cors_allowed = True
 
     async def get(self):
         pass

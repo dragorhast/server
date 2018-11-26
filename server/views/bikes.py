@@ -1,10 +1,6 @@
 """
 Handles all the bike CRUD
 """
-from collections import namedtuple
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict
 
 from aiohttp import web, WSMsgType
 from nacl.encoding import RawEncoder
@@ -12,8 +8,8 @@ from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 from nacl.utils import random
 
-from server.models.bike import Bike
 from server import logger, Store
+from server.store.ticket_store import BikeConnectionTicket, TicketStore
 from server.views.base import BaseView
 from server.views.utils import getter
 
@@ -36,8 +32,7 @@ class BikeView(BaseView):
     Gets or updates a single bike.
     """
     url = "/bikes/{id:[0-9]+}"
-    cors_allowed = True
-    bike_getter = getter(STORE.get_bike, 'id')
+    bike_getter = getter(Store.get_bike, 'id', 'bike_id')
 
     @bike_getter
     async def get(self, bike):
@@ -66,7 +61,7 @@ class BikeRentalsView(BaseView):
     Gets the rentals for a single bike.
     """
     url = "/bikes/{id:[0-9]+}/rentals"
-    bike_getter = getter(STORE.get_bike, 'id')
+    bike_getter = getter(Store.get_bike, 'id', 'bike_id')
 
     @bike_getter
     async def get(self, bike):
@@ -89,30 +84,35 @@ class BikeRentalsView(BaseView):
         pass
 
 
-@dataclass
-class BikeTicket:
-    pub_key: bytes
-    challenge: bytes
-    timestamp: datetime
-    bike: Bike
-
-
 class BikeSocketView(BaseView):
     """
     Provides an endpoint for the server to communicate with the bikes.
 
-    The bike posts to the url with their public key. A challenge is returned
-    to the bike and signed. This ephemeral key is then sent to the server
-    when setting up the connection. If the signed key is valid, the connection
-    is accepted.
+    The bike posts to the url with their public key, which generates a ticket.
+    The challenge is returned to the bike. The bike signs the challenge to prove
+    their identity when setting up the connection. If the signed key is valid,
+    the connection is accepted.
 
-    Keys are 128 bit Ed25519 keys, for digital signatures.
+    When the websocket is opened, the client sends their public key to the
+    server followed by the challenge. They should expect to receive a "verified"
+    response in return.
+
+    .. code-block:: python
+
+        challenge, ticket_id = create_ticket(public_key)
+        signed_challenge = signing_key.sign(challenge)
+        await ws.send_bytes(public_key)
+        await ws.send_bytes(signed_challenge)
+        if not await ws.receive_str() == "verified":
+            raise Exception
+
+    For more detail about the auth process, see :doc:`/auth`.
     """
 
     url = "/bikes/connect"
 
-    open_tickets: Dict[str, BikeTicket] = {}
-    """Keeps track of the currently issued auth tickets."""
+    open_tickets = TicketStore()
+    """Maps a public key to their currently issued ticket."""
 
     async def get(self):
         """
@@ -129,19 +129,23 @@ class BikeSocketView(BaseView):
             return ws
 
         signed_message = await ws.receive_bytes(timeout=0.5)
-        ticket = self.open_tickets[remote]
+        ticket = self.open_tickets.take_ticket(remote)
 
         # verify the signed challenge
         try:
             verify_key = VerifyKey(ticket.pub_key, encoder=RawEncoder)
             challenge = verify_key.verify(signed_message)
         except BadSignatureError as e:
+            await ws.send_str("rip")
             await ws.close(code=1008, message=e)
             return ws
 
         if not ticket.challenge == challenge:
+            await ws.send_str("rip")
             await ws.close(code=1008, message="Signed wrong message")
             return ws
+        else:
+            await ws.send_str("verified")
 
         del self.open_tickets[remote]
 
@@ -173,10 +177,12 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        if not any(bike.pub == public_key for bike in STORE.get_bikes()):
+        if not any(bike.pub == public_key for bike in Store.get_bikes()):
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
 
         challenge = random(64)
-        self.open_tickets[self.request.remote] = BikeTicket(public_key, challenge, datetime.now(),
-                                                            STORE.get_bike(public_key=public_key))
+        self.open_tickets.add_ticket(
+            self.request.remote,
+            BikeConnectionTicket(public_key, challenge, Store.get_bike(public_key=public_key))
+        )
         return web.Response(body=challenge)
