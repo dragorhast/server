@@ -1,10 +1,10 @@
-from typing import Optional, Union, Iterator, Dict
+from typing import Optional, Iterator, Dict
 
 from server.models.bike import Bike
-from server.store.store import Store
+from server.store.persistent_store import PersistentStore
 
 
-class MemoryStore(Store):
+class MemoryStore(PersistentStore):
     """
     Emulates a database by doing all the operation in memory.
     """
@@ -40,7 +40,7 @@ class MemoryStore(Store):
 
         return bikes.values()
 
-    def get_bike(self, bike_id: Optional[int] = None,
+    def get_bike(self, *, bike_id: Optional[int] = None,
                  public_key: Optional[bytes] = None) -> Optional[Bike]:
         bikes = self.get_bikes(bike_id=bike_id, public_key=public_key)
         return next(iter(bikes)) if bikes else None

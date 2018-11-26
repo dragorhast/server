@@ -12,13 +12,10 @@ from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 from nacl.utils import random
 
-from server import logger
 from server.models.bike import Bike
-from server.store import Store
+from server import logger, Store
 from server.views.base import BaseView
 from server.views.utils import getter
-
-STORE = Store()
 
 
 class BikesView(BaseView):
@@ -26,10 +23,9 @@ class BikesView(BaseView):
     Gets the bikes, or adds a new bike.
     """
     url = "/bikes"
-    cors_allowed = True
 
     async def get(self):
-        return web.json_response(list(bike.serialize() for bike in STORE.get_bikes()))
+        return web.json_response(list(bike.serialize() for bike in Store.get_bikes()))
 
     async def post(self):
         pass
