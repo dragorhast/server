@@ -1,6 +1,7 @@
 """
-Makes the appropriate views available from the module.
+Contains all the API views for the server.
 """
+
 from aiohttp.web_urldispatcher import UrlDispatcher
 
 from server import logger
@@ -21,7 +22,13 @@ views = [
 ]
 
 
-def register_all(router: UrlDispatcher, base: str):
+def register_views(router: UrlDispatcher, base: str):
+    """
+    Registers all the API views onto the given router at a specific root url.
+
+    :param router: The router to register the views to.
+    :param base: The base URL.
+    """
     for view in views:
         logger.info(f"Registered {view.__name__} at {base+view.url}")
         view.register(router, base)
