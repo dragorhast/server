@@ -1,4 +1,3 @@
 [build]
-  base = "docs/"
-  publish = "docs/build/"
-  command = "sphinx-build source build"
+  publish = "docs/build/html"
+  command = "python -m pipenv run docs"

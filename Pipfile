@@ -24,8 +24,9 @@ codecov = "*"
 aiobreaker = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.6"
 
 [scripts]
 server = "python -m server"
 test = "python -m pytest --cov=server tests"
+docs = "sphinx-build docs/source docs/build"

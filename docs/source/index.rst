@@ -10,7 +10,7 @@ tap2go Server
    :maxdepth: 2
    :caption: Design
 
-   auth
+   communication
 
 .. toctree::
    :maxdepth: 3

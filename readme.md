@@ -77,7 +77,6 @@ human intervention allowing us to focus on the content itself.
 Documentation is included. You may build it by installing the dev dependencies and running `sphinx-autobuild`.
 
 ```bash
-
 pipenv install --dev
-pipenv run sphinx-autobuild
+pipenv run docs
 ```
