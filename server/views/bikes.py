@@ -124,30 +124,24 @@ class BikeSocketView(BaseView):
         await ws.prepare(self.request)
         remote = self.request.remote
 
-        if remote not in self.open_tickets:
-            await ws.close(code=1008, message="No current challenge, please generate one")
-            return ws
+        public_key = await ws.receive_bytes(timeout=0.5)
+        signature = await ws.receive_bytes(timeout=0.5)
 
-        signed_message = await ws.receive_bytes(timeout=0.5)
-        ticket = self.open_tickets.take_ticket(remote)
+        try:
+            ticket = self.open_tickets.pop_ticket(remote, public_key)
+        except KeyError as e:
+            await ws.send_str("fail:no_ticket")
+            return ws
 
         # verify the signed challenge
         try:
-            verify_key = VerifyKey(ticket.pub_key, encoder=RawEncoder)
-            challenge = verify_key.verify(signed_message)
+            verify_key = VerifyKey(ticket.bike.public_key, encoder=RawEncoder)
+            verify_key.verify(ticket.challenge, signature)
         except BadSignatureError as e:
-            await ws.send_str("rip")
-            await ws.close(code=1008, message=e)
+            await ws.send_str("fail:invalid_sig")
             return ws
 
-        if not ticket.challenge == challenge:
-            await ws.send_str("rip")
-            await ws.close(code=1008, message="Signed wrong message")
-            return ws
-        else:
-            await ws.send_str("verified")
-
-        del self.open_tickets[remote]
+        await ws.send_str("verified")
 
         try:
             # handle messages
@@ -177,12 +171,10 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        if not any(bike.pub == public_key for bike in Store.get_bikes()):
+        bike = [bike for bike in Store.get_bikes() if bike.public_key == public_key]
+        if not bike:
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
+        bike = bike[0]
 
-        challenge = random(64)
-        self.open_tickets.add_ticket(
-            self.request.remote,
-            BikeConnectionTicket(public_key, challenge, Store.get_bike(public_key=public_key))
-        )
+        challenge = self.open_tickets.add_ticket(self.request.remote, bike)
         return web.Response(body=challenge)

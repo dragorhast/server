@@ -32,6 +32,7 @@ sent.
         end
         Note left of B: The bike signs the challenge.
         Note left of B: The bike opens a web socket with the server.
+        B ->> S: Public Key
         B ->> S: Signature
         Note right of S: The signature is verified against the public key.
         alt Signature Incorrect
@@ -39,3 +40,9 @@ sent.
         else
         S ->> B: "verified"
         end
+
+Protocol
+------------------
+
+After the connection is made, we need to establish a protocol to work on top of. There are two types of communication
+that I propose we use. The first: call response, the second: pubsub.

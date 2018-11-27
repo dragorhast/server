@@ -35,7 +35,7 @@ class MemoryStore(PersistentStore):
                 key: value
                 for key, value
                 in bikes.items()
-                if value.pub == public_key
+                if value.public_key == public_key
             }
 
         return bikes.values()

@@ -28,7 +28,7 @@ class Bike:
     """
 
     bid: int
-    pub: bytes
+    public_key: bytes
     _socket: Optional[Callable[[], Optional[WebSocketResponse]]] = None
     """
     A weak reference to the websocket. Weak references, when called,
@@ -46,7 +46,7 @@ class Bike:
         """
         return {
             "id": self.bid,
-            "pub": self.pub.hex(),
+            "pub": self.public_key.hex(),
             "connected": self._is_connected,
             "locked": self.locked
         }

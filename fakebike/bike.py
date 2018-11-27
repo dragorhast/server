@@ -1,4 +1,4 @@
-from nacl.signing import SigningKey
+from nacl.signing import SigningKey, SignedMessage
 
 
 class Bike:
@@ -19,7 +19,7 @@ class Bike:
     def public_key(self):
         return self.signing_key.verify_key
 
-    def sign(self, data):
+    def sign(self, data) -> SignedMessage:
         return self.signing_key.sign(data)
 
     async def lock(self, msg, socket):

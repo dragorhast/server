@@ -22,6 +22,7 @@ hyperion-cli = "*"
 pynacl = "*"
 codecov = "*"
 aiobreaker = "*"
+sphinx-autodoc-typehints = "*"
 
 [requires]
 python_version = "3.6"

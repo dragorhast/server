@@ -37,31 +37,32 @@ ServerBreaker = CircuitBreaker(fail_max=10, timeout_duration=timedelta(seconds=3
 
 
 @ServerBreaker
-async def create_ticket(session, public_key):
+async def create_ticket(session, bike: Bike):
     """
     Gets the challenge from the server.
 
     :return: The challenge bytes
     :raises AuthError:
     """
-    async with session.post(URL, data=public_key.encode(RawEncoder)) as resp:
+    async with session.post(URL, data=bike.public_key.encode(RawEncoder)) as resp:
         if resp.status != 200 and resp.reason == "Identity not recognized.":
             raise AuthException("public key not on server")
         return await resp.read()
 
 
 @ServerBreaker
-async def bike_handler(session, signed_challenge, bike: Bike):
+async def bike_handler(session, bike: Bike, signed_challenge):
     """
     Opens an authenticated web socket session with the server.
     :return: None
     """
     async with session.ws_connect(URL) as ws:
         # send signature
+        await ws.send_bytes(bike.public_key.encode(RawEncoder))
         await ws.send_bytes(signed_challenge)
         confirmation = await ws.receive_str()
-        if not confirmation == "verified":
-            raise AuthException("signed challenge incorrectly")
+        if "fail" in confirmation:
+            raise AuthException(confirmation.split(":")[1])
 
         logger.info(f"Bike {bike.bid} established connection")
 
@@ -88,8 +89,9 @@ async def start_session(bike):
     async with ClientSession() as session:
         while True:
             try:
-                signed_challenge = bike.sign(await create_ticket(session, bike.public_key))
-                await bike_handler(session, signed_challenge, bike)
+                challenge = await create_ticket(session, bike)
+                signature = bike.sign(challenge).signature
+                await bike_handler(session, bike, signature)
             except AuthException as e:
                 logger.error(f"Bike {bike.bid} {e}, quitting...")
                 return

@@ -1,3 +1,3 @@
 [build]
-  publish = "docs/build/html"
+  publish = "docs/build"
   command = "python -m pipenv run docs"
