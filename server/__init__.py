@@ -13,3 +13,6 @@ logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
 Store = Store()
+
+api_root = "/api/v1"
+"""The base url for the api."""

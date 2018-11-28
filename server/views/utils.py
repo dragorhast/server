@@ -23,6 +23,7 @@ def getter(getter_function, var_name, key):
     def attach_instance(decorated):
         """
         Attaches an instance of the.
+
         :param decorated:
         :return:
         """

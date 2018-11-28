@@ -6,20 +6,30 @@
 tap2go Server
 =============
 
+Welcome to the documentation for the tap2go server. If you are looking for api documentation, you can find that
+:doc:`/server/views`.
+
 .. toctree::
    :maxdepth: 2
    :caption: Design
 
+   style
    communication
 
 .. toctree::
    :maxdepth: 3
-   :caption: Code
+   :caption: Server
 
    server/models
-   server/pricing
    server/store
    server/views
+   server/server
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Fake Bike
+
+   fakebike/fakebike
 
 
 Indices and tables

@@ -17,6 +17,9 @@ from server.views.utils import getter
 class BikesView(BaseView):
     """
     Gets the bikes, or adds a new bike.
+
+
+    .. versionadded:: 0.1.0
     """
     url = "/bikes"
 

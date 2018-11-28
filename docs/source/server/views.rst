@@ -6,15 +6,7 @@ Views
     :undoc-members:
     :show-inheritance:
 
-Base
-------------------------
-
-.. automodule:: server.views.base
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Bike Related
+Bike Related Views
 -------------------------
 
 .. automodule:: server.views.bikes
@@ -22,7 +14,7 @@ Bike Related
     :undoc-members:
     :show-inheritance:
 
-Issue Related
+Issue Related Views
 --------------------------
 
 .. automodule:: server.views.issues
@@ -30,7 +22,7 @@ Issue Related
     :undoc-members:
     :show-inheritance:
 
-Pick-up Related
+Pick-up Related Views
 ---------------------------
 
 .. automodule:: server.views.pickups
@@ -38,7 +30,7 @@ Pick-up Related
     :undoc-members:
     :show-inheritance:
 
-Rental Related
+Rental Related Views
 ---------------------------
 
 .. automodule:: server.views.rentals
@@ -46,7 +38,7 @@ Rental Related
     :undoc-members:
     :show-inheritance:
 
-Reservation Related
+Reservation Related Views
 --------------------------------
 
 .. automodule:: server.views.reservations
@@ -54,7 +46,7 @@ Reservation Related
     :undoc-members:
     :show-inheritance:
 
-User Related
+User Related Views
 -------------------------
 
 .. automodule:: server.views.users
@@ -70,3 +62,10 @@ Utilities
     :undoc-members:
     :show-inheritance:
 
+Base
+------------------------
+
+.. automodule:: server.views.base
+    :members:
+    :undoc-members:
+    :show-inheritance:

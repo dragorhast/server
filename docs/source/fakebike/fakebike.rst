@@ -1,10 +1,12 @@
-fakebike package
+Fake Bike
 ================
 
-Submodules
-----------
+.. automodule:: fakebike
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-fakebike.bike module
+Bike
 --------------------
 
 .. automodule:: fakebike.bike
@@ -12,7 +14,7 @@ fakebike.bike module
     :undoc-members:
     :show-inheritance:
 
-fakebike.run module
+Run
 -------------------
 
 .. automodule:: fakebike.run
@@ -21,10 +23,4 @@ fakebike.run module
     :show-inheritance:
 
 
-Module contents
----------------
 
-.. automodule:: fakebike
-    :members:
-    :undoc-members:
-    :show-inheritance:

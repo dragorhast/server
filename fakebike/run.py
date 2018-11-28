@@ -1,9 +1,7 @@
 """
-Creates and registers multiple fake bikes with the server.
+Creates and registers multiple fake bikes with the server. Connections are automatically retried when dropped.
 
-Connections are automatically retried when dropped.
-
-..note: The public keys are the same ones on the server.
+.. note:: The public keys must be registered with the server.
 """
 
 from asyncio import get_event_loop, sleep, gather
@@ -54,6 +52,7 @@ async def create_ticket(session, bike: Bike):
 async def bike_handler(session, bike: Bike, signed_challenge):
     """
     Opens an authenticated web socket session with the server.
+
     :return: None
     """
     async with session.ws_connect(URL) as ws:

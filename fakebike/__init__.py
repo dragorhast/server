@@ -1,3 +1,9 @@
+"""
+This package simulates a bike.
+
+.. versionadded:: 0.1.0
+"""
+
 import logging
 
 logger = logging.getLogger()
