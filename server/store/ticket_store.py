@@ -6,10 +6,9 @@ to be persisted.
 """
 
 from asyncio import sleep
-from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Dict, Set, List
+from typing import Set
 
 from nacl.utils import random
 
@@ -26,10 +25,11 @@ class BikeConnectionTicket:
     challenge: bytes
     bike: Bike
     remote: str
-    timestamp: datetime = field(default_factory=lambda: datetime.now())
+    timestamp: datetime = field(default_factory=datetime.now)
 
-    def __eq__(self, other: 'BikeConnectionTicket'):
-        return self.challenge == other.challenge and \
+    def __eq__(self, other):
+        return isinstance(other, BikeConnectionTicket) and \
+               self.challenge == other.challenge and \
                self.remote == other.remote and \
                self.bike.public_key == other.bike.public_key
 
@@ -40,7 +40,6 @@ class BikeConnectionTicket:
 
 class TooManyTicketException(Exception):
     """Raised when the store is full."""
-    pass
 
 
 class DuplicateTicketException(Exception):
@@ -48,7 +47,6 @@ class DuplicateTicketException(Exception):
     Raised when a ticket already exists
     for that IP and public key.
     """
-    pass
 
 
 class TicketStore:
@@ -95,11 +93,10 @@ class TicketStore:
     def pop_ticket(self, remote, public_key: bytes) -> BikeConnectionTicket:
         """Pops the ticket with the given id, excluding expired ones."""
         match = {t for t in self.tickets if t.bike.public_key == public_key and t.remote == remote}
-        if match:
-            self.tickets -= match
-            return match.pop()
-        else:
+        if not match:
             raise KeyError("No such ticket")
+        self.tickets -= match
+        return match.pop()
 
     async def remove_all_expired(self, removal_period: timedelta):
         """Clears all the expired tickets."""

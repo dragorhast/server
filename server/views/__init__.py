@@ -20,7 +20,6 @@ the api must:
 
 from aiohttp.web_urldispatcher import UrlDispatcher
 
-from server import logger
 from .bikes import *
 from .issues import *
 from .pickups import *
@@ -46,5 +45,5 @@ def register_views(router: UrlDispatcher, base: str):
     :param base: The base URL.
     """
     for view in views:
-        logger.info(f"Registered {view.__name__} at {base+view.url}")
+        logger.info(f"Registered {view.__name__} at {base + view.url}")
         view.register(router, base)

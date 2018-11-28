@@ -6,8 +6,10 @@ to facilitate some of the advanced functionality.
 from asyncio import CancelledError
 from contextlib import suppress
 from datetime import timedelta
+from typing import Set
 
 from aiohttp import WSCloseCode
+from aiohttp.web_ws import WebSocketResponse
 
 from server import logger
 from server.views import BikeSocketView
@@ -31,11 +33,17 @@ async def stop_background_tasks(app):
 
 
 async def close_bike_connections(app):
-    connections = set(app['bike_connections'])
+    """
+    Closes all outstanding connections between bikes and the server.
+
+    :param app: The web app the is closing.
+    :return: None
+    """
+    connections: Set[WebSocketResponse] = set(app['bike_connections'])
     if connections:
         logger.info("Closing all open bike connections")
-    for ws in set(app['bike_connections']):
-        await ws.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
+    for connection in connections:
+        await connection.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
 
 
 def register_signals(app):

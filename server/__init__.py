@@ -3,6 +3,8 @@ The main package for the API server.
 """
 
 import logging
+
+from server.store.persistent_store import PersistentStore
 from .store import Store
 
 logger = logging.getLogger()
@@ -12,7 +14,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
-Store = Store()
+store: PersistentStore = Store()
 
 api_root = "/api/v1"
 """The base url for the api."""

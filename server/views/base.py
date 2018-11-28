@@ -12,7 +12,6 @@ class ViewURLException(Exception):
     """
     Raised if the view doesn't provide a URL.
     """
-    pass
 
 
 class BaseView(View):
@@ -24,7 +23,7 @@ class BaseView(View):
     .. todo:: Add permissions so that views may limit functionality as needed.
     """
 
-    url = None
+    url: str
 
     @classmethod
     def register(cls, router: UrlDispatcher, base: Optional[str] = None):

@@ -38,7 +38,7 @@ class MemoryStore(PersistentStore):
                 if value.public_key == public_key
             }
 
-        return bikes.values()
+        return iter(bikes.values())
 
     def get_bike(self, *, bike_id: Optional[int] = None,
                  public_key: Optional[bytes] = None) -> Optional[Bike]:

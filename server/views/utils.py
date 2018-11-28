@@ -20,6 +20,7 @@ def getter(getter_function, var_name, key):
     :param key: The key to filter in the function.
     :return: A decorator that wraps the response and passes in the object.
     """
+
     def attach_instance(decorated):
         """
         Attaches an instance of the.

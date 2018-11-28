@@ -25,7 +25,7 @@ class PickupView(BaseView):
     """
     Gets, updates or deletes a single pick-up point.
     """
-    url = "/pickups/{id}"
+    url = "/pickups/{id:[0-9]+}"
 
     async def get(self):
         pass
@@ -41,7 +41,7 @@ class PickupBikesView(BaseView):
     """
     Gets list of bikes currently at a pickup point.
     """
-    url = "/pickups/{id}/bikes"
+    url = "/pickups/{id:[0-9]+}/bikes"
 
     async def get(self):
         pass
@@ -51,7 +51,7 @@ class PickupReservationsView(BaseView):
     """
     Gets or adds to a pickup point's list of reservations.
     """
-    url = "/pickups/{id}/reservations"
+    url = "/pickups/{id:[0-9]+}/reservations"
 
     async def get(self):
         pass

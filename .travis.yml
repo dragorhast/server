@@ -19,9 +19,6 @@ jobs:
     name: PyLint
     script: pipenv run pylint server
   - stage: test
-    name: Flake8
-    script: pipenv run flake8 server
-  - stage: test
     name: Test Runner
     script:
     - pipenv run test

@@ -6,7 +6,7 @@ provide a persistent data store.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List
 
 from server.models.bike import Bike
 
@@ -15,11 +15,12 @@ class PersistentStore(ABC):
     """The abstract store interface."""
 
     @abstractmethod
-    def get_bikes(self, *, bike_id: Optional[int] = None):
+    def get_bikes(self, *,
+                  bike_id: Optional[int] = None,
+                  public_key: Optional[bytes] = None) -> List[Bike]:
         """
         Gets bikes that match the given filters.
         """
-        pass
 
     @abstractmethod
     def get_bike(self, *, bike_id: Optional[int] = None,
@@ -27,4 +28,3 @@ class PersistentStore(ABC):
         """
         Gets a single bike that matches the given filters.
         """
-        pass

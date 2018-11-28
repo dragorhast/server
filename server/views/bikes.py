@@ -6,10 +6,9 @@ from aiohttp import web, WSMsgType
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
-from nacl.utils import random
 
-from server import logger, Store
-from server.store.ticket_store import BikeConnectionTicket, TicketStore
+from server import logger, store
+from server.store.ticket_store import TicketStore
 from server.views.base import BaseView
 from server.views.utils import getter
 
@@ -24,7 +23,7 @@ class BikesView(BaseView):
     url = "/bikes"
 
     async def get(self):
-        return web.json_response(list(bike.serialize() for bike in Store.get_bikes()))
+        return web.json_response(list(bike.serialize() for bike in store.get_bikes()))
 
     async def post(self):
         pass
@@ -35,7 +34,7 @@ class BikeView(BaseView):
     Gets or updates a single bike.
     """
     url = "/bikes/{id:[0-9]+}"
-    bike_getter = getter(Store.get_bike, 'id', 'bike_id')
+    bike_getter = getter(store.get_bike, 'id', 'bike_id')
 
     @bike_getter
     async def get(self, bike):
@@ -64,7 +63,7 @@ class BikeRentalsView(BaseView):
     Gets the rentals for a single bike.
     """
     url = "/bikes/{id:[0-9]+}/rentals"
-    bike_getter = getter(Store.get_bike, 'id', 'bike_id')
+    bike_getter = getter(store.get_bike, 'id', 'bike_id')
 
     @bike_getter
     async def get(self, bike):
@@ -80,7 +79,6 @@ class BikeRentalsView(BaseView):
 
         todo implement
         """
-        pass
 
     @bike_getter
     async def patch(self, bike):
@@ -123,48 +121,48 @@ class BikeSocketView(BaseView):
         bike and the server. Requires an open ticket
         (which can be created by posting) to succeed.
         """
-        ws = web.WebSocketResponse()
-        await ws.prepare(self.request)
+        socket = web.WebSocketResponse()
+        await socket.prepare(self.request)
         remote = self.request.remote
 
-        public_key = await ws.receive_bytes(timeout=0.5)
-        signature = await ws.receive_bytes(timeout=0.5)
+        public_key = await socket.receive_bytes(timeout=0.5)
+        signature = await socket.receive_bytes(timeout=0.5)
 
         try:
             ticket = self.open_tickets.pop_ticket(remote, public_key)
-        except KeyError as e:
-            await ws.send_str("fail:no_ticket")
-            return ws
+        except KeyError:
+            await socket.send_str("fail:no_ticket")
+            return socket
 
         # verify the signed challenge
         try:
             verify_key = VerifyKey(ticket.bike.public_key, encoder=RawEncoder)
             verify_key.verify(ticket.challenge, signature)
-        except BadSignatureError as e:
-            await ws.send_str("fail:invalid_sig")
-            return ws
+        except BadSignatureError:
+            await socket.send_str("fail:invalid_sig")
+            return socket
 
-        await ws.send_str("verified")
+        await socket.send_str("verified")
 
         try:
             # handle messages
-            logger.info(f"Bike {ticket.bike.bid} connected")
-            self.request.app['bike_connections'].add(ws)
-            ticket.bike.socket = ws
+            logger.info("Bike %s connected", ticket.bike.bid)
+            self.request.app['bike_connections'].add(socket)
+            ticket.bike.socket = socket
 
-            async for msg in ws:
+            async for msg in socket:
                 if msg.type == WSMsgType.TEXT:
                     if msg.data == 'close':
-                        await ws.close()
+                        await socket.close()
                     else:
-                        await ws.send_str(msg.data + '/answer')
+                        await socket.send_str(msg.data + '/answer')
                 elif msg.type == WSMsgType.ERROR:
-                    print(f'ws connection closed with exception {ws.exception()}')
+                    print('ws connection closed with exception %s', socket.exception())
         finally:
-            logger.info(f"Bike {ticket.bike.bid} disconnected")
-            self.request.app['bike_connections'].discard(ws)
+            logger.info("Bike %s disconnected", ticket.bike.bid)
+            self.request.app['bike_connections'].discard(socket)
 
-        return ws
+        return socket
 
     async def post(self):
         """
@@ -174,7 +172,7 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        bike = [bike for bike in Store.get_bikes() if bike.public_key == public_key]
+        bike = [bike for bike in store.get_bikes() if bike.public_key == public_key]
         if not bike:
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
         bike = bike[0]

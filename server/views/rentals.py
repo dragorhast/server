@@ -20,7 +20,7 @@ class RentalView(BaseView):
     """
     Gets or updates a single rental.
     """
-    url = "/rentals/{id}"
+    url = "/rentals/{id:[0-9]+}"
 
     async def get(self):
         pass

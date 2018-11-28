@@ -48,7 +48,6 @@ The server is equipped for testing with a range of tools:
 You can run the lot like so:
 
     pipenv run test
-    flake8 server
     pylint server
     mypy server
     safety check

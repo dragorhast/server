@@ -23,7 +23,7 @@ class UserView(BaseView):
     """
     Gets, updates or deletes a single user.
     """
-    url = "/users/{id}"
+    url = "/users/{id:[0-9]+}"
 
     async def get(self):
         pass
@@ -39,7 +39,7 @@ class UserRentalsView(BaseView):
     """
     Gets or adds to the users list of rentals.
     """
-    url = "/users/{id}/rentals"
+    url = "/users/{id:[0-9]+}/rentals"
 
     async def get(self):
         pass
@@ -52,7 +52,7 @@ class UserReservationsView(BaseView):
     """
     Gets or adds to the users' list of reservations.
     """
-    url = "/users/{id}/reservations"
+    url = "/users/{id:[0-9]+}/reservations"
 
     async def get(self):
         pass
@@ -65,7 +65,7 @@ class UserIssuesView(BaseView):
     """
     Gets or adds to the users' list of issues.
     """
-    url = "/users/{id}/issues"
+    url = "/users/{id:[0-9]+}/issues"
 
     async def get(self):
         pass
@@ -78,4 +78,4 @@ class MeView(BaseView):
     """
     Gets the data for the currently authenticated user/
     """
-    pass
+    url = "/users/me"

@@ -52,4 +52,3 @@ def test_duplicate(ticket_store, random_bike):
     ticket_store.add_ticket("127.0.0.1", random_bike)
     with pytest.raises(KeyError):
         ticket_store.add_ticket("127.0.0.1", random_bike)
-    pass
