@@ -1,6 +1,7 @@
 """
 The primary entry point to the application.
 """
+import uvloop
 import weakref
 
 from aiohttp import web
@@ -24,6 +25,7 @@ async def send_to_developer_portal(request):
 app.router.add_get("/", send_to_developer_portal)
 register_signals(app)
 register_views(app.router, api_root)
+uvloop.install()
 
 if __name__ == '__main__':
     web.run_app(app)
