@@ -27,12 +27,6 @@ class BikeConnectionTicket:
     remote: str
     timestamp: datetime = field(default_factory=datetime.now)
 
-    def __eq__(self, other):
-        return isinstance(other, BikeConnectionTicket) and \
-               self.challenge == other.challenge and \
-               self.remote == other.remote and \
-               self.bike.public_key == other.bike.public_key
-
     def __hash__(self):
         """Hashes the ticket based on the remote and the public key."""
         return hash((self.bike.public_key, self.remote))
@@ -40,13 +34,6 @@ class BikeConnectionTicket:
 
 class TooManyTicketException(Exception):
     """Raised when the store is full."""
-
-
-class DuplicateTicketException(Exception):
-    """
-    Raised when a ticket already exists
-    for that IP and public key.
-    """
 
 
 class TicketStore:
@@ -62,11 +49,13 @@ class TicketStore:
     per IP address / public key combination at any time.
     """
 
-    max_tickets_per_remote = 3
-    expiry_period = timedelta(seconds=10)
-
-    tickets: Set[BikeConnectionTicket] = set()
+    _tickets: Set[BikeConnectionTicket]
     """A map of IP addresses and their currently issued tickets"""
+
+    def __init__(self, *, max_tickets_per_remote=3, expiry_period=timedelta(seconds=10)):
+        self._tickets = set()
+        self.max_tickets_per_remote = max_tickets_per_remote
+        self.expiry_period = expiry_period
 
     def add_ticket(self, remote, bike: Bike) -> bytes:
         """
@@ -76,26 +65,23 @@ class TicketStore:
         :raise DuplicateTicketException: A similar ticket exists.
         """
 
-        tickets = {t for t in self.tickets if t.remote == remote}
+        tickets = {t for t in self._tickets if t.remote == remote}
 
-        if len(tickets) > self.max_tickets_per_remote:
+        if len(tickets) >= self.max_tickets_per_remote:
             raise TooManyTicketException()
 
         challenge = random(64)
         ticket = BikeConnectionTicket(challenge, bike, remote)
 
-        if ticket in self.tickets:
-            raise DuplicateTicketException()
-
-        self.tickets.add(ticket)
+        self._tickets.add(ticket)
         return challenge
 
     def pop_ticket(self, remote, public_key: bytes) -> BikeConnectionTicket:
         """Pops the ticket with the given id, excluding expired ones."""
-        match = {t for t in self.tickets if t.bike.public_key == public_key and t.remote == remote}
+        match = {t for t in self._tickets if t.bike.public_key == public_key and t.remote == remote}
         if not match:
             raise KeyError("No such ticket")
-        self.tickets -= match
+        self._tickets -= match
         return match.pop()
 
     async def remove_all_expired(self, removal_period: timedelta):
@@ -107,11 +93,11 @@ class TicketStore:
 
     def remove_expired(self):
         """Clears expired tickets for a remote."""
-        self.tickets = {t for t in self.tickets if not self._is_expired(t)}
+        self._tickets = {t for t in self._tickets if not self._is_expired(t)}
 
     def _is_expired(self, ticket):
         return ticket.timestamp + self.expiry_period <= datetime.now()
 
     def __contains__(self, remote):
         """Check if a remote has any open tickets"""
-        return remote in self.tickets
+        return remote in self._tickets
