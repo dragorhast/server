@@ -26,6 +26,7 @@ from .pickups import *
 from .rentals import *
 from .reservations import *
 from .users import *
+from .misc import send_to_developer_portal
 
 views = [
     BikeView, BikesView, BikeRentalsView, BikeSocketView,

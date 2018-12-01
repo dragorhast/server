@@ -3,6 +3,7 @@ The main package for the API server.
 """
 
 import logging
+import os
 
 from server.store.persistent_store import PersistentStore
 from .store import Store
@@ -18,3 +19,5 @@ store: PersistentStore = Store()
 
 api_root = "/api/v1"
 """The base url for the api."""
+
+server_mode = os.getenv("SERVER_MODE", "development")
