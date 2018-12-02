@@ -26,9 +26,8 @@ jobs:
     script: pipenv run pylint server; true
   - stage: test
     name: Test Runner
-    script:
-    - pipenv run test
-    - pipenv run codecov
+    script: pipenv run test
+    after_success: pipenv run codecov
   - stage: test
     name: Type Analysis
     script: pipenv run mypy server; true

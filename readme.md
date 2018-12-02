@@ -1,9 +1,10 @@
 # Dragorhast Server
 
+[![Python Version](https://img.shields.io/badge/python-3.5%2B-blue.svg?style=flat-square)](https://docs.python.org/3/)
 [![Build Status](https://img.shields.io/travis/dragorhast/server.svg?style=flat-square)](https://travis-ci.org/dragorhast/server)
+[![Coverage](https://img.shields.io/codecov/c/github/dragorhast/server.svg?style=flat-square)](https://codecov.io/gh/dragorhast/server)
 [![GitHub License](https://img.shields.io/github/license/dragorhast/server.svg?style=flat-square)](https://github.com/dragorhast/server/blob/master/license.md)
-![Python Version](https://img.shields.io/badge/python-3.5%2B-blue.svg?style=flat-square)
-[![GitHub issues](https://img.shields.io/github/issues/dragorhast/server.svg?style=flat-square)](https://github.com/dragorhast/server/issues)
+[![Latest Version](https://img.shields.io/github/tag/dragorhast/server.svg?style=flat-square)](https://github.com/dragorhast/server/releases)
 
 <p align="center"><img src="./graphic.png" /></p>
 
