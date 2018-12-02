@@ -8,9 +8,12 @@ import uvloop
 from aiohttp import web
 from aiohttp_sentry import SentryMiddleware
 
-from server import api_root, server_mode
+from server import api_root, server_mode, logger
 from server.signals import register_signals
+from server.version import __version__
 from server.views import register_views, send_to_developer_portal
+
+logger.info(f'Starting tap2go-server {__version__}!')
 
 # set up app and install uvloop
 app = web.Application(middlewares=[SentryMiddleware()])
@@ -31,7 +34,7 @@ if server_mode != "development":
     sentry_sdk.init(
         dsn="https://ac31a26ce42c434e9ce1bde34768631d@sentry.io/1296249",
         environment=server_mode,
-        release="server@0.1.0"
+        release=f"server@{__version__}"
     )
 
 if __name__ == '__main__':

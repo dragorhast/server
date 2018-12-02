@@ -27,6 +27,7 @@ uvloop = {editable = true,git = "https://github.com/MagicStack/uvloop.git",ref =
 cython = "*"
 sentry-sdk = "*"
 aiohttp-sentry = "*"
+gitpython = "*"
 
 [requires]
 python_version = "3.7"
