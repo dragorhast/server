@@ -1,17 +1,6 @@
-from git import Repo, InvalidGitRepositoryError
+"""Defines the version of the application."""
 
-from server import logger
+__version__ = "0.1.0"
+"""The version of the program."""
 
-try:
-    repo = Repo('.')
-except InvalidGitRepositoryError as e:
-    logger.error("Trying to get server version, but no git repo found in %s. Make sure it's included!", e)
-    exit(1)
-
-tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)
-
-if tags:
-    __version__ = tags[-1]
-else:
-    logger.error("Trying to get server version, but there are no tags to derive version from!")
-    exit(1)
+short_version = ".".join(__version__.split(".")[:2])

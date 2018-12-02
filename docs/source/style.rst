@@ -24,13 +24,18 @@ Some quick pointers:
 Versioning
 ----------
 
-The server uses semantic versioning as defined in PEP440_, determined by git tags. When a new version is built,
-a git tag with the desired version number is added to the commit. Semantic versioning is done with a very simple scheme.
+The server uses semantic versioning as defined in PEP440_. When a new version is built, the version number is incremented
+in :data:`server.version` and a git tag with the desired version number is added to the commit. This is typically done
+as part of a new PR before it is merged or, alternatively, straight to the master branch.
 
-The version is defined by a string of the format `a.b.c` where 'a' denotes a major (potentially breaking) version,
-'b' denotes a minor version with added features, and 'c' denotes a bug fix patch. Additionally, it is possible to append
-alpha, beta, and release candidate segments, labeled with a 'a', 'b', or 'rc' suffix. Each major, minor, or patch version
-can increment indefinitely as needed, and are reset when a more significant version is released.
+Semantic versioning is done with a very simple scheme. The version is defined by a string of the format `a.b.c` where:
+
+- 'a' denotes a major (potentially breaking) version
+- 'b' denotes a minor version with added features
+- 'c' denotes a bug fix patch
+
+Additionally, it is possible to append alpha, beta, and release candidate segments, suffixed with 'a', 'b', or 'rc'.
+Each major, minor, or patch version can increment indefinitely as needed.
 
 Some examples of valid formats are listed below:
 
@@ -38,8 +43,7 @@ Some examples of valid formats are listed below:
 - 0.3.4
 - 1.0.0b3
 - 1.10.3
-
-
+- 2.0.0rc1
 
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/
 .. _PEP440: https://www.python.org/dev/peps/pep-0440/

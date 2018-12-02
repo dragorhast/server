@@ -28,7 +28,6 @@ aiohttp-sentry = "*"
 hyperion-cli = "*"
 pynacl = "*"
 aiobreaker = "*"
-gitpython = "*"
 dataclasses = "*"
 # docs
 sphinx = "*"

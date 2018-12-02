@@ -14,8 +14,11 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../..'))
 
+# can only import after inserting path
+from server.version import __version__, short_version
 
 # -- Project information -----------------------------------------------------
 
@@ -24,9 +27,9 @@ copyright = '2018, Dragorhast'
 author = 'Dragorhast'
 
 # The short X.Y version
-version = ''
+version = short_version
 # The full version, including alpha/beta/rc tags
-release = '0.1.0'
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 

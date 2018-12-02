@@ -14,4 +14,14 @@ Signals Submodule
     :undoc-members:
     :show-inheritance:
 
+Version Submodule
+-----------------
 
+.. automodule:: server.version
+    :members:
+    :undoc-members:
+    :private-members:
+    :special-members:
+    :show-inheritance:
+
+.. autodata:: server.version.__version__
