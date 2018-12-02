@@ -30,9 +30,6 @@ aiohttp-sentry = "*"
 gitpython = "*"
 gunicorn = "*"
 
-[requires]
-python_version = "3.7"
-
 [scripts]
 server = "python -m server"
 test = "python -m pytest --cov=server tests"
