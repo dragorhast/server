@@ -23,8 +23,11 @@ aiohttp = "*"
 hyperion-cli = "*"
 pynacl = "*"
 aiobreaker = "*"
-uvloop = {editable = true, git = "https://github.com/MagicStack/uvloop.git", ref = "v0.12.0rc1"}
+uvloop = {editable = true,git = "https://github.com/MagicStack/uvloop.git",ref = "v0.12.0rc1"}
 cython = "*"
+sentry-sdk = "*"
+aiohttp-sentry = "*"
+gitpython = "*"
 
 [requires]
 python_version = "3.7"
