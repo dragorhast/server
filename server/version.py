@@ -3,9 +3,9 @@ from git import Repo, InvalidGitRepositoryError
 from server import logger
 
 try:
-    repo = Repo('..')
+    repo = Repo('.')
 except InvalidGitRepositoryError as e:
-    logger.error("Trying to get server version, but no git repo found. Make sure it's included!")
+    logger.error("Trying to get server version, but no git repo found in %s. Make sure it's included!", e)
     exit(1)
 
 tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)
