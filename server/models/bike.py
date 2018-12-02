@@ -12,7 +12,7 @@ import weakref
 from typing import Optional, Callable, Dict, Any
 
 from aiohttp.web_ws import WebSocketResponse
-from attr import dataclass
+from dataclasses import dataclass
 
 
 @dataclass

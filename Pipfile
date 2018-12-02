@@ -12,28 +12,36 @@ pylint = "*"
 mypy = "*"
 safety = "*"
 bandit = "*"
+
+[packages]
+# aiohttp
+aiohttp = "*"
+idna-ssl = "*"
+gunicorn = "*"
+#uvloop
+cython = "*"
+uvloop = {git = "https://github.com/MagicStack/uvloop.git",ref = "v0.12.0rc1"}
+#sentry
+sentry-sdk = "*"
+aiohttp-sentry = "*"
+# misc
+hyperion-cli = "*"
+pynacl = "*"
+aiobreaker = "*"
+gitpython = "*"
+dataclasses = "*"
+# docs
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
 sphinxcontrib-mermaid = "*"
 sphinx-autodoc-typehints = "*"
 
-[packages]
-aiohttp = "*"
-hyperion-cli = "*"
-pynacl = "*"
-aiobreaker = "*"
-cython = "*"
-uvloop = {git = "https://github.com/MagicStack/uvloop.git",ref = "v0.12.0rc1"}
-sentry-sdk = "*"
-aiohttp-sentry = "*"
-gitpython = "*"
-gunicorn = "*"
-
 [requires]
-python_version = "3.7"
+python_version = "3.6"
 
 [scripts]
 server = "python -m server"
 test = "python -m pytest --cov=server tests"
 docs = "sphinx-build docs/source docs/build"
+auto-docs = "sphinx-autobuild docs/source docs/build"

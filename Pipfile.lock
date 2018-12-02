@@ -1,11 +1,11 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "02b70f78b443124424dddf31b7411f42ce102028930f0910fd2c0014df3067d9"
+            "sha256": "8295a11180e6a4c0427837ad66206d34f5edcb61c18388348d20e8b92b06fdbe"
         },
         "pipfile-spec": 6,
         "requires": {
-            "python_version": "3.7"
+            "python_version": "3.6"
         },
         "sources": [
             {
@@ -214,6 +214,14 @@
             "index": "pypi",
             "version": "==0.29.1"
         },
+        "dataclasses": {
+            "hashes": [
+                "sha256:454a69d788c7fda44efd71e259be79577822f5e3f53f029a22d08004e951dc9f",
+                "sha256:6988bd2b895eef432d562370bb707d540f32f7360ab13da45340101bc2307d84"
+            ],
+            "index": "pypi",
+            "version": "==0.6"
+        },
         "feedparser": {
             "hashes": [
                 "sha256:bd030652c2d08532c034c27fcd7c85868e7fa3cb2b17f230a44a6bbc92519bf9",
@@ -230,10 +238,10 @@
         },
         "geopy": {
             "hashes": [
-                "sha256:1bbea0efc5af91e0a7d4c2b31650f61667bcc1d0d717784d78c03f0ed13bb374",
-                "sha256:59ddda52c62e5ebddda76c53b7b644bb0922f3f594aa350cc62cce7d8ea6afcc"
+                "sha256:e448b41932985d71329d6caba5d95be53207c49b74e88acd651fb7b9c6896750",
+                "sha256:e5442fd5865d1d8da0a028f5899cc696664b1c9adafb82dc2e7be85d40df9a6a"
             ],
-            "version": "==1.17.0"
+            "version": "==1.18.0"
         },
         "gitdb2": {
             "hashes": [
@@ -272,6 +280,13 @@
                 "sha256:684a38a6f903c1d71d6d5fac066b58d7768af4de2b832e426ec79c30daa94a16"
             ],
             "version": "==2.7"
+        },
+        "idna-ssl": {
+            "hashes": [
+                "sha256:a933e3bb13da54383f9e8f35dc4f9cb9eb9b3b78c6b36f311254d6d0d92c6c7c"
+            ],
+            "index": "pypi",
+            "version": "==1.1.0"
         },
         "lxml": {
             "hashes": [
@@ -883,11 +898,11 @@
         },
         "sphinx-autodoc-typehints": {
             "hashes": [
-                "sha256:8d8fe010aff3664bf3acd1cb42825e7f9c58a83c8b225b73c03585754d4f1f13",
-                "sha256:fd37b7af3e0af946372830d0a665918e27f63d6a26806a2af05fe31c7aff20a3"
+                "sha256:9f546fa18ee6bfb17f5cf937805d3c8afea48b976050db0bd14bb463eee97888",
+                "sha256:adfa4712e77c795522574ce644e084cded2f6e796a59d37e7f1cb98287687100"
             ],
             "index": "pypi",
-            "version": "==1.5.1"
+            "version": "==1.5.2"
         },
         "sphinx-rtd-theme": {
             "hashes": [
@@ -956,6 +971,7 @@
                 "sha256:edb04bdd45bfd76c8292c4d9654568efaedf76fe78eb246dde69bdb13b2dad87",
                 "sha256:f19f2a4f547505fe9072e15f6f4ae714af51b5a681a97f187971f50c283193b6"
             ],
+            "markers": "python_version < '3.7' and implementation_name == 'cpython'",
             "version": "==1.1.0"
         },
         "urllib3": {
