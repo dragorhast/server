@@ -1,7 +1,7 @@
 Style Guide
 ===========
 
-The code should conform to PEP8_, which is the official python style guide. There is a linter that will report on errors
+The code should conform to PEP8_, the official python style guide. There is a linter that will report on errors
 in the style, which will improve conformity. To access it, run the following command:
 
 >>> pylint server
@@ -21,5 +21,25 @@ Some quick pointers:
 * CMD + ALT + L will automatically format the current document
 * Committing code through PyCharm allows you to automatically format every file you've edited
 
+Versioning
+----------
 
-.. _PEP8: https://pep8.org/
+The server uses semantic versioning as defined in PEP440_, determined by git tags. When a new version is built,
+a git tag with the desired version number is added to the commit. Semantic versioning is done with a very simple scheme.
+
+The version is defined by a string of the format `a.b.c` where 'a' denotes a major (potentially breaking) version,
+'b' denotes a minor version with added features, and 'c' denotes a bug fix patch. Additionally, it is possible to append
+alpha, beta, and release candidate segments, labeled with a 'a', 'b', or 'rc' suffix. Each major, minor, or patch version
+can increment indefinitely as needed, and are reset when a more significant version is released.
+
+Some examples of valid formats are listed below:
+
+- 0.1.0
+- 0.3.4
+- 1.0.0b3
+- 1.10.3
+
+
+
+.. _PEP8: https://www.python.org/dev/peps/pep-0008/
+.. _PEP440: https://www.python.org/dev/peps/pep-0440/
