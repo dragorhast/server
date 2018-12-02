@@ -14,7 +14,7 @@ that facilitate all the functionality of the app from rental bookings to admin m
 
 ## Installation
 
-Installing the server is easy. Assuming you have a recent version of python (3.7 or above) then
+Installing the server is easy. Assuming you have a recent version of python (3.6 or above) then
 
     > git clone https://github.com/dragorhast/server.git
     > cd server
