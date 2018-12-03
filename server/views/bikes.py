@@ -9,7 +9,8 @@ from nacl.signing import VerifyKey
 
 from server import logger
 from server.models import Bike
-from server.service import get_bike, get_bikes, create_bike
+from server.permissions.auth import AuthenticatedPermission
+from server.permissions.util import require_permission
 from server.store.ticket_store import TicketStore
 from server.views.base import BaseView
 from server.views.utils import getter
@@ -27,6 +28,7 @@ class BikesView(BaseView):
     async def get(self):
         return web.json_response(list(bike.serialize() for bike in await get_bikes()))
 
+    @require_permission(AuthenticatedPermission())
     async def post(self):
         bike_data = await self.request.json()
 
