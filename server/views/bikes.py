@@ -141,8 +141,11 @@ class BikeSocketView(BaseView):
         except BadSignatureError:
             await socket.send_str("fail:invalid_sig")
             return socket
-
-        await socket.send_str("verified")
+        else:
+            await socket.send_str("verified")
+            status = await socket.receive_json()
+            if "locked" in status:
+                ticket.bike.locked = status["locked"]
 
         try:
             # handle messages

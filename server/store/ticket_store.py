@@ -52,7 +52,7 @@ class TicketStore:
     _tickets: Set[BikeConnectionTicket]
     """A map of IP addresses and their currently issued tickets"""
 
-    def __init__(self, *, max_tickets_per_remote=3, expiry_period=timedelta(seconds=10)):
+    def __init__(self, *, max_tickets_per_remote=10, expiry_period=timedelta(seconds=10)):
         self._tickets = set()
         self.max_tickets_per_remote = max_tickets_per_remote
         self.expiry_period = expiry_period

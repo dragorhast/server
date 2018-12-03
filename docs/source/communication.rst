@@ -39,7 +39,11 @@ sent.
         S ->> B: "fail"
         else
         S ->> B: "verified"
+        B ->> S: "current-status"
         end
+
+The last message in the pair process updates the server with the status of the bike, via a simple json update. Currently
+this is only the locked status of the bike.
 
 Protocol
 ------------------

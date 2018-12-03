@@ -3,7 +3,7 @@ Creates and registers multiple fake bikes with the server. Connections are autom
 
 .. note:: The public keys must be registered with the server.
 """
-
+import json
 from asyncio import get_event_loop, sleep, gather
 from datetime import timedelta
 
@@ -16,10 +16,10 @@ from fakebike import logger
 from fakebike.bike import Bike
 
 bikes = {
-    0: Bike(0, bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55")),
+    0: Bike(0, bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55"), locked=False),
     1: Bike(1, bytes.fromhex("1e163e14b5a7d6e8914489d76ed17a52d16aba49357f3eeef7f1d5a4dc3d57b5")),
-    2: Bike(2, bytes.fromhex("4af429ad536e92d791ed3137c382b0ae48520867119654c8c10d8e81d9b65f0e")),
-    3: Bike(3, bytes.fromhex("a68f921cab9631842f6c4d2e792fc163a978c47dbba685eb5b88b0fb54b23939"))
+    2: Bike(2, bytes.fromhex("4af429ad536e92d791ed3137c382b0ae48520867119654c8c10d8e81d9b65f0e"), locked=True),
+    3: Bike(3, bytes.fromhex("a68f921cab9631842f6c4d2e792fc163a978c47dbba685eb5b88b0fb54b23939"), locked=True)
 }
 
 URL = "http://localhost:8080/api/v1/bikes/connect"
@@ -62,8 +62,9 @@ async def bike_handler(session, bike: Bike, signed_challenge):
         confirmation = await ws.receive_str()
         if "fail" in confirmation:
             raise AuthException(confirmation.split(":")[1])
-
-        logger.info(f"Bike {bike.bid} established connection")
+        else:
+            logger.info(f"Bike {bike.bid} established connection")
+            await ws.send_json({"locked": bike.locked})
 
         # handle messages
         async for msg in ws:

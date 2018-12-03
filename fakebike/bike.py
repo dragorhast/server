@@ -4,12 +4,13 @@ from nacl.signing import SigningKey, SignedMessage
 class Bike:
     bid: int
     seed: bytes
-    locked: bool = False
+    locked: bool
 
-    def __init__(self, bid, seed):
+    def __init__(self, bid, seed, locked=False):
         self.bid = bid
         self.seed = seed
         self.signing_key = SigningKey(seed)
+        self.locked = locked
         self.commands = {
             "lock": self.lock,
             "unlock": self.unlock,
