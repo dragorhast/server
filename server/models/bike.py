@@ -56,7 +56,7 @@ class Bike:
         return data
 
     @property
-    def _is_connected(self):
+    def is_connected(self):
         """
         Checks if the bike has been assigned a weak reference
         to a socket and if the socket is still alive.
@@ -77,7 +77,7 @@ class Bike:
         :return: None
         :raises ConnectionError: If the socket is not open.
         """
-        if not self._is_connected:
+        if not self.is_connected:
             raise ConnectionError("No open socket.")
         await self._socket().send_str("lock" if locked else "unlock")
         self.locked = locked

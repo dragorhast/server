@@ -1,6 +1,8 @@
-from typing import Optional, Iterator, Dict
+from typing import Optional, Iterator, Dict, List
 
 from server.models.bike import Bike
+from server.models.rental import Rental
+from server.models.user import User
 from server.store.persistent_store import PersistentStore
 
 
@@ -16,9 +18,18 @@ class MemoryStore(PersistentStore):
         3: Bike(3, bytes.fromhex("8861b3d855f52fd9791a9204e1a6553de287abb3433acee66cc3064687455892")),
     }
 
-    def get_bikes(self, *,
-                  bike_id: Optional[int] = None,
-                  public_key: Optional[bytes] = None) -> Iterator[Bike]:
+    users = {
+        0: User("Alexander", "Lyon"),
+        1: User("Sebastian", "Zajko")
+    }
+
+    rentals = {
+        0: Rental(bikes[0], users[0])
+    }
+
+    async def get_bikes(self, *,
+                        bike_id: Optional[int] = None,
+                        public_key: Optional[bytes] = None) -> Iterator[Bike]:
 
         bikes = self.bikes
 
@@ -40,7 +51,23 @@ class MemoryStore(PersistentStore):
 
         return iter(bikes.values())
 
-    def get_bike(self, *, bike_id: Optional[int] = None,
-                 public_key: Optional[bytes] = None) -> Optional[Bike]:
-        bikes = self.get_bikes(bike_id=bike_id, public_key=public_key)
-        return next(iter(bikes)) if bikes else None
+    async def get_bike(self, *, bike_id: Optional[int] = None,
+                       public_key: Optional[bytes] = None) -> Optional[Bike]:
+        bikes = await self.get_bikes(bike_id=bike_id, public_key=public_key)
+
+        try:
+            return next(bikes)
+        except StopIteration:
+            return None
+
+    async def add_bike(self, public_key):
+        next_key = max(self.bikes.keys()) + 1 if self.bikes else 0
+        bike = Bike(next_key, public_key)
+        self.bikes[next_key] = bike
+        return bike
+
+    async def get_users(self) -> Iterator[User]:
+        return iter(self.users.values())
+
+    async def get_rentals(self) -> List[Rental]:
+        pass

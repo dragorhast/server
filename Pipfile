@@ -35,6 +35,7 @@ sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
 sphinxcontrib-mermaid = "*"
 sphinx-autodoc-typehints = "*"
+gino = "*"
 
 [requires]
 python_version = "3.6"

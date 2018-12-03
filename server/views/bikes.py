@@ -7,7 +7,9 @@ from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
-from server import logger, store
+from server import logger
+from server.models import Bike
+from server.service import get_bike, get_bikes, create_bike
 from server.store.ticket_store import TicketStore
 from server.views.base import BaseView
 from server.views.utils import getter
@@ -23,10 +25,19 @@ class BikesView(BaseView):
     url = "/bikes"
 
     async def get(self):
-        return web.json_response(list(bike.serialize() for bike in store.get_bikes()))
+        return web.json_response(list(bike.serialize() for bike in await get_bikes()))
 
     async def post(self):
-        pass
+        bike_data = await self.request.json()
+
+        if "public_key" not in bike_data:
+            raise web.HTTPBadRequest(reason="Must include public key.")
+
+        try:
+            bike = await create_bike(bike_data["public_key"])
+        except ValueError as e:
+            raise web.HTTPBadRequest(reason=e)
+        return web.json_response(bike.serialize())
 
 
 class BikeView(BaseView):
@@ -34,7 +45,7 @@ class BikeView(BaseView):
     Gets or updates a single bike.
     """
     url = "/bikes/{id:[0-9]+}"
-    bike_getter = getter(store.get_bike, 'id', 'bike_id')
+    bike_getter = getter(get_bike, 'id', 'bike_id')
 
     @bike_getter
     async def get(self, bike):
@@ -45,12 +56,16 @@ class BikeView(BaseView):
         pass
 
     @bike_getter
-    async def patch(self, bike):
+    async def patch(self, bike: Bike):
         data = await self.request.json()
 
-        if "locked" in data:
-            await bike.set_locked(data["locked"])
+        if "locked" not in data:
+            raise web.HTTPBadRequest(reason="Must specify locked or not.")
 
+        if not bike.is_connected:
+            raise web.HTTPServiceUnavailable(reason="Requested bike not connected to server.")
+
+        await bike.set_locked(data["locked"])
         return web.Response(text="updated")
 
     @bike_getter
@@ -63,7 +78,7 @@ class BikeRentalsView(BaseView):
     Gets the rentals for a single bike.
     """
     url = "/bikes/{id:[0-9]+}/rentals"
-    bike_getter = getter(store.get_bike, 'id', 'bike_id')
+    bike_getter = getter(get_bike, 'id', 'bike_id')
 
     @bike_getter
     async def get(self, bike):
@@ -175,7 +190,7 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        bike = [bike for bike in store.get_bikes() if bike.public_key == public_key]
+        bike = [bike for bike in await get_bikes() if bike.public_key == public_key]
         if not bike:
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
         bike = bike[0]
