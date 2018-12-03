@@ -11,6 +11,7 @@ from server import logger
 from server.models import Bike
 from server.permissions.auth import AuthenticatedPermission
 from server.permissions.util import require_permission
+from server.service import get_bike, get_bikes, create_bike, get_rentals, get_user, start_rental
 from server.store.ticket_store import TicketStore
 from server.views.base import BaseView
 from server.views.utils import getter
@@ -84,7 +85,7 @@ class BikeRentalsView(BaseView):
 
     @bike_getter
     async def get(self, bike):
-        pass
+        return web.json_response([rental.serialize() for rental in await get_rentals(bike=bike)])
 
     @bike_getter
     async def post(self, bike):
@@ -93,13 +94,10 @@ class BikeRentalsView(BaseView):
 
         If the rental could not be made, (not authenticated
         or bike in use) it will fail with the appropriate message.
-
-        todo implement
         """
-
-    @bike_getter
-    async def patch(self, bike):
-        pass
+        user = await get_user()
+        rental = await start_rental(bike, user)
+        return web.json_response(rental.serialize())
 
 
 class BikeSocketView(BaseView):
