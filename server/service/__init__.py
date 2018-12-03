@@ -5,9 +5,10 @@ service layer to implement their logic.
 
 The service layer implements the use cases for the system.
 """
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 
-from server.models import Bike
+from server.models import Bike, User
+from server.models.rental import Rental
 from server.store import Store
 
 store = Store()
@@ -50,3 +51,28 @@ async def create_bike(public_key: Union[str, bytes]) -> Bike:
 
 async def get_users():
     return await store.get_users()
+
+
+async def get_rentals(bike: Union[int, Bike]) -> Iterable[Rental]:
+    """
+    Gets rentals for a given bike.
+
+    :param bike: The bike or id to fetch.
+    :return: An iterable of rentals.
+    """
+    if isinstance(bike, Bike):
+        bid = bike.bid
+    elif isinstance(bike, int):
+        bid = bike
+    else:
+        raise TypeError("Must be bike id or bike.")
+
+    return await store.get_rentals(bike_id=bid)
+
+
+async def start_rental(bike, user) -> Rental:
+    return await store.add_rental(bike.bid, user.uid)
+
+
+async def get_user() -> User:
+    return next((await store.get_users()))

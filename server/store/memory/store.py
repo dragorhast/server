@@ -1,4 +1,4 @@
-from typing import Optional, Iterator, Dict, List
+from typing import Optional, Iterator, Dict
 
 from server.models.bike import Bike
 from server.models.rental import Rental
@@ -69,5 +69,20 @@ class MemoryStore(PersistentStore):
     async def get_users(self) -> Iterator[User]:
         return iter(self.users.values())
 
-    async def get_rentals(self) -> List[Rental]:
-        pass
+    async def get_rentals(self, *, bike_id: Optional[int] = None) -> Iterator[Rental]:
+        rentals = self.rentals
+
+        if bike_id is not None:
+            rentals = {
+                k: v
+                for k, v in rentals.items()
+                if v.bike.bid == bike_id
+            }
+
+        return iter(rentals.values())
+
+    async def add_rental(self, user_id, bike_id):
+        next_key = max(self.rentals.keys()) + 1 if self.rentals else 0
+        rental = Rental(next_key, self.bikes[bike_id], self.users[user_id])
+        self.rentals[next_key] = rental
+        return rental

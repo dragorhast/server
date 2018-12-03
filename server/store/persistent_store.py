@@ -6,7 +6,7 @@ provide a persistent data store.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import Optional, List, Iterator
 
 from server.models.bike import Bike
 from server.models.rental import Rental
@@ -19,7 +19,7 @@ class PersistentStore(ABC):
     @abstractmethod
     async def get_bikes(self, *,
                         bike_id: Optional[int] = None,
-                        public_key: Optional[bytes] = None) -> List[Bike]:
+                        public_key: Optional[bytes] = None) -> Iterator[Bike]:
         """
         Gets bikes that match the given filters.
         """
@@ -36,9 +36,13 @@ class PersistentStore(ABC):
         """Adds a bike to the system."""
 
     @abstractmethod
-    async def get_users(self) -> List[User]:
+    async def get_users(self) -> Iterator[User]:
         """Gets all users."""
 
     @abstractmethod
-    async def get_rentals(self) -> List[Rental]:
+    async def get_rentals(self, *, bike_id: Optional[int] = None) -> Iterator[Rental]:
         """Gets all rentals."""
+
+    @abstractmethod
+    async def add_rental(self, user_id, bike_id):
+        """Adds a new rental."""
