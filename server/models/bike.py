@@ -44,12 +44,16 @@ class Bike:
 
         :return: A dictionary.
         """
-        return {
+        data = {
             "id": self.bid,
-            "pub": self.public_key.hex(),
+            "public_key": self.public_key.hex(),
             "connected": self._is_connected,
-            "locked": self.locked
         }
+
+        if data["connected"]:
+            data["locked"] = self.locked
+
+        return data
 
     @property
     def _is_connected(self):
