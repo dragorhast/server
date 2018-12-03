@@ -19,12 +19,12 @@ class MemoryStore(PersistentStore):
     }
 
     users = {
-        0: User("Alexander", "Lyon"),
-        1: User("Sebastian", "Zajko")
+        0: User(0, "Alexander", "Lyon"),
+        1: User(1, "Sebastian", "Zajko")
     }
 
     rentals = {
-        0: Rental(bikes[0], users[0])
+        0: Rental(0, bikes[0], users[0])
     }
 
     async def get_bikes(self, *,
