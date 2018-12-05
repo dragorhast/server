@@ -14,6 +14,8 @@ Welcome to the documentation for the tap2go server. If you are looking for api d
    :caption: Design
 
    style
+   bike-protocol
+   authentication
    communication
    design
    database
