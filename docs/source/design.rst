@@ -34,4 +34,4 @@ Additionally we believe that our platform should be open, and that our work— w
 also benefit the community. With this in mind, we are also enabling CORS on the server to allow others unrestricted
 access to our APIs. This does not mean, however, that anyone can access any data from the server, only that others may
 develop apps on our platform if, for example, they really wanted an android wear app. Using revocable API keys we
-rovide a powerful authentication system independent of any GUI.
+provide a powerful authentication system independent of any GUI.

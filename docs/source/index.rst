@@ -16,6 +16,7 @@ Welcome to the documentation for the tap2go server. If you are looking for api d
    style
    communication
    design
+   database
 
 .. toctree::
    :maxdepth: 3
