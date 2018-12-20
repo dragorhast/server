@@ -6,11 +6,9 @@ from aiohttp import web, WSMsgType
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
-from server.store.ticket_store import TicketStore
+from server.ticket_store import TicketStore
 
 from server import logger
-from server.permissions.auth import AuthenticatedPermission
-from server.permissions.util import require_permission
 from server.service import get_bike, get_bikes, create_bike, get_rentals, get_user, start_rental, lock_bike
 from server.views.base import BaseView
 from server.views.utils import getter
@@ -31,7 +29,6 @@ class BikesView(BaseView):
             "data": list(bike.serialize() for bike in await get_bikes())
         })
 
-    @require_permission(AuthenticatedPermission())
     async def post(self):
         """
         Accepts:
