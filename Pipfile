@@ -29,6 +29,8 @@ hyperion-cli = "*"
 pynacl = "*"
 aiobreaker = "*"
 dataclasses = "*"
+tortoise-orm = "*"
+aiosqlite = "*"
 # docs
 sphinx = "*"
 sphinx-autobuild = "*"

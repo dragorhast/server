@@ -10,9 +10,21 @@ from typing import Set
 
 from aiohttp import WSCloseCode
 from aiohttp.web_ws import WebSocketResponse
+from tortoise import Tortoise
 
 from server import logger
 from server.views import BikeSocketView
+
+
+async def initialize_database(app):
+    """Initializes and generates the schema for our database."""
+    await Tortoise.init(
+        db_url=app['database_uri'],
+        modules={'models': ['server.models']}
+    )
+
+    # Generate the schema
+    await Tortoise.generate_schemas()
 
 
 async def start_background_tasks(app):
@@ -46,7 +58,15 @@ async def close_bike_connections(app):
         await connection.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
 
 
+async def close_database_connections(app):
+    await Tortoise.close_connections()
+
+
 def register_signals(app):
     app.on_startup.append(start_background_tasks)
+    app.on_startup.append(initialize_database)
+
     app.on_shutdown.append(close_bike_connections)
+
     app.on_cleanup.append(stop_background_tasks)
+    app.on_cleanup.append(close_database_connections)

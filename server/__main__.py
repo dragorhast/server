@@ -22,6 +22,9 @@ uvloop.install()
 # keep a track of all open bike connections
 app['bike_connections'] = weakref.WeakSet()
 
+# set database stuff
+app['database_uri'] = 'sqlite://db.sqlite3'
+
 # set up the background tasks
 register_signals(app)
 
