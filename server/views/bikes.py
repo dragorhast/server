@@ -6,9 +6,12 @@ from aiohttp import web, WSMsgType
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
-
-from server import logger, store
 from server.store.ticket_store import TicketStore
+
+from server import logger
+from server.permissions.auth import AuthenticatedPermission
+from server.permissions.util import require_permission
+from server.service import get_bike, get_bikes, create_bike, get_rentals, get_user, start_rental, lock_bike
 from server.views.base import BaseView
 from server.views.utils import getter
 
@@ -23,10 +26,30 @@ class BikesView(BaseView):
     url = "/bikes"
 
     async def get(self):
-        return web.json_response(list(bike.serialize() for bike in store.get_bikes()))
+        return web.json_response({
+            "status": "success",
+            "data": list(bike.serialize() for bike in await get_bikes())
+        })
 
+    @require_permission(AuthenticatedPermission())
     async def post(self):
-        pass
+        """
+        Accepts:
+            {"public_key": xxxx}
+        """
+        bike_data = await self.request.json()
+
+        if "public_key" not in bike_data:
+            raise web.HTTPBadRequest(reason="Must include public key.")
+
+        try:
+            bike = await create_bike(bike_data["public_key"])
+        except ValueError as e:
+            raise web.HTTPBadRequest(reason=e)
+        return web.json_response({
+            "status": "success",
+            "data": bike.serialize()
+        })
 
 
 class BikeView(BaseView):
@@ -34,7 +57,7 @@ class BikeView(BaseView):
     Gets or updates a single bike.
     """
     url = "/bikes/{id:[0-9]+}"
-    bike_getter = getter(store.get_bike, 'id', 'bike_id')
+    bike_getter = getter(get_bike, 'id', 'bike_id')
 
     @bike_getter
     async def get(self, bike):
@@ -44,12 +67,16 @@ class BikeView(BaseView):
     async def delete(self, bike):
         pass
 
-    @bike_getter
-    async def patch(self, bike):
+    async def patch(self):
         data = await self.request.json()
 
-        if "locked" in data:
-            await bike.set_locked(data["locked"])
+        if "locked" not in data:
+            raise web.HTTPBadRequest(reason="Must specify locked or not.")
+
+        try:
+            await lock_bike("", True)
+        except Exception:
+            raise web.HTTPServiceUnavailable(reason="Requested bike not connected to server.")
 
         return web.Response(text="updated")
 
@@ -63,11 +90,17 @@ class BikeRentalsView(BaseView):
     Gets the rentals for a single bike.
     """
     url = "/bikes/{id:[0-9]+}/rentals"
-    bike_getter = getter(store.get_bike, 'id', 'bike_id')
+    bike_getter = getter(get_bike, 'id', 'bike_id')
 
     @bike_getter
     async def get(self, bike):
-        pass
+        """
+
+
+        :param bike:
+        :return:
+        """
+        return web.json_response([rental.serialize() for rental in await get_rentals(bike=bike)])
 
     @bike_getter
     async def post(self, bike):
@@ -76,13 +109,10 @@ class BikeRentalsView(BaseView):
 
         If the rental could not be made, (not authenticated
         or bike in use) it will fail with the appropriate message.
-
-        todo implement
         """
-
-    @bike_getter
-    async def patch(self, bike):
-        pass
+        user = await get_user()
+        rental = await start_rental(bike, user)
+        return web.json_response(rental.serialize())
 
 
 class BikeSocketView(BaseView):
@@ -175,7 +205,7 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        bike = [bike for bike in store.get_bikes() if bike.public_key == public_key]
+        bike = [bike for bike in await get_bikes() if bike.public_key == public_key]
         if not bike:
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
         bike = bike[0]

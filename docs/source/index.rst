@@ -28,6 +28,7 @@ Welcome to the documentation for the tap2go server. If you are looking for api d
    server/store
    server/views
    server/server
+   server/service
 
 .. toctree::
    :maxdepth: 2

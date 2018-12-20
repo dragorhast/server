@@ -30,12 +30,12 @@ def getter(getter_function, var_name, key):
         """
 
         @wraps(decorated)
-        def new_func(self: View):
+        async def new_func(self: View):
             item_id = int(self.request.match_info.get(var_name))
-            item = getter_function(**{key: item_id})
+            item = await getter_function(**{key: item_id})
             if item is None:
                 raise web.HTTPNotFound(reason="No item with that id.")
-            return decorated(self, item)
+            return await decorated(self, item)
 
         return new_func
 

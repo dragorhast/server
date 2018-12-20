@@ -3,6 +3,7 @@ Handles all the user CRUD
 """
 from aiohttp import web
 
+from server.service import get_users
 from server.views.base import BaseView
 
 
@@ -13,7 +14,7 @@ class UsersView(BaseView):
     url = "/users"
 
     async def get(self):
-        return web.json_response([])
+        return web.json_response(get_users())
 
     async def post(self):
         pass
