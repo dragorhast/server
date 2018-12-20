@@ -9,14 +9,14 @@ For an example of this, see :class:`~server.views.bikes.BikeSocketView`.
 """
 
 import weakref
-from typing import Optional, Callable, Dict, Any
 
 from aiohttp.web_ws import WebSocketResponse
-from dataclasses import dataclass
+from typing import Optional, Callable, Dict, Any
+
+from tortoise import Model, fields
 
 
-@dataclass
-class Bike:
+class Bike(Model):
     """
     The main class for the bike.
 
@@ -27,16 +27,17 @@ class Bike:
     chances of crashes due to writing to closed sockets.
     """
 
-    bid: int
-    public_key: bytes
+    id = fields.IntField(pk=True)
+    public_key_hex = fields.TextField()
+    type = fields.TextField()
+
+    locked: bool = True
     _socket: Optional[Callable[[], Optional[WebSocketResponse]]] = None
     """
     A weak reference to the websocket. Weak references, when called,
     return the object they are supposed to reference, or None if it
     has been deleted.
     """
-
-    locked: bool = True
 
     def serialize(self) -> Dict[str, Any]:
         """
@@ -45,7 +46,7 @@ class Bike:
         :return: A dictionary.
         """
         data = {
-            "id": self.bid,
+            "id": self.id,
             "public_key": self.public_key.hex(),
             "connected": self._is_connected,
         }
@@ -54,6 +55,14 @@ class Bike:
             data["locked"] = self.locked
 
         return data
+
+    @property
+    def public_key(self):
+        if hasattr(self, '_public_key'):
+            return self._public_key
+        else:
+            self._public_key = bytes.fromhex(self.public_key_hex)
+            return self._public_key
 
     @property
     def _is_connected(self):
