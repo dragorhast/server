@@ -16,4 +16,3 @@ logger.setLevel(logging.DEBUG if server_mode == "development" else logging.INFO)
 
 api_root = "/api/v1"
 """The base url for the api."""
-

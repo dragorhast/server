@@ -23,8 +23,8 @@ async def initialize_database(app):
         modules={'models': ['server.models']}
     )
 
-    # Generate the schema
-    await Tortoise.generate_schemas()
+    # try to generate the schema, ignoring if it exists
+    await Tortoise.generate_schemas(safe=True)
 
 
 async def start_background_tasks(app):
