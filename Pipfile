@@ -5,7 +5,8 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
-pytest-asyncio = "*"
+pytest-asyncio = {git = "https://github.com/Zac-HD/pytest-asyncio.git",ref="hypothesis"}
+hypothesis = "*"
 pytest-cov = "*"
 codecov = "*"
 pylint = "*"

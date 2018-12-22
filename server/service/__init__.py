@@ -5,44 +5,76 @@ service layer to implement their logic.
 
 The service layer implements the use cases for the system.
 """
-from typing import Optional, Union, Iterable
+from typing import Optional, Union
+
+from tortoise.exceptions import DoesNotExist
 
 from server.models import Bike, User, RentalUpdate, RentalUpdateType
+
+MASTER_KEY = 0xdeadbeef.to_bytes(4, "big")
 
 
 async def get_bikes():
     """Gets all the bikes from the system."""
-    return await Bike.get()
+    return await Bike.all()
 
 
 async def get_bike(*, bike_id: Optional[int] = None,
-                   public_key: Optional[bytes] = None):
+                   public_key: Optional[bytes] = None) -> Optional[Bike]:
     """Gets a bike from the system."""
-    return await Bike.get(id=bike_id, public_key_hex=public_key.hex()).first()
+    kwargs = {}
+
+    if bike_id:
+        kwargs["id"] = bike_id
+    if public_key:
+        kwargs["public_key_hex"] = public_key.hex()
+
+    try:
+        return await Bike.get(**kwargs).first()
+    except DoesNotExist:
+        return None
 
 
-async def create_bike(public_key: Union[str, bytes]) -> Bike:
+class BadKeyException(Exception):
+    pass
+
+
+async def register_bike(public_key: Union[str, bytes], master_key: Union[str, bytes]) -> Bike:
     """
-    Creates a bike and returns it.
+    Register a bike with the system, and return it.
 
     :param public_key: The public key, or a string hex representation of it.
+    :param master_key: The master key, or a string hex representation of it.
+    :raises TypeError: if the key is not the right type
     :raises ValueError: If the key is not hex string
+    :raises BadKeyException: If the master key is not correct
     """
 
-    if not isinstance(public_key, str) or isinstance(public_key, bytes):
-        raise TypeError
+    keys = {
+        "pub": public_key,
+        "master": master_key
+    }
 
-    if isinstance(public_key, str):
-        try:
-            public_key = bytes.fromhex(public_key)
-        except ValueError:
-            raise ValueError("Key is not a hex string!")
+    # check keys for type and convert to bytes
+    for name, value in keys.items():
+        if not isinstance(value, str) and not isinstance(value, bytes):
+            raise TypeError("%s has incorrect type %s", name, type(value))
 
-    existing = await store.get_bike(public_key=public_key)
+        if isinstance(value, str):
+            try:
+                keys[name] = bytes.fromhex(value)
+            except ValueError:
+                raise ValueError("Public key is not a hex string!")
+
+    if not master_key == MASTER_KEY:
+        raise BadKeyException
+
+    existing = await get_bike(public_key=keys["pub"])
+
     if existing is not None:
         return existing
 
-    return await store.add_bike(public_key)
+    return await Bike.create(public_key_hex=keys["pub"].hex())
 
 
 async def lock_bike(public_key, value):
