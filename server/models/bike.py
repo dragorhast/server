@@ -9,11 +9,17 @@ For an example of this, see :class:`~server.views.bikes.BikeSocketView`.
 """
 
 import weakref
-
-from aiohttp.web_ws import WebSocketResponse
+from enum import Enum
 from typing import Optional, Callable, Dict, Any
 
+from aiohttp.web_ws import WebSocketResponse
 from tortoise import Model, fields
+
+from server.models.fields import EnumField
+
+
+class BikeType(Enum):
+    ROAD = "road"
 
 
 class Bike(Model):
@@ -28,8 +34,8 @@ class Bike(Model):
     """
 
     id = fields.IntField(pk=True)
-    public_key_hex = fields.TextField()
-    type = fields.TextField()
+    public_key_hex = fields.CharField(max_length=64)
+    type = EnumField(enum_type=BikeType, default=BikeType.ROAD)
 
     locked: bool = True
     _socket: Optional[Callable[[], Optional[WebSocketResponse]]] = None
