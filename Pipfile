@@ -5,7 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
-pytest-asyncio = {git = "https://github.com/Zac-HD/pytest-asyncio.git",ref="hypothesis"}
+pytest-asyncio = {git = "https://github.com/Zac-HD/pytest-asyncio.git",ref = "hypothesis"}
 hypothesis = "*"
 pytest-cov = "*"
 codecov = "*"
@@ -13,6 +13,7 @@ pylint = "*"
 mypy = "*"
 safety = "*"
 bandit = "*"
+pytest-aiohttp = "*"
 
 [packages]
 # aiohttp
@@ -30,7 +31,8 @@ hyperion-cli = "*"
 pynacl = "*"
 aiobreaker = "*"
 dataclasses = "*"
-tortoise-orm = "*"
+marshmallow = ">=3rc1"
+tortoise-orm = {git = "https://github.com/arlyon/tortoise-orm.git",ref = "testing"}
 aiosqlite = "*"
 # docs
 sphinx = "*"
@@ -47,3 +49,6 @@ server = "python -m server"
 test = "python -m pytest --cov=server tests"
 docs = "sphinx-build docs/source docs/build"
 auto-docs = "sphinx-autobuild docs/source docs/build"
+
+[pipenv]
+allow_prereleases = true

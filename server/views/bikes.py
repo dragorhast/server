@@ -3,13 +3,18 @@ Handles all the bike CRUD
 """
 
 from aiohttp import web, WSMsgType
+from marshmallow import Schema
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
-from server.ticket_store import TicketStore
 
 from server import logger
-from server.service import get_bike, get_bikes, create_bike, get_rentals, get_user, start_rental, lock_bike
+from server.models.bike import BikeType
+from server.serializer.fields import BytesField, EnumField
+from server.serializer.jsend import JSendStatus, JSendSchema
+from server.service import get_bike, get_bikes, register_bike, get_rentals, get_user, start_rental, \
+    lock_bike
+from server.ticket_store import TicketStore
 from server.views.base import BaseView
 from server.views.utils import getter
 
@@ -18,7 +23,6 @@ class BikesView(BaseView):
     """
     Gets the bikes, or adds a new bike.
 
-
     .. versionadded:: 0.1.0
     """
     url = "/bikes"
@@ -26,21 +30,24 @@ class BikesView(BaseView):
     async def get(self):
         return web.json_response({
             "status": "success",
-            "data": list(bike.serialize() for bike in await get_bikes())
+            "data": [bike.serialize() for bike in await get_bikes()]
         })
 
     async def post(self):
         """
         Accepts:
-            {"public_key": xxxx}
+            {"public_key": xxxx, "type": Optional, "master_key": xxxx}
+
+            The public key is the key for the bike, and the master key
+            is the server accepted key for adding bikes.
         """
         bike_data = await self.request.json()
 
-        if "public_key" not in bike_data:
-            raise web.HTTPBadRequest(reason="Must include public key.")
+        schema = BikeRegisterSchema()
+        bike_data = schema.load(bike_data)
 
         try:
-            bike = await create_bike(bike_data["public_key"])
+            bike = await register_bike(bike_data["public_key"], bike_data["master_key"])
         except ValueError as e:
             raise web.HTTPBadRequest(reason=e)
         return web.json_response({
@@ -55,10 +62,16 @@ class BikeView(BaseView):
     """
     url = "/bikes/{id:[0-9]+}"
     bike_getter = getter(get_bike, 'id', 'bike_id')
+    schema = JSendSchema()
 
     @bike_getter
     async def get(self, bike):
-        return web.json_response(bike.serialize())
+        json_response = self.schema.dump({
+            "status": JSendStatus.SUCCESS,
+            "data": bike.serialize()
+        })
+
+        return web.json_response(json_response)
 
     @bike_getter
     async def delete(self, bike):
@@ -209,3 +222,9 @@ class BikeSocketView(BaseView):
 
         challenge = self.open_tickets.add_ticket(self.request.remote, bike)
         return web.Response(body=challenge)
+
+
+class BikeRegisterSchema(Schema):
+    public_key = BytesField()
+    master_key = BytesField()
+    type = EnumField(BikeType)

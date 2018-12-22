@@ -3,6 +3,8 @@ from functools import wraps
 from aiohttp import web
 from aiohttp.web_urldispatcher import View
 
+from server.serializer.jsend import JSendStatus, JSendSchema
+
 
 def getter(getter_function, var_name, key):
     """
@@ -34,7 +36,13 @@ def getter(getter_function, var_name, key):
             item_id = int(self.request.match_info.get(var_name))
             item = await getter_function(**{key: item_id})
             if item is None:
-                raise web.HTTPNotFound(reason="No item with that id.")
+                schema = JSendSchema()
+                response = {
+                    "status": JSendStatus.FAIL,
+                    "data": {"id": f"Invalid {key} supplied"}
+                }
+
+                raise web.HTTPNotFound(text=schema.dumps(response), content_type='application/json')
             return await decorated(self, item)
 
         return new_func

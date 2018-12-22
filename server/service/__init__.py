@@ -51,8 +51,8 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
     """
 
     keys = {
-        "pub": public_key,
-        "master": master_key
+        "public_key": public_key,
+        "master_key": master_key
     }
 
     # check keys for type and convert to bytes
@@ -66,15 +66,15 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
             except ValueError:
                 raise ValueError("Public key is not a hex string!")
 
-    if not master_key == MASTER_KEY:
+    if not keys["master_key"] == MASTER_KEY:
         raise BadKeyException
 
-    existing = await get_bike(public_key=keys["pub"])
+    existing = await get_bike(public_key=keys["public_key"])
 
     if existing is not None:
         return existing
 
-    return await Bike.create(public_key_hex=keys["pub"].hex())
+    return await Bike.create(public_key_hex=keys["public_key"].hex())
 
 
 async def lock_bike(public_key, value):
