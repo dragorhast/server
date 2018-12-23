@@ -38,10 +38,10 @@ class JSendSchema(Schema):
                     "When the status is %s, the message fields must be populated.", data["status"])
 
     @staticmethod
-    def of(data_type: Type):
+    def of(data_type: Type, *args, **kwargs):
         """Creates a subclass of JSendSchema of a specific data type."""
 
         class TypedJSendSchema(JSendSchema):
-            data = fields.Nested(data_type)
+            data = fields.Nested(data_type, *args, **kwargs)
 
         return TypedJSendSchema()

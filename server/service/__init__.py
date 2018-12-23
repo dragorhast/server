@@ -5,7 +5,7 @@ service layer to implement their logic.
 
 The service layer implements the use cases for the system.
 """
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 
 from tortoise.exceptions import DoesNotExist
 
@@ -14,7 +14,7 @@ from server.models import Bike, User, RentalUpdate, RentalUpdateType
 MASTER_KEY = 0xdeadbeef.to_bytes(4, "big")
 
 
-async def get_bikes():
+async def get_bikes() -> Iterable[Bike]:
     """Gets all the bikes from the system."""
     return await Bike.all()
 
@@ -108,28 +108,16 @@ async def get_rentals(bike: Union[int, Bike]):
     todo: Properly determine all rentals and maybe cache.
     """
     if isinstance(bike, Bike):
-        bid = bike.bid
+        id = bike.id
     elif isinstance(bike, int):
-        bid = bike
+        id = bike
     else:
         raise TypeError("Must be bike id or bike.")
 
-    return await RentalUpdate.get()
+    return await RentalUpdate.filter(bike=bike)
 
 
-async def start_rental(bike, user):
-    """
-
-    :param bike:
-    :param user:
-    :return:
-
-    todo: implement
-    """
-    update = RentalUpdate(user, bike, RentalUpdateType.RENT)
-
-
-async def get_user() -> User:
+async def get_user(firebase_id) -> User:
     """
 
     :return:

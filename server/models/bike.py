@@ -16,6 +16,7 @@ from aiohttp.web_ws import WebSocketResponse
 from tortoise import Model, fields
 
 from server.models.fields import EnumField
+from server.serializer import BikeSchema
 
 
 class BikeType(Enum):
@@ -51,14 +52,14 @@ class Bike(Model):
 
         :return: A dictionary.
         """
-        data = {
-            "id": self.id,
-            "public_key": self.public_key.hex(),
-            "connected": self._is_connected,
-        }
+        schema = BikeSchema(exclude=("connected", "locked"))
 
-        if data["connected"]:
-            data["locked"] = self.locked
+        data = schema.dump({
+            "id": self.id,
+            "public_key": self.public_key,
+            "connected": self._is_connected,
+            "locked": self.locked
+        })
 
         return data
 

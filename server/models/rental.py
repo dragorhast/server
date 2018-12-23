@@ -1,7 +1,17 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 
 from tortoise import Model, fields
+
+from server.models.fields import EnumField
+
+
+class RentalUpdateType(Enum):
+    RENT = "rent"
+    RETURN = "return"
+    LOCK = "lock"
+    UNLOCK = "unlock"
+    CANCEL = "cancel"
 
 
 class RentalUpdate(Model):
@@ -11,12 +21,5 @@ class RentalUpdate(Model):
 
     user = fields.ForeignKeyField(model_name="models.User")
     bike = fields.ForeignKeyField(model_name="models.Bike")
-    type = fields.IntField()
+    type = EnumField(RentalUpdateType)
     time: datetime = fields.DatetimeField(auto_now_add=True)
-
-
-class RentalUpdateType(Enum):
-
-    RENT = 0
-    RETURN = 1
-

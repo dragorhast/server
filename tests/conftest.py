@@ -15,7 +15,7 @@ from tests.util import random_key
 
 
 @pytest.yield_fixture
-async def database():
+async def database(loop):
     await Tortoise.init(
         db_url="sqlite://:memory:",
         modules={'models': ['server.models']})
@@ -29,7 +29,7 @@ async def database():
 
 
 @pytest.fixture
-def client(aiohttp_client, loop) -> TestClient:
+async def client(aiohttp_client, loop) -> TestClient:
     asyncio.get_event_loop().set_debug(True)
     app = web.Application()
 
@@ -38,7 +38,7 @@ def client(aiohttp_client, loop) -> TestClient:
     register_signals(app)
     register_views(app.router, "/api/v1")
 
-    return loop.run_until_complete(aiohttp_client(app))
+    return await aiohttp_client(app)
 
 
 @pytest.fixture
