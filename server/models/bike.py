@@ -39,11 +39,11 @@ class Bike(Model):
     type = EnumField(enum_type=BikeType, default=BikeType.ROAD)
 
     locked: bool = True
-    _socket: Optional[Callable[[], Optional[WebSocketResponse]]] = None
+    _socket: Callable[..., Optional[WebSocketResponse]] = lambda *args: None
     """
     A weak reference to the websocket. Weak references, when called,
     return the object they are supposed to reference, or None if it
-    has been deleted.
+    has been deleted. We set it to lambda None to emulate this behaviour.
     """
 
     def serialize(self) -> Dict[str, Any]:
@@ -77,7 +77,7 @@ class Bike(Model):
         Checks if the bike has been assigned a weak reference
         to a socket and if the socket is still alive.
         """
-        return self._socket is not None and self._socket() is not None
+        return self._socket() is not None
 
     def _set_socket(self, socket):
         self._socket = weakref.ref(socket)
@@ -90,10 +90,12 @@ class Bike(Model):
         Locks or unlocks the bike.
 
         :param locked: The status to set the bike to.
-        :return: None
         :raises ConnectionError: If the socket is not open.
         """
-        if not self._is_connected:
+        socket = self._socket()
+
+        if not self._is_connected or socket is None:
             raise ConnectionError("No open socket.")
-        await self._socket().send_str("lock" if locked else "unlock")
+
+        await socket.send_str("lock" if locked else "unlock")
         self.locked = locked

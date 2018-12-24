@@ -4,7 +4,7 @@ from server.models.bike import BikeType, Bike
 from server.serializer import BikeSchema, RentalSchema
 from server.serializer.jsend import JSendStatus, JSendSchema
 from server.service import MASTER_KEY
-from server.views import BikeRegisterSchema, CreateRentalSchema
+from server.views import BikeRegisterSchema
 from tests.util import random_key
 
 
@@ -118,25 +118,7 @@ async def test_get_bike_rentals(client: TestClient):
     await test_register_bike(client)
 
     response = await client.get(f'/api/v1/bikes/1/rentals')
-    response_schema = JSendSchema.of(RentalSchema(), many=True)
-    data = await response.json()
+    response_schema = JSendSchema.of(RentalSchema(many=True))
+    data = response_schema.load(await response.json())
 
     assert data["status"] == JSendStatus.SUCCESS
-
-
-async def test_create_bike_rental(client: TestClient):
-    """Assert that you can rent a bike out."""
-
-    await test_register_bike(client)
-
-    request_schema = CreateRentalSchema()
-    response_schema = JSendSchema.of(RentalSchema())
-
-    request = request_schema.dump({"firebase_id": "test_user"})
-
-    response = await client.post(f'/api/v1/bikes/1/rentals', json=request)
-    response_data = await response.text()
-
-    pass
-
-

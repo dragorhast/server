@@ -1,5 +1,4 @@
 import pytest
-from hypothesis import given, strategies
 
 from server.models import Bike
 from server.service import get_bikes, get_bike, register_bike, BadKeyException, MASTER_KEY

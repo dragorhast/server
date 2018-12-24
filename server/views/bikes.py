@@ -4,7 +4,6 @@ Handles all the bike CRUD
 
 from aiohttp import web, WSMsgType
 from marshmallow import Schema, ValidationError
-from marshmallow.fields import String
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey

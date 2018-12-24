@@ -5,7 +5,7 @@ service layer to implement their logic.
 
 The service layer implements the use cases for the system.
 """
-from typing import Optional, Union, Iterable
+from typing import Optional, Union, Iterable, Any, Dict
 
 from tortoise.exceptions import DoesNotExist
 
@@ -22,7 +22,7 @@ async def get_bikes() -> Iterable[Bike]:
 async def get_bike(*, bike_id: Optional[int] = None,
                    public_key: Optional[bytes] = None) -> Optional[Bike]:
     """Gets a bike from the system."""
-    kwargs = {}
+    kwargs: Dict = {}
 
     if bike_id:
         kwargs["id"] = bike_id
@@ -50,48 +50,53 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
     :raises BadKeyException: If the master key is not correct
     """
 
+    def clean_key(name, key) -> bytes:
+        if not isinstance(key, str) and not isinstance(key, bytes):
+            raise TypeError(f"{name} has incorrect type {type(key)}")
+
+        if isinstance(key, str):
+            try:
+                return bytes.fromhex(key)
+            except ValueError:
+                raise ValueError("Public key is not a hex string!")
+
+        return key
+
     keys = {
         "public_key": public_key,
         "master_key": master_key
     }
 
-    # check keys for type and convert to bytes
-    for name, value in keys.items():
-        if not isinstance(value, str) and not isinstance(value, bytes):
-            raise TypeError("%s has incorrect type %s", name, type(value))
+    cleaned_keys = {
+        name: clean_key(name, key)
+        for name, key in keys.items()
+    }
 
-        if isinstance(value, str):
-            try:
-                keys[name] = bytes.fromhex(value)
-            except ValueError:
-                raise ValueError("Public key is not a hex string!")
-
-    if not keys["master_key"] == MASTER_KEY:
+    if not cleaned_keys["master_key"] == MASTER_KEY:
         raise BadKeyException
 
-    existing = await get_bike(public_key=keys["public_key"])
+    existing = await get_bike(public_key=cleaned_keys["public_key"])
 
     if existing is not None:
         return existing
 
-    return await Bike.create(public_key_hex=keys["public_key"].hex())
+    return await Bike.create(public_key_hex=cleaned_keys["public_key"].hex())
 
 
-async def lock_bike(public_key, value):
+async def lock_bike(public_key, value) -> None:
     """
     Locks or unlocks the bike with a public key.
 
     :param public_key: The key for the bike.
     :param value: The locked or unlocked value.
     :return: True if successful.
-    :raises Exception: If the bike is not connected.
+    :raises ConnectionError: If the bike is not connected.
     """
-    bike: Bike = Bike.get(public_key_hex=public_key.hex()).first()
-    if not bike._is_connected:
-        raise Exception
-
-    await bike.set_locked(value)
-    return True
+    bike: Bike = await Bike.get(public_key_hex=public_key.hex()).first()
+    try:
+        await bike.set_locked(value)
+    except ConnectionError as e:
+        raise e
 
 
 async def get_users():
@@ -108,20 +113,18 @@ async def get_rentals(bike: Union[int, Bike]):
     todo: Properly determine all rentals and maybe cache.
     """
     if isinstance(bike, Bike):
-        id = bike.id
+        bid = bike.id
     elif isinstance(bike, int):
-        id = bike
+        bid = bike
     else:
         raise TypeError("Must be bike id or bike.")
 
-    return await RentalUpdate.filter(bike=bike)
+    return await RentalUpdate.filter(bike__id=bid)
 
 
 async def get_user(firebase_id) -> User:
     """
 
-    :return:
-
-    todo: implement
+    :return: The user with the given firebase id.
     """
-    return await User.get().first()
+    return await User.filter(firebase_id=firebase_id).first()

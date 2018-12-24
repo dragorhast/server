@@ -1,15 +1,13 @@
 from enum import Enum, IntEnum
-from typing import Union, Optional, TypeVar
+from typing import Union, Optional, Type
 
 from marshmallow import fields, ValidationError
-
-T = TypeVar("T")
 
 
 class BytesField(fields.Field):
     """A field that maps bytes or a hex string to and from a hex string."""
 
-    def __init__(self, max_length: Optional[int] = None, *args, **kwargs):
+    def __init__(self, *args, max_length: Optional[int] = None, **kwargs):
         """
 
         :param max_length: The maximum length of the hex-encoded string.
@@ -45,7 +43,7 @@ class BytesField(fields.Field):
 class EnumField(fields.Field):
     """A field that maps a value to and from an enum."""
 
-    def __init__(self, enum_type: T, use_name=False, as_string=False, *args, **kwargs):
+    def __init__(self, enum_type: Type[Enum], *args, use_name=False, as_string=False, **kwargs):
         """
         :param enum_type: theEnum (or enum.IntEnum) subclass
         :param use_name: use enum's property name instead of value when serialize
@@ -58,24 +56,26 @@ class EnumField(fields.Field):
         self.use_name = use_name
         self.as_string = as_string
 
-    def _serialize(self, value: T, attr, obj, **kwargs):
+    def _serialize(self, value: Enum, attr, obj, **kwargs):
         """Converts an enum to a string representation."""
         if value is not None:
             if self.use_name:
                 return value.name
-            elif self.as_string:
+            if self.as_string:
                 return str(value.value)
-            else:
-                return value.value
+            return value.value
+        return None
 
-    def _deserialize(self, value: str, attr, data, **kwargs) -> T:
+    def _deserialize(self, value: str, attr, data, **kwargs) -> Optional[Enum]:
         """Converts a string back to the enum type T."""
         try:
             if self.use_name:
                 return self._enum_type[value]
-            elif issubclass(self._enum_type, IntEnum):
+            if issubclass(self._enum_type, IntEnum):
                 return self._enum_type(int(value))
-            elif issubclass(self._enum_type, Enum):
+            if issubclass(self._enum_type, Enum):
                 return self._enum_type(value)
         except Exception:
             raise ValidationError(f"Field does not exist on {self._enum_type}.")
+        else:
+            return None
