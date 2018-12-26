@@ -45,5 +45,13 @@ Some examples of valid formats are listed below:
 - 1.10.3
 - 2.0.0rc1
 
+Documentation
+-------------
+
+Try to use `Semantic Line Breaks`_ when possible when writing documentation that will frequently change.
+
+
+
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/
 .. _PEP440: https://www.python.org/dev/peps/pep-0440/
+.. _`Semantic Line Breaks`: http://sembr.org/

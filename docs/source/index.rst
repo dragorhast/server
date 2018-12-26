@@ -16,7 +16,6 @@ Welcome to the documentation for the tap2go server. If you are looking for api d
    style
    bike-protocol
    authentication
-   communication
    design
    database
 
@@ -25,10 +24,10 @@ Welcome to the documentation for the tap2go server. If you are looking for api d
    :caption: Server
 
    server/models
-   server/store
    server/views
    server/server
    server/service
+   server/serializer
 
 .. toctree::
    :maxdepth: 2

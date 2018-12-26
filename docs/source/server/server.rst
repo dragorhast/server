@@ -1,7 +1,15 @@
-tap2go Server
-=============
+Server
+======
 
 .. automodule:: server
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Apps Submodule
+--------------
+
+.. automodule:: server.app
     :members:
     :undoc-members:
     :show-inheritance:
