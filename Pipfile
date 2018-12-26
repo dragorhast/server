@@ -20,7 +20,7 @@ idna-ssl = "*"
 gunicorn = "*"
 #uvloop
 cython = "*"
-uvloop = {git = "https://github.com/MagicStack/uvloop.git",ref = "v0.12.0rc1"}
+uvloop = {git = "https://github.com/MagicStack/uvloop.git", ref = "releases"}
 #sentry
 sentry-sdk = "*"
 aiohttp-sentry = "*"
