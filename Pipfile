@@ -30,7 +30,7 @@ pynacl = "*"
 aiobreaker = "*"
 dataclasses = "*"
 marshmallow = ">=3rc1"
-tortoise-orm = {git = "https://github.com/arlyon/tortoise-orm.git",ref = "testing"}
+tortoise-orm = "*"
 aiosqlite = "*"
 # docs
 sphinx = "*"
