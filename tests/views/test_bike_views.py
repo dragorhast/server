@@ -1,6 +1,7 @@
 from aiohttp.test_utils import TestClient
 
-from server.models.bike import BikeType, Bike
+from server.models.bike import Bike
+from server.models.util import BikeType
 from server.serializer import BikeSchema, RentalSchema
 from server.serializer.jsend import JSendStatus, JSendSchema
 from server.service import MASTER_KEY

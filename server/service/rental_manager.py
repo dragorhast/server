@@ -2,64 +2,84 @@
 This module is what handles all the rentals in the system.
 """
 from collections import defaultdict
-from datetime import datetime
-from typing import NamedTuple, Callable, Dict, Optional, Set
+from typing import Callable, Dict, Set
 
-from server.models import User, Bike, RentalUpdate, RentalUpdateType
-from server.serializer import RentalSchema
+from server.models import User, Bike, RentalUpdate, Rental
+from server.models.util import RentalUpdateType
+from server.pricing import get_price
 
 
-class Rental(NamedTuple):
-    """An immutable rental handle. To modify, please use the rental manager."""
-    user: User
-    bike: Bike
-    start_time: datetime = datetime.now()
-    end_time: Optional[datetime] = None
+class InactiveRentalError(Exception):
+    pass
 
-    def _end(self):
-        return Rental(self.user, self.bike, self.start_time, datetime.now())
 
-    def serialize(self):
-        schema = RentalSchema()
-
-        rental_data = {
-            "user": self.user,
-            "bike": self.bike,
-            "start_time": self.start_time,
-        }
-
-        if self.end_time:
-            rental_data["end_time"] = self.end_time
-
-        return schema.dump(rental_data)
+class ActiveRentalError(Exception):
+    pass
 
 
 class RentalManager:
     """
     Handles the lifecycle of the rental in the system.
+
+    todo: When the server restarts with active rentals, they are not rebuilt.
     """
 
-    _rentals: Dict[User, Rental] = {}
-    _subscribers: Dict[Rental, Set[Callable]] = defaultdict(set)
+    def __init__(self):
+        self._rentals = {}
+        self._subscribers = defaultdict(set)
+
+    _rentals: Dict[int, int]
+    """Maps user ids to their current rental."""
+
+    _subscribers: Dict[int, Set[Callable]]
+    """Maps a rental to a set of event subscribers."""
+
+    async def rebuild(self):
+        """
+        Rebuilds the currently active rentals from the database.
+
+        todo Fix tortoise to correctly map types with the serializer
+        """
+        unfinished_rentals = await Rental.filter(
+            updates__type__not_in=(t.value for t in RentalUpdateType.terminating_types()))
+        for rental in unfinished_rentals:
+            self._rentals[rental.user_id] = rental.id
 
     async def create(self, user: User, bike: Bike) -> Rental:
         """Creates a new rental for a user."""
-        rental = Rental(user, bike)
+        if user.id in self._rentals:
+            raise ActiveRentalError
+
+        rental = await Rental.create(user=user, bike=bike)
         await self._publish_event(rental, RentalUpdateType.RENT)
-        self._rentals[user] = rental
+        self._rentals[user.id] = rental.id
         return rental
 
-    async def finish(self, rental: Rental):
-        """Completes a rental."""
+    async def finish(self, rental: Rental, *, extra_cost=0.0):
+        """
+        Completes a rental.
+
+        :raises InactiveRentalError: When there is no active rental for that user.
+        """
+        user = await User.filter(id=rental.user_id).first()
+        if user.id not in self._rentals:
+            raise InactiveRentalError
+
         await self._publish_event(rental, RentalUpdateType.RETURN)
-        del self._rentals[rental.user]
-        return rental._end()
+        rental_events = await RentalUpdate.filter(rental=rental).order_by('time')
+        rental.price = await get_price(rental_events[0].time, rental_events[-1].time, extra_cost)
+        del self._rentals[user.id]
+        return await rental.save()
 
     async def cancel(self, rental: Rental):
         """Cancels a rental, effective immediately, waiving the rental fee."""
+        user = await User.filter(id=rental.user_id).first()
+        if user.id not in self._rentals:
+            raise InactiveRentalError
+
         await self._publish_event(rental, RentalUpdateType.CANCEL)
-        del self._rentals[rental.user]
-        return rental._end()
+        del self._rentals[user.id]
+        return rental
 
     async def lock(self, rental: Rental, set_to: bool):
         """Locks a bike."""
@@ -68,8 +88,8 @@ class RentalManager:
             RentalUpdateType.LOCK if set_to else RentalUpdateType.UNLOCK
         )
 
-    async def _publish_event(self, rental, event_type: RentalUpdateType):
-        await RentalUpdate.create(user=rental.user, bike=rental.bike, type=event_type)
+    async def _publish_event(self, rental: Rental, event_type: RentalUpdateType):
+        await RentalUpdate.create(rental=rental, type=event_type)
         for subscriber in self._subscribers[rental]:
             subscriber(rental, event_type)
 
@@ -78,8 +98,9 @@ class RentalManager:
         self._subscribers[rental].add(handler)
 
     def unsubscribe(self, rental: Rental, handler):
-        """Unsubscribes a handler from a rental's events."""
+        """Un-subscribes a handler from a rental's events."""
         self._subscribers[rental].remove(handler)
 
 
 rental_manager = RentalManager()
+rental_manager.rebuild()

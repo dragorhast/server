@@ -4,18 +4,17 @@ Handles all the bike CRUD
 
 from aiohttp import web, WSMsgType
 from marshmallow import Schema, ValidationError
+from marshmallow.fields import String
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
 from server import logger
-from server.models.bike import BikeType, Bike
-from server.serializer import BikeSchema, RentalSchema
-from server.serializer.fields import BytesField, EnumField
-from server.serializer.jsend import JSendStatus, JSendSchema
+from server.models.bike import Bike
+from server.models.util import BikeType
+from server.serializer import BikeSchema, RentalSchema, BytesField, EnumField, JSendStatus, JSendSchema
 from server.service import get_bike, get_bikes, register_bike, get_rentals, get_user, \
-    lock_bike, BadKeyException
-from server.ticket_store import TicketStore
+    lock_bike, BadKeyError, TicketStore, rental_manager
 from server.views.base import BaseView
 from server.views.utils import getter
 
@@ -58,7 +57,7 @@ class BikesView(BaseView):
 
         try:
             bike = await register_bike(bike_data["public_key"], bike_data["master_key"])
-        except (ValueError, BadKeyException) as e:
+        except (ValueError, BadKeyError) as e:
             response = response_schema.dump({
                 "status": JSendStatus.FAIL,
                 "data": e.args if isinstance(e, ValueError) else "Incorrect master key"
@@ -141,9 +140,16 @@ class BikeRentalsView(BaseView):
         If the rental could not be made, (not authenticated
         or bike in use) it will fail with the appropriate message.
         """
-        user = await get_user()
-        rental = await start_rental(bike, user)
-        return web.json_response(rental.serialize())
+        request_schema = CreateRentalSchema()
+        response_schema = JSendSchema.of(RentalSchema())
+
+        request = request_schema.load(await self.request.json())
+
+        user = await get_user(request["firebase_id"])
+        rental = await rental_manager.create(user, bike)
+
+        response = response_schema.dump(rental.serialize())
+        return web.json_response(response)
 
 
 class BikeSocketView(BaseView):
@@ -168,7 +174,7 @@ class BikeSocketView(BaseView):
         if not await ws.receive_str() == "verified":
             raise Exception
 
-    For more detail about the auth process, see :doc:`/communication`.
+    For more detail about the auth process, see :doc:`/bike-protocol`.
     """
 
     url = "/bikes/connect"
@@ -243,6 +249,13 @@ class BikeSocketView(BaseView):
 
         challenge = self.open_tickets.add_ticket(self.request.remote, bike)
         return web.Response(body=challenge)
+
+
+class CreateRentalSchema(Schema):
+    """The schema to start a bike rental."""
+
+    firebase_id = String()
+    """The user to start the rental as."""
 
 
 class BikeRegisterSchema(Schema):

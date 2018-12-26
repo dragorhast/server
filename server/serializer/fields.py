@@ -1,3 +1,7 @@
+"""
+Defines some additional fields so that the Schemas can serialize to and from native python data types.
+"""
+
 from enum import Enum, IntEnum
 from typing import Union, Optional, Type
 
@@ -5,11 +9,13 @@ from marshmallow import fields, ValidationError
 
 
 class BytesField(fields.Field):
-    """A field that maps bytes or a hex string to and from a hex string."""
+    """
+    A field that serializes :class:`bytes` or a hex-encoded :class:`str`
+    to a hex-encoded :class:`str` and de-serializes it back to :class:`bytes`.
+    """
 
     def __init__(self, *args, max_length: Optional[int] = None, **kwargs):
         """
-
         :param max_length: The maximum length of the hex-encoded string.
         """
         super().__init__(*args, **kwargs)
@@ -41,7 +47,9 @@ class BytesField(fields.Field):
 
 
 class EnumField(fields.Field):
-    """A field that maps a value to and from an enum."""
+    """
+    A fields the serializes an :class:`Enum` to a :class:`str` and back.
+    """
 
     def __init__(self, enum_type: Type[Enum], *args, use_name=False, as_string=False, **kwargs):
         """

@@ -1,7 +1,7 @@
 import pytest
 
 from server.models import Bike
-from server.service import get_bikes, get_bike, register_bike, BadKeyException, MASTER_KEY
+from server.service import get_bikes, get_bike, register_bike, BadKeyError, MASTER_KEY
 from tests.util import random_key
 
 
@@ -34,7 +34,7 @@ async def test_create_bike(database):
 
 async def test_create_bike_bad_master(database):
     """Assert that creating a bike with the wrong key fails."""
-    with pytest.raises(BadKeyException):
+    with pytest.raises(BadKeyError):
         await register_bike(random_key(32), "BADBAD")
 
 

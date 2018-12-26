@@ -8,7 +8,7 @@ from typing import Optional
 from aiohttp.web import View, UrlDispatcher
 
 
-class ViewURLException(Exception):
+class ViewURLError(Exception):
     """
     Raised if the view doesn't provide a URL.
     """
@@ -30,9 +30,9 @@ class BaseView(View):
         """
         Registers the view with the given router.
 
-        :raises ViewURLException: If the URL hasn't been set on the given view.
+        :raises ViewURLError: If the URL hasn't been set on the given view.
         """
         if cls.url is None:
-            raise ViewURLException("No url provided!")
+            raise ViewURLError("No URL provided!")
         url = base + cls.url if base is not None else cls.url
         router.add_view(url, cls)

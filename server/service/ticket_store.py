@@ -6,10 +6,10 @@ to be persisted.
 """
 
 from asyncio import sleep
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Set
 
+from dataclasses import dataclass, field
 from nacl.utils import random
 
 from server import logger
@@ -32,7 +32,7 @@ class BikeConnectionTicket:
         return hash((self.bike.public_key, self.remote))
 
 
-class TooManyTicketException(Exception):
+class TooManyTicketError(Exception):
     """Raised when the store is full."""
 
 
@@ -61,14 +61,13 @@ class TicketStore:
         """
         Adds a ticket to the store.
 
-        :raise TooManyTicketException: The ticket queue is full.
-        :raise DuplicateTicketException: A similar ticket exists.
+        :raise TooManyTicketError: The ticket queue is full.
         """
 
         tickets = {t for t in self._tickets if t.remote == remote}
 
         if len(tickets) >= self.max_tickets_per_remote:
-            raise TooManyTicketException()
+            raise TooManyTicketError()
 
         challenge = random(64)
         ticket = BikeConnectionTicket(challenge, bike, remote)

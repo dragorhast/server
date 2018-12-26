@@ -13,7 +13,8 @@ from nacl.encoding import RawEncoder
 
 from fakebike import logger
 from fakebike.bike import Bike
-from server.views import BikeRegisterSchema, BikeType
+from server.views import BikeRegisterSchema
+from server.models.util import BikeType
 
 bikes = {
     0: Bike(0, bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55"),
@@ -28,7 +29,7 @@ bikes = {
 URL = "http://localhost:8080/api/v1/bikes"
 
 
-class AuthException(Exception):
+class AuthError(Exception):
     """Raised when there is an auth problem."""
     pass
 
@@ -47,7 +48,7 @@ async def create_ticket(session, bike: Bike):
     """
     async with session.post(URL + "/connect", data=bike.public_key.encode(RawEncoder)) as resp:
         if resp.status != 200 and resp.reason == "Identity not recognized.":
-            raise AuthException("public key not on server")
+            raise AuthError("public key not on server")
         return await resp.read()
 
 
@@ -64,7 +65,7 @@ async def bike_handler(session, bike: Bike, signed_challenge: bytes):
         await ws.send_bytes(signed_challenge)
         confirmation = await ws.receive_str()
         if "fail" in confirmation:
-            raise AuthException(confirmation.split(":")[1])
+            raise AuthError(confirmation.split(":")[1])
         else:
             logger.info(f"Bike {bike.bid} established connection")
             await ws.send_json({"locked": bike.locked})
@@ -112,7 +113,7 @@ async def start_session(bike: Bike):
                 challenge = await create_ticket(session, bike)
                 signature = bike.sign(challenge).signature
                 await bike_handler(session, bike, signature)
-            except AuthException as e:
+            except AuthError as e:
                 if "public key not on server" in e.args:
                     await register_bike(session, bike, 0xdeadbeef.to_bytes(4, "big"))
                 else:

@@ -3,7 +3,7 @@ from functools import wraps
 from aiohttp import web
 from aiohttp.web_urldispatcher import View
 
-from server.serializer.jsend import JSendStatus, JSendSchema
+from server.serializer import JSendStatus, JSendSchema
 
 
 def getter(getter_function, var_name, key):

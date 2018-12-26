@@ -1,13 +1,18 @@
+"""
+Programmatically defines the JSend specification.
+"""
+
 from enum import Enum
 from typing import Type
 
 from marshmallow import Schema, fields, validates_schema, ValidationError
 
-from server.serializer.fields import EnumField
+from server.serializer import BikeSchema
+from .fields import EnumField
 
 
 class JSendStatus(Enum):
-    """An Enum to quantify the JSend status states."""
+    """Enumerates the JSend status states."""
 
     SUCCESS = "success"
     """Everything went as expected."""
@@ -20,6 +25,11 @@ class JSendStatus(Enum):
 
 
 class JSendSchema(Schema):
+    """
+    A Schema that encapsulates the logic of the `JSend Format`_.
+
+    .. _`JSend Format`: https://labs.omniti.com/labs/jsend
+    """
     status = EnumField(JSendStatus, required=True)
     data = fields.Field()
     message = fields.String()
@@ -27,7 +37,12 @@ class JSendSchema(Schema):
 
     @validates_schema
     def ensure_fields(self, data):
-        """Ensures the required fields are available."""
+        """
+        Ensures that, according to the specification:
+
+        - the ``data`` field is included when the status is :attr:`~JSendStatus.SUCCESS` or :attr:`~JSendStatus.FAIL`
+        - the ``message`` field is included when the status is :attr:`~JSendStatus.ERROR`
+        """
         if data["status"] == JSendStatus.SUCCESS or data["status"] == JSendStatus.FAIL:
             if "data" not in data:
                 raise ValidationError(f"When status is {data['status']}, the data field must be populated.")
@@ -37,7 +52,15 @@ class JSendSchema(Schema):
 
     @staticmethod
     def of(data_type: Type, *args, **kwargs):
-        """Creates a subclass of JSendSchema of a specific data type."""
+        """
+        Creates a subclass of JSendSchema of a specific data type.
+
+        This allows us to require the ``data`` property to be of a specific schema.
+        As an example, to create a JSendSchema that expects a BikeSchema as the data:
+
+        >>> bike_schema = JSendSchema.of(BikeSchema())
+        >>> validated_data = bike_schema.load(await response.json())
+        """
 
         class TypedJSendSchema(JSendSchema):
             data = fields.Nested(data_type, *args, **kwargs)

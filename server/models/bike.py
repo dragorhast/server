@@ -9,18 +9,14 @@ For an example of this, see :class:`~server.views.bikes.BikeSocketView`.
 """
 
 import weakref
-from enum import Enum
 from typing import Optional, Callable, Dict, Any
 
 from aiohttp.web_ws import WebSocketResponse
 from tortoise import Model, fields
 
 from server.models.fields import EnumField
+from server.models.util import BikeType
 from server.serializer import BikeSchema
-
-
-class BikeType(Enum):
-    ROAD = "road"
 
 
 class Bike(Model):

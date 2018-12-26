@@ -4,7 +4,7 @@ import pytest
 from pytest import raises
 
 from server.models.bike import Bike
-from server.ticket_store import BikeConnectionTicket, TooManyTicketException
+from server.service import BikeConnectionTicket, TooManyTicketError
 
 
 @pytest.mark.asyncio
@@ -45,5 +45,5 @@ async def test_too_many_tickets(ticket_store, random_bike: Bike):
     """Make sure a remote may only add a limited number of tickets."""
     ticket_store.max_tickets_per_remote = 1
     ticket_store.add_ticket("127.0.0.1", random_bike)
-    with raises(TooManyTicketException):
+    with raises(TooManyTicketError):
         ticket_store.add_ticket("127.0.0.1", random_bike)

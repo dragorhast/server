@@ -5,11 +5,13 @@ service layer to implement their logic.
 
 The service layer implements the use cases for the system.
 """
-from typing import Optional, Union, Iterable, Any, Dict
+from typing import Optional, Union, Iterable, Dict
 
 from tortoise.exceptions import DoesNotExist
 
-from server.models import Bike, User, RentalUpdate, RentalUpdateType
+from server.models import Bike, User, RentalUpdate
+from .ticket_store import TicketStore, TooManyTicketError, BikeConnectionTicket
+from .rental_manager import rental_manager, InactiveRentalError, ActiveRentalError
 
 MASTER_KEY = 0xdeadbeef.to_bytes(4, "big")
 
@@ -35,7 +37,7 @@ async def get_bike(*, bike_id: Optional[int] = None,
         return None
 
 
-class BadKeyException(Exception):
+class BadKeyError(Exception):
     pass
 
 
@@ -47,7 +49,7 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
     :param master_key: The master key, or a string hex representation of it.
     :raises TypeError: if the key is not the right type
     :raises ValueError: If the key is not hex string
-    :raises BadKeyException: If the master key is not correct
+    :raises BadKeyError: If the master key is not correct
     """
 
     def clean_key(name, key) -> bytes:
@@ -73,7 +75,7 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
     }
 
     if not cleaned_keys["master_key"] == MASTER_KEY:
-        raise BadKeyException
+        raise BadKeyError
 
     existing = await get_bike(public_key=cleaned_keys["public_key"])
 
@@ -119,7 +121,7 @@ async def get_rentals(bike: Union[int, Bike]):
     else:
         raise TypeError("Must be bike id or bike.")
 
-    return await RentalUpdate.filter(bike__id=bid)
+    return await RentalUpdate.filter(rental__bike__id=bid)
 
 
 async def get_user(firebase_id) -> User:
