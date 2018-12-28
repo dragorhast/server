@@ -24,6 +24,7 @@ class BaseView(View):
     """
 
     url: str
+    name: Optional[str]
 
     @classmethod
     def register(cls, router: UrlDispatcher, base: Optional[str] = None):
@@ -35,4 +36,10 @@ class BaseView(View):
         if cls.url is None:
             raise ViewURLError("No URL provided!")
         url = base + cls.url if base is not None else cls.url
-        router.add_view(url, cls)
+
+        kwargs = {}
+        name = getattr(cls, "name", None)
+        if name is not None:
+            kwargs["name"] = name
+
+        router.add_view(url, cls, **kwargs)
