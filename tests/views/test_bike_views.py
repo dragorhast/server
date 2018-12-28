@@ -5,7 +5,7 @@ from server.models.util import BikeType
 from server.serializer import BikeSchema, RentalSchema
 from server.serializer.jsend import JSendStatus, JSendSchema
 from server.service import MASTER_KEY
-from server.views import BikeRegisterSchema
+from server.views import BikeRegisterSchema, AuthorizedSchema
 from tests.util import random_key
 
 
@@ -123,3 +123,45 @@ async def test_get_bike_rentals(client: TestClient):
     data = response_schema.load(await response.json())
 
     assert data["status"] == JSendStatus.SUCCESS
+
+
+async def test_create_bike_rental(client: TestClient):
+    """Assert that you can create a rental.
+
+    todo mock get_user
+    todo mock key validation
+    """
+
+
+async def test_create_bike_rental_missing_user(client: TestClient):
+    """Assert that creating a rental with a non existing user (but valid firebase key) gives a descriptive error.
+
+    todo mock key validation
+    """
+
+    await test_register_bike(client)
+    request_schema = AuthorizedSchema()
+    response_schema = JSendSchema()
+    request_data = request_schema.load({
+        "firebase_id": "mock"
+    })
+
+    response = await client.post(f'/api/v1/bikes/1/rentals', json=request_data)
+    response_data = response_schema.load(await response.json())
+
+    assert response_data["status"] == JSendStatus.FAIL
+    assert "No such user exists" in response_data["data"]["firebase_id"]
+
+
+async def test_create_bike_rental_invalid_key(client: TestClient):
+    """Assert that creating a rental with an invalid firebase key fails."""
+
+    await test_register_bike(client)
+    request_schema = AuthorizedSchema()
+    response_schema = JSendSchema()
+    request_data = request_schema.load({
+        "firebase_id": "mock"
+    })
+
+    response = await client.post(f'/api/v1/bikes/1/rentals', json=request_data)
+    response_data = response_schema.load(await response.json())

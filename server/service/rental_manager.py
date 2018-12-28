@@ -1,10 +1,11 @@
 """
 This module is what handles all the rentals in the system.
 """
-from collections import defaultdict
-from typing import Callable, Dict, Set
 
-from server.models import User, Bike, RentalUpdate, Rental
+from collections import defaultdict
+from typing import Dict, Set, Callable
+
+from server.models import Bike, Rental, User, RentalUpdate
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
 
@@ -33,6 +34,9 @@ class RentalManager:
 
     _subscribers: Dict[int, Set[Callable]]
     """Maps a rental to a set of event subscribers."""
+
+    async def active_rentals(self):
+        return await Rental.filter(id__in=self._rentals.keys())
 
     async def rebuild(self):
         """

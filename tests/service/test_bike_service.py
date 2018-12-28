@@ -1,7 +1,8 @@
 import pytest
 
 from server.models import Bike
-from server.service import get_bikes, get_bike, register_bike, BadKeyError, MASTER_KEY
+from server.service import MASTER_KEY
+from server.service.bikes import get_bikes, get_bike, register_bike, BadKeyError
 from tests.util import random_key
 
 
