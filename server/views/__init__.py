@@ -34,7 +34,7 @@ views = [
     PickupView, PickupsView, PickupBikesView, PickupReservationsView,
     RentalView, RentalsView,
     ReservationView, ReservationsView,
-    UserView, UsersView, UserIssuesView, UserRentalsView, UserReservationsView
+    UserView, UsersView, UserIssuesView, UserRentalsView, UserReservationsView, MeView
 ]
 
 
