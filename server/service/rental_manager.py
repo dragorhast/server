@@ -26,14 +26,11 @@ class RentalManager:
     """
 
     def __init__(self):
-        self._rentals = {}
-        self._subscribers = defaultdict(set)
+        self._rentals: Dict[int, int] = {}
+        """Maps user ids to their current rental."""
 
-    _rentals: Dict[int, int]
-    """Maps user ids to their current rental."""
-
-    _subscribers: Dict[int, Set[Callable]]
-    """Maps a rental to a set of event subscribers."""
+        self._subscribers: Dict[int, Set[Callable]] = defaultdict(set)
+        """Maps a rental to a set of event subscribers."""
 
     async def active_rentals(self):
         return await Rental.filter(id__in=self._rentals.keys())
