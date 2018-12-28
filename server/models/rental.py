@@ -28,12 +28,9 @@ class Rental(Model):
         schema = RentalSchema()
 
         rental_data = {
-            "user": self.user,
-            "bike": self.bike,
-            "events": self.start_time,
+            "user_id": self.user_id,
+            "bike_id": self.bike_id,
+            "price": self.price
         }
-
-        if self.end_time:
-            rental_data["end_time"] = self.end_time
 
         return schema.dump(rental_data)

@@ -1,10 +1,18 @@
 """
 Handles all the user CRUD
 """
-from aiohttp import web
+from typing import Optional
 
-from server.service import get_users
+from aiohttp import web
+from aiohttp.abc import Request
+from aiohttp.web_routedef import UrlDispatcher
+
+from server.models import User, Rental
+from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
+from server.service.users import get_users, get_user
+from server.token_verify import verifier, TokenVerificationError
 from server.views.base import BaseView
+from server.views.utils import getter
 
 
 class UsersView(BaseView):
@@ -12,6 +20,7 @@ class UsersView(BaseView):
     Gets or adds to the list of users.
     """
     url = "/users"
+    name = "users"
 
     async def get(self):
         return web.json_response(get_users())
@@ -22,18 +31,34 @@ class UsersView(BaseView):
 
 class UserView(BaseView):
     """
-    Gets, updates or deletes a single user.
+    Gets, replaces or deletes a single user.
     """
     url = "/users/{id:[0-9]+}"
+    name = "user"
+    user_getter = getter(get_user, 'id', 'user_id')
 
-    async def get(self):
+    @user_getter
+    async def get(self, user: User):
+        response_schema = JSendSchema.of(UserSchema())
+        response_data = response_schema.dump({
+            "status": JSendStatus.SUCCESS,
+            "data": user.serialize()
+        })
+        return web.json_response(response_data)
+
+    @user_getter
+    async def put(self, user: User):
         pass
 
-    async def delete(self):
-        pass
-
-    async def patch(self):
-        pass
+    @user_getter
+    async def delete(self, user: User):
+        await user.delete()
+        response_schema = JSendSchema.of(UserSchema())
+        response_data = response_schema.dump({
+            "status": JSendStatus.SUCCESS,
+            "data": "deleted"
+        })
+        return web.json_response(response_data, status=204)
 
 
 class UserRentalsView(BaseView):
@@ -41,12 +66,17 @@ class UserRentalsView(BaseView):
     Gets or adds to the users list of rentals.
     """
     url = "/users/{id:[0-9]+}/rentals"
+    name = "user_rentals"
 
     async def get(self):
-        pass
+        response_schema = JSendSchema.of(RentalSchema(), many=True)
+        rentals = await Rental.filter(user__id=self.request.match_info.get("id"))
+        response_data = response_schema.dump({
+            "status": JSendStatus.SUCCESS,
+            "data": (rental.serialize() for rental in rentals)
+        })
 
-    async def post(self):
-        pass
+        return web.json_response(response_data)
 
 
 class UserReservationsView(BaseView):
@@ -54,6 +84,7 @@ class UserReservationsView(BaseView):
     Gets or adds to the users' list of reservations.
     """
     url = "/users/{id:[0-9]+}/reservations"
+    name = "user_reservations"
 
     async def get(self):
         pass
@@ -67,6 +98,7 @@ class UserIssuesView(BaseView):
     Gets or adds to the users' list of issues.
     """
     url = "/users/{id:[0-9]+}/issues"
+    name = "user_issues"
 
     async def get(self):
         pass
@@ -88,18 +120,23 @@ class MeView(BaseView):
         """
         Accepts all types of request, does some checking against the user, and forwards them on to the appropriate user.
         """
-
         if "Authorization" not in request.headers or not request.headers["Authorization"].startswith("Bearer "):
             response_schema = JSendSchema()
             return web.json_response(response_schema.dump({
                 "status": JSendStatus.FAIL,
                 "data": {"json": "You must supply your firebase token."}
             }), status=401)
-        else:
-            token = request.headers["Authorization"][7:]
-            # todo process firebase id
 
-        user = await get_user(token)
+        try:
+            token = verifier.verify_token(request.headers["Authorization"][7:])
+        except TokenVerificationError as error:
+            response_schema = JSendSchema()
+            return web.json_response(response_schema.dump({
+                "status": JSendStatus.FAIL,
+                "data": {"token": error.args}
+            }), status=401)
+
+        user = await get_user(firebase_id=token)
 
         if user is None:
             response_schema = JSendSchema()

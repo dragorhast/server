@@ -3,7 +3,7 @@ Defines serializers for the various models in the system.
 """
 
 from marshmallow import Schema
-from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime
+from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float
 
 from server.models.util import RentalUpdateType
 from .fields import BytesField, EnumField
@@ -30,6 +30,9 @@ class RentalUpdateSchema(Schema):
 
 class RentalSchema(Schema):
     id = Integer()
-    user = Nested(UserSchema(), required=True)
-    bike = Nested(BikeSchema(), required=True)
-    events = Nested(RentalUpdateSchema(), many=True, required=True)
+    user = Nested(UserSchema())
+    user_id = Integer()
+    bike = Nested(BikeSchema())
+    bike_id = Integer()
+    price = Float()
+    events = Nested(RentalUpdateSchema(), many=True)
