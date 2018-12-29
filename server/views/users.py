@@ -6,11 +6,14 @@ from typing import Optional
 from aiohttp import web
 from aiohttp.abc import Request
 from aiohttp.web_routedef import UrlDispatcher
+from marshmallow import ValidationError
 
 from server.models import User, Rental
+from server.permissions import AuthenticatedPermission
+from server.permissions.util import require_user_permission
 from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
-from server.service.users import get_users, get_user
-from server.token_verify import verifier, TokenVerificationError
+from server.service.users import get_users, get_user, delete_user, create_user, UserExistsError
+from server.token_verify import verifier, TokenVerificationError, verify_token
 from server.views.base import BaseView
 from server.views.utils import getter
 
@@ -26,7 +29,45 @@ class UsersView(BaseView):
         return web.json_response(get_users())
 
     async def post(self):
-        pass
+
+        request_schema = UserSchema(only=('first', 'email'))
+
+        try:
+            request_data = request_schema.load(await self.request.json())
+        except ValidationError as err:
+            response_schema = JSendSchema()
+            response_data = response_schema.dump({
+                "status": JSendStatus.FAIL,
+                "data": err.messages
+            })
+            return web.json_response(response_data, status=400)
+
+        try:
+            token = verify_token(self.request)
+        except TokenVerificationError as err:
+            response_schema = JSendSchema()
+            response_data = response_schema.dump({
+                "status": JSendStatus.FAIL,
+                "data": {"token": err.args}
+            })
+            return web.json_response(response_data, status=403)
+
+        try:
+            user = await create_user(**request_data, firebase_id=token)
+        except UserExistsError as err:
+            response_schema = JSendSchema()
+            response_data = response_schema.dump({
+                "status": JSendStatus.FAIL,
+                "data": err.errors
+            })
+            return web.json_response(response_data, status=409)
+
+        response_schema = JSendSchema.of(UserSchema())
+        response_data = response_schema.dump({
+            "status": JSendStatus.SUCCESS,
+            "data": user.serialize()
+        })
+        return web.json_response(response_data, status=201)
 
 
 class UserView(BaseView):
@@ -38,6 +79,7 @@ class UserView(BaseView):
     user_getter = getter(get_user, 'id', 'user_id')
 
     @user_getter
+    @require_user_permission(AuthenticatedPermission())
     async def get(self, user: User):
         response_schema = JSendSchema.of(UserSchema())
         response_data = response_schema.dump({
@@ -47,18 +89,15 @@ class UserView(BaseView):
         return web.json_response(response_data)
 
     @user_getter
+    @require_user_permission(AuthenticatedPermission())
     async def put(self, user: User):
-        pass
+        return web.json_response({})
 
     @user_getter
+    @require_user_permission(AuthenticatedPermission())
     async def delete(self, user: User):
-        await user.delete()
-        response_schema = JSendSchema.of(UserSchema())
-        response_data = response_schema.dump({
-            "status": JSendStatus.SUCCESS,
-            "data": "deleted"
-        })
-        return web.json_response(response_data, status=204)
+        await delete_user(user)
+        raise web.HTTPNoContent
 
 
 class UserRentalsView(BaseView):

@@ -21,8 +21,6 @@ class ActiveRentalError(Exception):
 class RentalManager:
     """
     Handles the lifecycle of the rental in the system.
-
-    todo: When the server restarts with active rentals, they are not rebuilt.
     """
 
     def __init__(self):
@@ -38,8 +36,6 @@ class RentalManager:
     async def rebuild(self):
         """
         Rebuilds the currently active rentals from the database.
-
-        todo Fix tortoise to correctly map types with the serializer
         """
         unfinished_rentals = await Rental.filter(
             updates__type__not_in=(t.value for t in RentalUpdateType.terminating_types()))

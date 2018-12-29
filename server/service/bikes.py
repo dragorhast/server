@@ -61,7 +61,7 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
     }
 
     if not cleaned_keys["master_key"] == MASTER_KEY:
-        raise BadKeyError
+        raise BadKeyError("Incorrect master key")
 
     existing = await get_bike(public_key=cleaned_keys["public_key"])
 
@@ -85,6 +85,13 @@ async def lock_bike(public_key, value) -> None:
         await bike.set_locked(value)
     except ConnectionError as e:
         raise e
+
+
+async def delete_bike(bike, master_key) -> None:
+    if not master_key == MASTER_KEY:
+        raise BadKeyError("Incorrect master key")
+
+    await bike.delete()
 
 
 class BadKeyError(Exception):

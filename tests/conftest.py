@@ -61,7 +61,7 @@ async def random_bike(database) -> Bike:
 @pytest.fixture
 async def random_user(database) -> User:
     """Creates a random user in the database."""
-    return await User.create(firebase_id="test_user", first="Alex", email="test@test.com")
+    return await User.create(firebase_id="deadbeef", first="Alex", email="test@test.com")
 
 
 @pytest.fixture

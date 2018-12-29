@@ -1,4 +1,12 @@
+from tortoise.exceptions import IntegrityError
+
 from server.models import User
+from server.token_verify import TokenVerificationError, verifier
+
+
+class UserExistsError(Exception):
+    def __init__(self, errors):
+        self.errors = errors
 
 
 async def get_users():
@@ -21,3 +29,38 @@ async def get_user(*, firebase_id=None, user_id=None) -> User:
         kwargs["id"] = user_id
 
     return await User.filter(**kwargs).first()
+
+
+async def create_user(first: str, email: str, firebase_id: str) -> User:
+    """
+    Creates a new user.
+
+    :param first:
+    :param email:
+    :param firebase_id:
+    :raises TokenVerificationError: When the firebase ID is invalid.
+    :raises UserExistsError: When the user with the given credentials already exists.
+    """
+    try:
+        token = verifier.verify_token(firebase_id)
+    except TokenVerificationError as error:
+        raise error
+
+    try:
+        return await User.create(first=first, email=email, firebase_id=token)
+    except IntegrityError as err:
+        errors = {}
+        for error in err.args:
+            for message in error.args:
+                if "UNIQUE" in message:
+                    field = message.split('.')[-1]
+                    errors[field] = f"User with that item already exists!"
+
+        if not errors:
+            raise err
+
+        raise UserExistsError(errors)
+
+
+async def delete_user(user: User):
+    await user.delete()

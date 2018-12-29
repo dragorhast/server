@@ -7,6 +7,8 @@ from typing import Optional
 
 from aiohttp.web import View, UrlDispatcher
 
+from server.permissions import Permission
+
 
 class ViewURLError(Exception):
     """
@@ -25,6 +27,7 @@ class BaseView(View):
 
     url: str
     name: Optional[str]
+    permissions: Optional[Permission]
 
     @classmethod
     def register(cls, router: UrlDispatcher, base: Optional[str] = None):

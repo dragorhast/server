@@ -20,7 +20,7 @@ class FirebaseVerifier(TokenVerifier):
     """
     Verifies a firebase token.
 
-    todo implement
+    .. todo:: implement
     """
 
     _public_key_url = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
@@ -62,6 +62,26 @@ class DummyVerifier(TokenVerifier):
             raise TokenVerificationError("Not a valid hex string.")
 
         return token
+
+
+def verify_token(request):
+    """
+    Checks a view for the existence of a valid Authorization header.
+
+    :param request: The view to check.
+    :return: The valid token.
+    :raises TokenVerificationError: When the Authorize header is invalid.
+    """
+    if (
+        "Authorization" not in request.headers or
+        not request.headers["Authorization"].startswith("Bearer ")
+    ):
+        raise TokenVerificationError("You must supply your firebase token.")
+
+    try:
+        return verifier.verify_token(request.headers["Authorization"][7:])
+    except TokenVerificationError as error:
+        raise error
 
 
 # verifier = FirebaseVerifier("dragorhast-420")

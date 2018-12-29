@@ -14,21 +14,30 @@ the api must:
 * Have idempotent_ GET, PUT, PATCH, and DELETE operations
 * Support filtering (if necessary) using the query string
 
+API Expected Responses
+----------------------
+
+The server responds with JSend formatted JSON to all GET, POST, and PUT requests.
+DELETE requests respond with a 204 content not found.
+
 .. _`Web Api Design`: https://pages.apigee.com/rs/apigee/images/api-design-ebook-2012-03.pdf
 .. _idempotent: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.1.2
 """
+from typing import List, Type
 
-from aiohttp.web_urldispatcher import UrlDispatcher
+from aiohttp.web_routedef import UrlDispatcher
 
-from .bikes import *
-from .issues import *
-from .pickups import *
-from .rentals import *
-from .reservations import *
-from .users import *
+from server import logger
+from server.views.base import BaseView
+from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView
+from .issues import IssuesView
 from .misc import send_to_developer_portal
+from .pickups import PickupView, PickupsView, PickupBikesView, PickupReservationsView
+from .rentals import RentalView, RentalsView
+from .reservations import ReservationView, ReservationsView
+from .users import UserView, UsersView, UserIssuesView, UserRentalsView, UserReservationsView, MeView
 
-views = [
+views: List[Type[BaseView]] = [
     BikeView, BikesView, BikeRentalsView, BikeSocketView,
     IssuesView,
     PickupView, PickupsView, PickupBikesView, PickupReservationsView,
