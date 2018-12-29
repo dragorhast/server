@@ -20,7 +20,7 @@ idna-ssl = "*"
 gunicorn = "*"
 #uvloop
 cython = "*"
-uvloop = {git = "https://github.com/MagicStack/uvloop.git", ref = "releases"}
+uvloop = {git = "https://github.com/MagicStack/uvloop.git",ref = "releases"}
 #sentry
 sentry-sdk = "*"
 aiohttp-sentry = "*"
@@ -38,6 +38,7 @@ sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
 sphinxcontrib-mermaid = "*"
 sphinx-autodoc-typehints = "*"
+python-jose = "*"
 
 [requires]
 python_version = "3.6"
