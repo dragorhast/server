@@ -1,21 +1,25 @@
-from json import JSONDecodeError
+from abc import ABC
 
 from server.permissions.base import Permission
+from server.token_verify import verify_token
 
 
-class AuthenticatedPermission(Permission):
+class UserPermission(Permission, ABC):
 
-    async def __call__(self, request, view):
-        try:
-            data = await request.json()
-        except JSONDecodeError:
-            return False
-        else:
-            return "auth" in data
+    async def __call__(self, view, user):
+        pass
 
 
-class AdminPermission(Permission):
+class AuthenticatedPermission(UserPermission):
 
-    async def __call__(self, request, view):
-        return "127.0.0.1" in request.remote
+    async def __call__(self, view, user):
+        token = verify_token(view.request)
 
+        if not user.firebase_id == token:
+            raise PermissionError("You don't have permission to fetch this resource.")
+
+
+class AdminPermission(UserPermission):
+
+    async def __call__(self, view, user):
+        return "127.0.0.1" in view.request.remote
