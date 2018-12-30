@@ -39,6 +39,7 @@ sphinx-rtd-theme = "*"
 sphinxcontrib-mermaid = "*"
 sphinx-autodoc-typehints = "*"
 python-jose = "*"
+aiohttp-cors = "*"
 
 [requires]
 python_version = "3.6"
