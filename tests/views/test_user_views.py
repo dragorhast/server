@@ -113,5 +113,7 @@ class TestUserRentalsView:
 
 class TestMeView:
 
-    async def test_get_me(self):
+    async def test_get_me(self, client: TestClient, random_user):
         """Assert that me redirects to the appropriate user."""
+        response = await client.get('/api/v1/users/me', headers={"Authorization": f"Bearer {random_user.firebase_id}"})
+        assert response.url.path == f'/api/v1/users/{random_user.id}'

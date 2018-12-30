@@ -27,7 +27,7 @@ def build_app(db_uri=None):
     register_signals(app)
 
     # register views
-    register_views(app.router, api_root)
+    register_views(app, api_root)
     app.router.add_get("/", send_to_developer_portal)
 
     # set up sentry exception tracking

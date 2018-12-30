@@ -37,7 +37,7 @@ async def client(aiohttp_client, loop) -> TestClient:
     app['bike_connections'] = weakref.WeakSet()
     app['database_uri'] = 'sqlite://:memory:'
     register_signals(app)
-    register_views(app.router, "/api/v1")
+    register_views(app, "/api/v1")
 
     return await aiohttp_client(app)
 

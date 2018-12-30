@@ -154,8 +154,23 @@ class MeView(BaseView):
     url = "/users/me{tail:.*}"
     name = "me"
 
+    async def get(self):
+        return await self._me_handler(self.request)
+
+    async def post(self):
+        return await self._me_handler(self.request)
+
+    async def put(self):
+        return await self._me_handler(self.request)
+
+    async def patch(self):
+        return await self._me_handler(self.request)
+
+    async def delete(self):
+        return await self._me_handler(self.request)
+
     @staticmethod
-    async def me_handler(request: Request):
+    async def _me_handler(request: Request):
         """
         Accepts all types of request, does some checking against the user, and forwards them on to the appropriate user.
         """
@@ -205,9 +220,3 @@ class MeView(BaseView):
         id = user.id
         user_url = url_without_tail[:-2] + str(id)
         return user_url + tail
-
-    @classmethod
-    def register(cls, router: UrlDispatcher, base: Optional[str] = None):
-        """Overrides the register function to register the me_handler for all request types."""
-        url = base + cls.url if base is not None else cls.url
-        router.add_route("*", url, cls.me_handler, name=cls.name)

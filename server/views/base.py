@@ -5,44 +5,60 @@ required in all other views.
 
 from typing import Optional
 
-from aiohttp.web import View, UrlDispatcher
+from aiohttp.web import View, UrlDispatcher, AbstractRoute
+from aiohttp_cors import CorsConfig, CorsViewMixin, ResourceOptions
 
 from server.permissions import Permission
 
 
-class ViewURLError(Exception):
+class ViewConfigurationError(Exception):
     """
     Raised if the view doesn't provide a URL.
     """
 
 
-class BaseView(View):
+class BaseView(View, CorsViewMixin):
     """
     The base view that all other views extend. Contains some useful
     helper functions that the extending classes can use.
-
-    .. todo:: Add CORS configuration to each view. Currently CORS is disabled.
-    .. todo:: Add permissions so that views may limit functionality as needed.
     """
 
     url: str
     name: Optional[str]
     permissions: Optional[Permission]
+    route: AbstractRoute
+
+    cors_config = {
+        "*": ResourceOptions(
+            allow_methods='*',
+            allow_headers=('Authorization',)
+        )
+    }
 
     @classmethod
-    def register(cls, router: UrlDispatcher, base: Optional[str] = None):
+    def register_route(cls, router: UrlDispatcher, base: Optional[str] = None):
         """
         Registers the view with the given router.
 
-        :raises ViewURLError: If the URL hasn't been set on the given view.
+        :raises ViewConfigurationError: If the URL hasn't been set on the given view.
         """
-        if cls.url is None:
-            raise ViewURLError("No URL provided!")
-        url = base + cls.url if base is not None else cls.url
+        try:
+            url = base + cls.url if base is not None else cls.url
+        except AttributeError:
+            raise ViewConfigurationError("No URL provided!")
 
         kwargs = {}
         name = getattr(cls, "name", None)
         if name is not None:
             kwargs["name"] = name
 
-        router.add_view(url, cls, **kwargs)
+        cls.route = router.add_view(url, cls, **kwargs)
+
+    @classmethod
+    def enable_cors(cls, cors: CorsConfig):
+        """Enables CORS on the view."""
+        try:
+            cors.add(cls.route)
+        except AttributeError as e:
+            raise ViewConfigurationError("No route assigned. Please register the route first.") from e
+
