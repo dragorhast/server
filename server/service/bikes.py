@@ -83,8 +83,8 @@ async def lock_bike(public_key, value) -> None:
     bike: Bike = await Bike.get(public_key_hex=public_key.hex()).first()
     try:
         await bike.set_locked(value)
-    except ConnectionError as e:
-        raise e
+    except ConnectionError as error:
+        raise error
 
 
 async def delete_bike(bike, master_key) -> None:

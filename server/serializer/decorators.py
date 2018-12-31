@@ -42,7 +42,6 @@ def expects(schema: Optional[Schema], into="data"):
                 })
                 return web.json_response(response_data, status=400)
 
-
             try:
                 self.request[into] = schema.load(await self.request.json())
             except ValidationError as err:

@@ -6,6 +6,7 @@ from server.service.verify_token import TokenVerificationError, verifier
 
 class UserExistsError(Exception):
     def __init__(self, errors):
+        super().__init__()
         self.errors = errors
 
 
@@ -48,16 +49,16 @@ async def create_user(first: str, email: str, firebase_id: str) -> User:
 
     try:
         return await User.create(first=first, email=email, firebase_id=token)
-    except IntegrityError as err:
+    except IntegrityError as error:
         errors = {}
-        for error in err.args:
+        for error in error.args:
             for message in error.args:
                 if "UNIQUE" in message:
                     field = message.split('.')[-1]
                     errors[field] = f"User with that item already exists!"
 
         if not errors:
-            raise err
+            raise error
 
         raise UserExistsError(errors)
 

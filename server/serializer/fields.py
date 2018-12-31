@@ -45,7 +45,8 @@ class BytesField(fields.Field):
         except ValueError:
             raise ValidationError(f"String {value} is not a valid hex-encoded string.")
 
-    def _jsonschema_type_mapping(self):
+    @staticmethod
+    def _jsonschema_type_mapping():
         """Defines the jsonschema type for the object."""
         return {
             'type': 'string',

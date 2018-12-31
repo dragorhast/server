@@ -1,6 +1,4 @@
 import pytest
-from aiohttp.web_request import Request
-from aiohttp.web_urldispatcher import View
 
 from server.permissions import Permission
 

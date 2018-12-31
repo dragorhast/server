@@ -1,6 +1,6 @@
 from aiohttp.web_urldispatcher import View
 
-from server.permissions import Permission
+from server.permissions.permission import Permission
 from server.service.verify_token import verify_token, TokenVerificationError
 
 
@@ -10,8 +10,8 @@ class ValidToken(Permission):
     async def __call__(self, view: View, **kwargs):
         try:
             token = verify_token(view.request)
-        except TokenVerificationError as e:
-            raise PermissionError(*e.args)
+        except TokenVerificationError as error:
+            raise PermissionError(*error.args)
         else:
             view.request["token"] = token
 

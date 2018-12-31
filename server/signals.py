@@ -26,7 +26,7 @@ async def close_bike_connections(app: Application):
     if connections:
         logger.info("Closing all open bike connections")
     for connection in connections:
-        await connection.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
+        await connection.close(code=WSCloseCode.GOING_AWAY)
 
 
 async def close_database_connections(app):

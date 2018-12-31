@@ -16,7 +16,6 @@ from tortoise import Model, fields
 
 from server.models.fields import EnumField
 from server.models.util import BikeType
-from server.serializer import BikeSchema
 
 
 class Bike(Model):
@@ -36,6 +35,7 @@ class Bike(Model):
 
     locked: bool = True
     _socket: Callable[..., Optional[WebSocketResponse]] = lambda *args: None
+    _public_key: bytes
     """
     A weak reference to the websocket. Weak references, when called,
     return the object they are supposed to reference, or None if it
@@ -59,9 +59,9 @@ class Bike(Model):
     def public_key(self):
         if hasattr(self, '_public_key'):
             return self._public_key
-        else:
-            self._public_key = bytes.fromhex(self.public_key_hex)
-            return self._public_key
+
+        self._public_key = bytes.fromhex(self.public_key_hex)
+        return self._public_key
 
     @property
     def _is_connected(self):

@@ -1,15 +1,15 @@
 from functools import wraps
+from typing import List
 
 from aiohttp import web
 from aiohttp.web_urldispatcher import View
-from itertools import chain
 
 from server.permissions import Permission
 from server.serializer import JSendSchema, JSendStatus
 
 
-def flatten(permission_error):
-    elements = []
+def flatten(permission_error) -> List[str]:
+    elements: List[str] = []
 
     for arg in permission_error.args:
         if isinstance(arg, PermissionError):
@@ -30,12 +30,12 @@ def requires(permission: Permission):
 
         @wraps(original_function)
         async def new_func(self: View, **kwargs):
-            errors = []
+            errors: List[str] = []
 
             try:
                 await permission(self, **kwargs)
-            except PermissionError as e:
-                errors += flatten(e)
+            except PermissionError as error:
+                errors += flatten(error)
 
             if errors:
                 response_schema = JSendSchema()

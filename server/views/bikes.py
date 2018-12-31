@@ -62,11 +62,11 @@ class BikesView(BaseView):
                 self.request["data"]["public_key"],
                 self.request["data"]["master_key"]
             )
-        except (ValueError, BadKeyError) as e:
+        except (ValueError, BadKeyError) as error:
             response_schema = JSendSchema()
             response = response_schema.dump({
                 "status": JSendStatus.FAIL,
-                "data": e.args
+                "data": error.args
             })
             return web.json_response(response, status=400)
 
@@ -100,11 +100,11 @@ class BikeView(BaseView):
         """Deletes a bike by its id."""
         try:
             await delete_bike(bike, self.request["data"]["master_key"])
-        except BadKeyError as e:
+        except BadKeyError as error:
             response_schema = JSendSchema()
             response = response_schema.dump({
                 "status": JSendStatus.FAIL,
-                "data": e.args
+                "data": error.args
             })
             return web.json_response(response, status=400)
 
@@ -131,7 +131,8 @@ class BikeRentalsView(BaseView):
     async def get(self, bike: Bike):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in (await get_rentals_for_bike(bike=bike))]
+            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in
+                     (await get_rentals_for_bike(bike=bike))]
         }
 
     @bike_getter

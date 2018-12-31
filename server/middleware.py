@@ -15,10 +15,10 @@ async def validate_token_middleware(request: Request, handler):
     if "Authorization" in request.headers:
         try:
             request["token"] = verify_token(request)
-        except TokenVerificationError as e:
+        except TokenVerificationError as error:
             return web.json_response({
                 "status": "fail",
-                "data": {"authorization": e.args}
+                "data": {"authorization": error.args}
             })
 
     return await handler(request)

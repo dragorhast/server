@@ -257,6 +257,6 @@ class MeView(BaseView):
         :param user: The user to rewrite to.
         """
         url_without_tail = path[:-len(tail)]
-        id = user.id
-        user_url = url_without_tail[:-2] + str(id)
+        user_id = user.id
+        user_url = url_without_tail[:-2] + str(user_id)
         return user_url + tail

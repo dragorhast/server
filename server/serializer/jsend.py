@@ -7,7 +7,6 @@ from typing import Type
 
 from marshmallow import Schema, fields, validates_schema, ValidationError
 
-from server.serializer import BikeSchema
 from .fields import EnumField
 
 
@@ -35,8 +34,9 @@ class JSendSchema(Schema):
     message = fields.String()
     code = fields.Integer()
 
+    @staticmethod
     @validates_schema
-    def assert_fields(self, data):
+    def assert_fields(data):
         """
         Asserts that, according to the specification:
 

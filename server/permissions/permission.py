@@ -41,8 +41,8 @@ class AndPermission(Permission):
         for permission in self._permissions:
             try:
                 await permission(view, **kwargs)
-            except PermissionError as e:
-                errors.append(e)
+            except PermissionError as error:
+                errors.append(error)
 
         if errors:
             raise PermissionError(*errors)
@@ -63,8 +63,8 @@ class OrPermission(Permission):
             try:
                 await permission(view, **kwargs)
                 return
-            except PermissionError as e:
-                errors.append(e)
+            except PermissionError as error:
+                errors.append(error)
 
         raise PermissionError(*errors)
 

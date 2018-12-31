@@ -59,6 +59,6 @@ def register_views(app: Application, base: str):
     cors = aiohttp_cors.setup(app)
 
     for view in views:
-        logger.info(f"Registered {view.__name__} at {base + view.url}")
+        logger.info("Registered %s at %s", view.__name__, base + view.url)
         view.register_route(app.router, base)
         view.enable_cors(cors)

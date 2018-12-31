@@ -40,8 +40,9 @@ class RentalSchema(Schema):
     estimated_price = Float()
     price = Float()
 
+    @staticmethod
     @validates_schema
-    def assert_end_time_with_price(self, data):
+    def assert_end_time_with_price(data):
         """
         Asserts that when a rental is complete both the price and end time are included.
         """

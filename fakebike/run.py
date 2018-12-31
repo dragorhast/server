@@ -13,8 +13,8 @@ from nacl.encoding import RawEncoder
 
 from fakebike import logger
 from fakebike.bike import Bike
-from server.views import BikeRegisterSchema
 from server.models.util import BikeType
+from server.views import BikeRegisterSchema
 
 bikes = {
     0: Bike(0, bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55"),
@@ -84,7 +84,6 @@ async def bike_handler(session, bike: Bike, signed_challenge: bytes):
 
 @ServerBreaker
 async def register_bike(session, bike: Bike, master_key: bytes):
-
     bike_register = {
         "public_key": bike.public_key.encode(RawEncoder),
         "type": BikeType.ROAD,

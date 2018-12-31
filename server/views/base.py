@@ -59,6 +59,5 @@ class BaseView(View, CorsViewMixin):
         """Enables CORS on the view."""
         try:
             cors.add(cls.route)
-        except AttributeError as e:
-            raise ViewConfigurationError("No route assigned. Please register the route first.") from e
-
+        except AttributeError as error:
+            raise ViewConfigurationError("No route assigned. Please register the route first.") from error
