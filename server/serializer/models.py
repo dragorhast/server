@@ -2,7 +2,7 @@
 Defines serializers for the various models in the system.
 """
 
-from marshmallow import Schema
+from marshmallow import Schema, validates_schema, ValidationError
 from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float
 
 from server.models.util import RentalUpdateType
@@ -34,5 +34,17 @@ class RentalSchema(Schema):
     user_id = Integer()
     bike = Nested(BikeSchema())
     bike_id = Integer()
-    price = Float()
     events = Nested(RentalUpdateSchema(), many=True)
+    start_time = DateTime(required=True)
+    end_time = DateTime()
+    price = Float(allow_none=True)
+
+    @validates_schema
+    def assert_end_time_with_price(self, data):
+        """
+        Asserts that when a rental is complete both the price and end time are included.
+        """
+        if "price" in data and "end_time" not in data:
+            raise ValidationError("If the price is included, you must also include the end time.")
+        elif "price" not in data and "end_time" in data:
+            raise ValidationError("If the end time is included, you must also include the price.")

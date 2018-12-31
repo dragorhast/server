@@ -3,11 +3,12 @@ Contains the various
 """
 
 from datetime import datetime
+from typing import Dict, Any
 
 from tortoise import Model, fields
 
-from server.models.util import RentalUpdateType
 from server.models.fields import EnumField
+from server.models.util import RentalUpdateType
 from server.serializer import RentalSchema
 
 
@@ -24,13 +25,25 @@ class Rental(Model):
     bike = fields.ForeignKeyField(model_name="models.Bike", related_name="rentals")
     price = fields.FloatField(null=True)
 
-    def serialize(self):
-        schema = RentalSchema()
+    @property
+    def start_time(self):
+        return self.updates[0].time
 
-        rental_data = {
+    @property
+    def end_time(self):
+        last_update: RentalUpdate = self.updates[-1]
+        return last_update.time if last_update.type == RentalUpdateType.RETURN else None
+
+    def serialize(self) -> Dict[str, Any]:
+        data = {
+            "id": self.id,
             "user_id": self.user_id,
             "bike_id": self.bike_id,
-            "price": self.price
+            "start_time": self.start_time,
         }
 
-        return schema.dump(rental_data)
+        if self.end_time is not None:
+            data["end_time"] = self.end_time
+            data["price"] = self.price
+
+        return data

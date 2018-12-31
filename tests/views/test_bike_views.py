@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiohttp.test_utils import TestClient
 
 from server.models.bike import Bike
@@ -5,7 +7,7 @@ from server.models.util import BikeType
 from server.serializer import BikeSchema, RentalSchema
 from server.serializer.jsend import JSendStatus, JSendSchema
 from server.service import MASTER_KEY
-from server.views.bikes import BikeRegisterSchema, AuthorizedSchema, MasterKeySchema
+from server.views.bikes import BikeRegisterSchema, MasterKeySchema
 from tests.util import random_key
 
 
@@ -32,10 +34,11 @@ class TestBikesView:
 
         request_json = request_schema.dump(request_data)
 
-        resp = await client.post('/api/v1/bikes', json=request_json)
-
+        response = await client.post('/api/v1/bikes', json=request_json)
         response_schema = JSendSchema.of(BikeSchema())
-        response_data = response_schema.load(await resp.json())
+
+        text = await response.text()
+        response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
 
     async def test_register_bike_bad_public_key(self, client: TestClient):
@@ -56,7 +59,7 @@ class TestBikesView:
         assert response_data["status"] == JSendStatus.FAIL
         assert any(
             "bad_key is not a valid hex-encoded string" in error
-            for error in response_data["data"]["public_key"]
+            for error in response_data["data"]["errors"]["public_key"]
         )
         assert resp.status == 400
 
@@ -107,7 +110,7 @@ class TestBikeView:
         data = response_schema.load(await response.json())
 
         assert data["status"] == JSendStatus.FAIL
-        assert "Invalid" in data["data"]["id"]
+        assert "No such resource" in data["data"]["id"]
 
     async def test_delete_bike(self, client: TestClient, random_bike):
         """Assert that you can delete bikes with a valid master key."""
@@ -146,24 +149,29 @@ class TestBikeRentalsView:
 
         response = await client.get(f'/api/v1/bikes/1/rentals')
         response_schema = JSendSchema.of(RentalSchema(many=True))
-        data = response_schema.load(await response.json())
+        response_data = response_schema.load(await response.json())
 
-        assert data["status"] == JSendStatus.SUCCESS
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert isinstance(response_data["data"], list)
 
     async def test_create_bike_rental(self, client: TestClient, random_user, random_bike):
         """Assert that you can create a rental."""
+        response = await client.post(
+            f'/api/v1/bikes/{random_bike.id}/rentals',
+            headers={"Authorization": f"Bearer {random_user.firebase_id}"}
+        )
+        response_data = JSendSchema.of(RentalSchema()).load(await response.json())
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert "price" not in response_data["data"]
+        assert response_data["data"]["bike_id"] == random_bike.id
+        assert response_data["data"]["user_id"] == random_user.id
+        assert response_data["data"]["start_time"] < datetime.now()
 
     async def test_create_bike_rental_missing_user(self, client: TestClient, random_bike):
-        """Assert that creating a rental with a non existing user (but valid firebase key) gives a descriptive error.
-        """
+        """Assert that creating a rental with a non existing user (but valid firebase key) gives a descriptive error."""
+        response = await client.post(f'/api/v1/bikes/{random_bike.id}/rentals', headers={"Authorization": "Bearer ab"})
 
-        request_schema = AuthorizedSchema()
         response_schema = JSendSchema()
-        request_data = request_schema.load({
-            "firebase_id": "mock"
-        })
-
-        response = await client.post(f'/api/v1/bikes/1/rentals', json=request_data)
         response_data = response_schema.load(await response.json())
 
         assert response_data["status"] == JSendStatus.FAIL
@@ -176,8 +184,8 @@ class TestBikeRentalsView:
 
         client: TestClient = client
 
-        response = await client.post(f'/api/v1/bikes/{random_bike.id}/rentals', headers={"Authorization": "Bearer invalid"})
-        text = await response.text()
+        response = await client.post(f'/api/v1/bikes/{random_bike.id}/rentals',
+                                     headers={"Authorization": "Bearer invalid"})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert response_data["data"]["token"] == "Not a valid hex string."
+        assert any("Not a valid hex string." == error for error in response_data["data"]["authorization"])

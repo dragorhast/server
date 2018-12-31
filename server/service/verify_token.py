@@ -72,11 +72,11 @@ def verify_token(request):
     :return: The valid token.
     :raises TokenVerificationError: When the Authorize header is invalid.
     """
-    if (
-        "Authorization" not in request.headers or
-        not request.headers["Authorization"].startswith("Bearer ")
-    ):
+    if "Authorization" not in request.headers:
         raise TokenVerificationError("You must supply your firebase token.")
+
+    if not request.headers["Authorization"].startswith("Bearer "):
+        raise TokenVerificationError("The Authorization header must be of the format \"Bearer $TOKEN\".")
 
     try:
         return verifier.verify_token(request.headers["Authorization"][7:])

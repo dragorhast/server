@@ -22,3 +22,7 @@ async def get_rentals_for_bike(bike: Union[int, Bike]):
 
 async def get_rentals():
     return await Rental.all()
+
+
+async def get_rental(rental_id: int) -> Rental:
+    return await Rental.filter(id=rental_id)

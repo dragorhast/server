@@ -12,7 +12,7 @@ async def test_rebuild_rentals(rental_manager: RentalManager, random_user, rando
     await RentalUpdate.create(rental=rental, type=RentalUpdateType.RENT)
     await rental_manager.rebuild()
 
-    assert rental_manager._rentals[random_user.id] == rental.id
+    assert rental_manager.active_rental_ids[random_user.id] == rental.id
 
 
 async def test_create_rental(rental_manager, random_user, random_bike):
@@ -33,8 +33,9 @@ async def test_create_rental_existing_rental(rental_manager, random_rental, rand
 async def test_finish_rental(rental_manager, random_rental):
     """Assert that finishing a rental correctly creates an event and charges the customer."""
     await rental_manager.finish(random_rental, extra_cost=2.0)
-    assert (await Rental.first()).price >= 2.0
-    assert await RentalUpdate.all().count() >= 2
+    rental = await Rental.first().prefetch_related('updates')
+    assert rental.price >= 2.0
+    assert len(rental.updates) == 2
 
 
 async def test_finish_inactive_rental(rental_manager, random_user, random_bike):

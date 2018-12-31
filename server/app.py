@@ -8,6 +8,7 @@ from aiohttp_sentry import SentryMiddleware
 
 from server import api_root, server_mode
 from server.middleware import validate_token_middleware
+from server.service.rental_manager import RentalManager
 from server.signals import register_signals
 from server.version import __version__
 from server.views import register_views, send_to_developer_portal
@@ -20,6 +21,9 @@ def build_app(db_uri=None):
 
     # keep a track of all open bike connections
     app['bike_connections'] = weakref.WeakSet()
+
+    app['rental_manager'] = RentalManager()
+    app['rental_manager'].rebuild()
 
     # set database stuff
     app['database_uri'] = db_uri if db_uri is not None else 'sqlite://:memory:'

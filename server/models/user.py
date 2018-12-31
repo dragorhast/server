@@ -1,7 +1,5 @@
 from tortoise import Model, fields
 
-from server.serializer import UserSchema
-
 
 class User(Model):
     """
@@ -15,10 +13,8 @@ class User(Model):
     email = fields.CharField(max_length=255, unique=True)
 
     def serialize(self):
-        schema = UserSchema()
-
-        return schema.dump({
+        return {
             "firebase_id": self.firebase_id,
             "first": self.first,
             "email": self.email
-        })
+        }

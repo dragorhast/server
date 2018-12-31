@@ -1,7 +1,7 @@
 from tortoise.exceptions import IntegrityError
 
 from server.models import User
-from server.token_verify import TokenVerificationError, verifier
+from server.service.verify_token import TokenVerificationError, verifier
 
 
 class UserExistsError(Exception):
@@ -60,6 +60,17 @@ async def create_user(first: str, email: str, firebase_id: str) -> User:
             raise err
 
         raise UserExistsError(errors)
+
+
+async def update_user(user: User, *, first=None, email=None):
+    if first:
+        user.first = first
+
+    if email:
+        user.email = email
+
+    await user.save()
+    return user
 
 
 async def delete_user(user: User):

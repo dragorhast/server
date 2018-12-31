@@ -7,6 +7,7 @@ from aiohttp.test_utils import TestClient
 from tortoise import Tortoise
 from tortoise.transactions import start_transaction
 
+from server.middleware import validate_token_middleware
 from server.models import Bike, User, Rental
 from server.service import TicketStore
 from server.service.rental_manager import RentalManager
@@ -32,9 +33,10 @@ async def database(loop):
 @pytest.fixture
 async def client(aiohttp_client, loop) -> TestClient:
     asyncio.get_event_loop().set_debug(True)
-    app = web.Application()
+    app = web.Application(middlewares=[validate_token_middleware])
 
     app['bike_connections'] = weakref.WeakSet()
+    app['rental_manager'] = RentalManager()
     app['database_uri'] = 'sqlite://:memory:'
     register_signals(app)
     register_views(app, "/api/v1")

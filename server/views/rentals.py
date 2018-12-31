@@ -6,7 +6,6 @@ To start a rental, go through the bike.
 from aiohttp import web
 
 from server.serializer import JSendSchema, RentalSchema, JSendStatus
-from server.service import rental_manager
 from server.views.base import BaseView
 
 
@@ -20,7 +19,7 @@ class RentalsView(BaseView):
         response_schema = JSendSchema.of(RentalSchema(), many=True)
         response_data = response_schema.dump({
             "status": JSendStatus.SUCCESS,
-            "data": (rental.serialize() for rental in await rental_manager.active_rentals())
+            "data": (rental.serialize() for rental in await self.request.app["rental_manager"].active_rentals())
         })
 
         return web.json_response(response_data)

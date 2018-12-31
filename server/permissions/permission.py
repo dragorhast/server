@@ -21,7 +21,7 @@ class Permission(ABC):
         return NotPermission(self)
 
     @abstractmethod
-    async def __call__(self, view: View, *args) -> bool:
+    async def __call__(self, view: View, **kwargs) -> None:
         """
         Evaluates the permission object.
 
@@ -35,19 +35,17 @@ class AndPermission(Permission):
     def __init__(self, *permissions):
         self._permissions = permissions
 
-    async def __call__(self, view, *args):
+    async def __call__(self, view, **kwargs):
         errors = []
 
         for permission in self._permissions:
             try:
-                await permission(view, *args)
+                await permission(view, **kwargs)
             except PermissionError as e:
                 errors.append(e)
 
         if errors:
             raise PermissionError(*errors)
-
-        return True
 
     def __repr__(self):
         return "(" + " & ".join(repr(p) for p in self._permissions) + ")"
@@ -58,13 +56,13 @@ class OrPermission(Permission):
     def __init__(self, *permissions):
         self._permissions = permissions
 
-    async def __call__(self, view, *args):
+    async def __call__(self, view, **kwargs):
         errors = []
 
         for permission in self._permissions:
             try:
-                await permission(view, *args)
-                return True
+                await permission(view, **kwargs)
+                return
             except PermissionError as e:
                 errors.append(e)
 
@@ -79,5 +77,10 @@ class NotPermission(Permission):
     def __init__(self, permission):
         self._permission = permission
 
-    async def __call__(self, view, *args):
-        return not self._permission(view, *args)
+    async def __call__(self, view, **kwargs):
+        try:
+            await self._permission(view, **kwargs)
+        except PermissionError:
+            return
+        else:
+            raise PermissionError(f"Permission {self._permission} passed, but is inverted.")

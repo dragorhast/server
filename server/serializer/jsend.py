@@ -36,9 +36,9 @@ class JSendSchema(Schema):
     code = fields.Integer()
 
     @validates_schema
-    def ensure_fields(self, data):
+    def assert_fields(self, data):
         """
-        Ensures that, according to the specification:
+        Asserts that, according to the specification:
 
         - the ``data`` field is included when the status is :attr:`~JSendStatus.SUCCESS` or :attr:`~JSendStatus.FAIL`
         - the ``message`` field is included when the status is :attr:`~JSendStatus.ERROR`

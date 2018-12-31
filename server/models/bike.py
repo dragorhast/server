@@ -48,16 +48,12 @@ class Bike(Model):
 
         :return: A dictionary.
         """
-        schema = BikeSchema(exclude=("connected", "locked"))
-
-        data = schema.dump({
+        return {
             "id": self.id,
             "public_key": self.public_key,
             "connected": self._is_connected,
             "locked": self.locked
-        })
-
-        return data
+        }
 
     @property
     def public_key(self):
