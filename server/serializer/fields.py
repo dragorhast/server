@@ -45,6 +45,12 @@ class BytesField(fields.Field):
         except ValueError:
             raise ValidationError(f"String {value} is not a valid hex-encoded string.")
 
+    def _jsonschema_type_mapping(self):
+        """Defines the jsonschema type for the object."""
+        return {
+            'type': 'string',
+        }
+
 
 class EnumField(fields.Field):
     """
@@ -87,3 +93,10 @@ class EnumField(fields.Field):
             raise ValidationError(f"Field does not exist on {self._enum_type}.")
         else:
             return None
+
+    def _jsonschema_type_mapping(self):
+        """Defines the jsonschema type for the object."""
+        return {
+            'type': 'string',
+            'enum': [enum.value for enum in self._enum_type]
+        }

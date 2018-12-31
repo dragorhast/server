@@ -40,6 +40,7 @@ sphinxcontrib-mermaid = "*"
 sphinx-autodoc-typehints = "*"
 python-jose = "*"
 aiohttp-cors = "*"
+marshmallow-jsonschema = "*"
 
 [requires]
 python_version = "3.6"
