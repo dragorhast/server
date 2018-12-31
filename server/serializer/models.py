@@ -37,7 +37,8 @@ class RentalSchema(Schema):
     events = Nested(RentalUpdateSchema(), many=True)
     start_time = DateTime(required=True)
     end_time = DateTime()
-    price = Float(allow_none=True)
+    estimated_price = Float()
+    price = Float()
 
     @validates_schema
     def assert_end_time_with_price(self, data):
@@ -48,3 +49,5 @@ class RentalSchema(Schema):
             raise ValidationError("If the price is included, you must also include the end time.")
         elif "price" not in data and "end_time" in data:
             raise ValidationError("If the end time is included, you must also include the price.")
+        if "price" in data and "estimated_price" in data:
+            raise ValidationError("Rental should have one of either price or estimated_price.")

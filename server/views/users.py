@@ -103,7 +103,7 @@ class UserRentalsView(BaseView):
         rentals = await Rental.filter(user__id=user.id)
         return {
             "status": JSendStatus.SUCCESS,
-            "data": (rental.serialize() for rental in rentals)
+            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in rentals]
         }
 
 
@@ -130,7 +130,7 @@ class UserCurrentRentalView(BaseView):
         response_schema = JSendSchema.of(RentalSchema())
         response_data = response_schema.dump({
             "status": JSendStatus.SUCCESS,
-            "data": current_rental.serialize()
+            "data": await current_rental.serialize(self.request.app["rental_manager"])
         })
 
         return web.json_response(response_data)
@@ -152,7 +152,7 @@ class UserCurrentRentalView(BaseView):
         response_schema = JSendSchema.of(RentalSchema())
         response_data = response_schema.dump({
             "status": JSendStatus.SUCCESS,
-            "data": current_rental.serialize()
+            "data": await current_rental.serialize(self.request.app["rental_manager"])
         })
 
         return web.json_response(response_data)

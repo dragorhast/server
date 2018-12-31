@@ -2,7 +2,6 @@ from aiohttp.test_utils import TestClient
 
 from server.models import User
 from server.serializer import UserSchema, JSendSchema, JSendStatus, RentalSchema
-from server.service import rental_manager
 
 
 class TestUsersView:
@@ -156,6 +155,7 @@ class TestUserCurrentRentalView:
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["id"] == rental.id
         assert "price" not in response_data["data"]
+        assert "estimated_price" in response_data["data"]
         assert response_data["data"]["bike_id"] == random_bike.id
         assert response_data["data"]["user_id"] == random_user.id
         assert "start_time" in response_data["data"]
@@ -183,11 +183,11 @@ class TestUserCurrentRentalView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["id"] == rental.id
-        assert response_data["data"]["price"] is not None
         assert response_data["data"]["bike_id"] == random_bike.id
         assert response_data["data"]["user_id"] == random_user.id
         assert "start_time" in response_data["data"]
         assert "end_time" in response_data["data"]
+        assert "price" in response_data["data"]
 
     async def test_end_current_rental_none(self, client: TestClient, random_user):
         """Assert that the user is warned when trying to end a rental when there is none."""

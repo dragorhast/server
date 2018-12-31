@@ -131,7 +131,7 @@ class BikeRentalsView(BaseView):
     async def get(self, bike: Bike):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": (rental.serialize() for rental in await get_rentals_for_bike(bike=bike))
+            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in (await get_rentals_for_bike(bike=bike))]
         }
 
     @bike_getter
@@ -161,7 +161,7 @@ class BikeRentalsView(BaseView):
         response_schema = JSendSchema.of(RentalSchema())
         response_data = response_schema.dump({
             "status": JSendStatus.SUCCESS,
-            "data": rental.serialize()
+            "data": await rental.serialize(self.request.app["rental_manager"])
         })
         return web.json_response(response_data)
 

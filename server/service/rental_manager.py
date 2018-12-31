@@ -3,6 +3,7 @@ This module is what handles all the rentals in the system.
 """
 
 from collections import defaultdict
+from datetime import datetime
 from typing import Dict, Set, Callable, Union, Tuple
 
 from server.models import Bike, Rental, User, RentalUpdate
@@ -41,6 +42,16 @@ class RentalManager:
 
         rental_id = self.active_rental_ids[user_id]
         return await Rental.filter(id=rental_id).first().prefetch_related('updates')
+
+    async def get_price_estimate(self, target: Union[Rental, int]):
+        """Gets the price of the rental so far."""
+
+        if isinstance(target, int):
+            rental = await Rental.filter(id=target).first()
+        elif isinstance(target, Rental):
+            rental = target
+
+        return await get_price(rental.start_date, datetime.now())
 
     async def bike_in_use(self, target: Union[Bike, int]):
         """Checks whether the given bike is in use."""

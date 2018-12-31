@@ -9,7 +9,6 @@ from tortoise import Model, fields
 
 from server.models.fields import EnumField
 from server.models.util import RentalUpdateType
-from server.serializer import RentalSchema
 
 
 class RentalUpdate(Model):
@@ -26,24 +25,26 @@ class Rental(Model):
     price = fields.FloatField(null=True)
 
     @property
-    def start_time(self):
+    def start_date(self):
         return self.updates[0].time
 
     @property
-    def end_time(self):
+    def end_date(self):
         last_update: RentalUpdate = self.updates[-1]
         return last_update.time if last_update.type == RentalUpdateType.RETURN else None
 
-    def serialize(self) -> Dict[str, Any]:
+    async def serialize(self, rental_manager) -> Dict[str, Any]:
         data = {
             "id": self.id,
             "user_id": self.user_id,
             "bike_id": self.bike_id,
-            "start_time": self.start_time,
+            "start_time": self.start_date,
         }
 
-        if self.end_time is not None:
-            data["end_time"] = self.end_time
+        if self.end_date is not None:
+            data["end_time"] = self.end_date
             data["price"] = self.price
+        else:
+            data["estimated_price"] = await rental_manager.get_price_estimate(self)
 
         return data
