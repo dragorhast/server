@@ -138,6 +138,7 @@ class UserCurrentRentalView(BaseView):
     @with_user
     @requires(UserMatchesFirebase())
     async def delete(self, user: User):
+        """Ends a rental."""
         if user.id not in self.request.app["rental_manager"].active_rental_ids:
             response_schema = JSendSchema()
             response_data = response_schema.dump({

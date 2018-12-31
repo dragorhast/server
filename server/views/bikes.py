@@ -16,10 +16,9 @@ from server.permissions.permissions import ValidToken, BikeNotInUse
 from server.serializer import BikeSchema, RentalSchema, BytesField, EnumField, JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
 from server.service import TicketStore
-from server.service.bikes import get_bikes, get_bike, register_bike, lock_bike, BadKeyError, delete_bike
+from server.service.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike
 from server.service.rentals import get_rentals_for_bike
 from server.service.users import get_user
-from server.service.verify_token import TokenVerificationError
 from server.views.base import BaseView
 from server.views.utils import getter
 
@@ -57,11 +56,7 @@ class BikesView(BaseView):
 
     @expects(BikeRegisterSchema())
     async def post(self):
-        """
-        Registers a bike with the system.
-        """
-
-
+        """ Registers a bike with the system."""
         try:
             bike = await register_bike(
                 self.request["data"]["public_key"],
@@ -148,23 +143,17 @@ class BikeRentalsView(BaseView):
         If the rental could not be made, (not authenticated
         or bike in use) it will fail with the appropriate message.
         """
-
-        try:
-            user = await get_user(firebase_id=self.request["token"])
-        except TokenVerificationError:
-            response_schema = JSendSchema()
-            response_data = response_schema.dump({
-                "status": JSendStatus.FAIL,
-                "data": {"firebase_id": f"Firebase token is invalid. Log back in to firebase and try again."}
-            })
-            return web.json_response(response_data)
+        user = await get_user(firebase_id=self.request["token"])
 
         if user is None:
             response_schema = JSendSchema()
             response_data = response_schema.dump({
                 "status": JSendStatus.FAIL,
-                "data": {"firebase_id": f"No such user exists, but your key is valid."
-                f"Create a new one at '{self.request.app.router['users'].url_for()}'."}
+                "data": {
+                    "firebase_id":
+                        f"No such user exists, but your key is valid."
+                        f"Create a new one at '{self.request.app.router['users'].url_for()}'."
+                }
             })
             return web.json_response(response_data)
 
