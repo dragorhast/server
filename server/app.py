@@ -7,6 +7,7 @@ from aiohttp import web
 from aiohttp_sentry import SentryMiddleware
 
 from server import api_root, server_mode
+from server.middleware import validate_token_middleware
 from server.signals import register_signals
 from server.version import __version__
 from server.views import register_views, send_to_developer_portal
@@ -14,7 +15,7 @@ from server.views import register_views, send_to_developer_portal
 
 def build_app(db_uri=None):
     """Sets up the app and installs uvloop."""
-    app = web.Application(middlewares=[SentryMiddleware()])
+    app = web.Application(middlewares=[SentryMiddleware(), validate_token_middleware])
     uvloop.install()
 
     # keep a track of all open bike connections
