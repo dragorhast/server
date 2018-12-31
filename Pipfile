@@ -41,6 +41,7 @@ sphinx-autodoc-typehints = "*"
 python-jose = "*"
 aiohttp-cors = "*"
 marshmallow-jsonschema = "*"
+aiocontextvars = "*"
 
 [requires]
 python_version = "3.6"
