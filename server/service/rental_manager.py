@@ -32,7 +32,7 @@ class RentalManager:
         """Maps a rental to a set of event subscribers."""
 
     async def active_rentals(self):
-        return await Rental.filter(id__in=self.active_rental_ids.keys())
+        return await Rental.filter(id__in=self.active_rental_ids.keys()).prefetch_related('updates')
 
     async def active_rental(self, user: Union[int, User]):
         if isinstance(user, int):

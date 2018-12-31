@@ -207,3 +207,30 @@ class TestMeView:
         """Assert that me redirects to the appropriate user."""
         response = await client.get('/api/v1/users/me', headers={"Authorization": f"Bearer {random_user.firebase_id}"})
         assert response.url.path == f'/api/v1/users/{random_user.id}'
+
+    async def test_get_me_missing_auth(self, client: TestClient, random_user):
+        """Assert that not supplying a valid token errors."""
+        response = await client.get('/api/v1/users/me')
+        response_schema = JSendSchema()
+        response_data = response_schema.load(await response.json())
+        assert response_data["status"] == JSendStatus.FAIL
+        assert "authorization" in response_data["data"]
+        assert any("supply your firebase token" in error for error in response_data["data"]["authorization"])
+
+    async def test_get_me_invalid_auth(self, client: TestClient, random_user):
+        """Assert that an invalid token returns an appropriate error."""
+        response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer bad_token"})
+        response_schema = JSendSchema()
+        response_data = response_schema.load(await response.json())
+        assert response_data["status"] == JSendStatus.FAIL
+        assert "authorization" in response_data["data"]
+        assert any("valid hex string" in error for error in response_data["data"]["authorization"])
+
+    async def test_get_me_missing_user(self, client: TestClient):
+        """Assert that calling me gives a descriptive error."""
+        response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer abcd"})
+        response_schema = JSendSchema()
+        response_data = response_schema.load(await response.json())
+        assert response_data["status"] == JSendStatus.FAIL
+        assert "authorization" in response_data["data"]
+        assert "User does not exist" in response_data["data"]["authorization"]

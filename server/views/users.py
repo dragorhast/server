@@ -195,46 +195,30 @@ class MeView(BaseView):
     name = "me"
 
     async def get(self):
-        return await self._me_handler(self.request)
+        return await self._me_handler()
 
     async def post(self):
-        return await self._me_handler(self.request)
+        return await self._me_handler()
 
     async def put(self):
-        return await self._me_handler(self.request)
+        return await self._me_handler()
 
     async def patch(self):
-        return await self._me_handler(self.request)
+        return await self._me_handler()
 
     async def delete(self):
-        return await self._me_handler(self.request)
+        return await self._me_handler()
 
-    @staticmethod
-    async def _me_handler(request: Request):
+    @requires(ValidToken())
+    async def _me_handler(self):
         """
         Accepts all types of request, does some checking against the user, and forwards them on to the appropriate user.
         """
-        if "Authorization" not in request.headers or not request.headers["Authorization"].startswith("Bearer "):
-            response_schema = JSendSchema()
-            return web.json_response(response_schema.dump({
-                "status": JSendStatus.FAIL,
-                "data": {"json": "You must supply your firebase token."}
-            }), status=401)
-
-        try:
-            token = verifier.verify_token(request.headers["Authorization"][7:])
-        except TokenVerificationError as error:
-            response_schema = JSendSchema()
-            return web.json_response(response_schema.dump({
-                "status": JSendStatus.FAIL,
-                "data": {"token": error.args}
-            }), status=401)
-
-        user = await get_user(firebase_id=token)
+        user = await get_user(firebase_id=self.request["token"])
 
         if user is None:
             response_schema = JSendSchema()
-            create_user_url = str(request.app.router['users'].url_for())
+            create_user_url = str(self.request.app.router['users'].url_for())
             return web.json_response(response_schema.dump({
                 "status": JSendStatus.FAIL,
                 "data": {
@@ -244,7 +228,7 @@ class MeView(BaseView):
                 }
             }), status=401)
 
-        concrete_url = MeView._get_concrete_user_url(request.path, request.match_info.get("tail"), user)
+        concrete_url = MeView._get_concrete_user_url(self.request.path, self.request.match_info.get("tail"), user)
         raise web.HTTPFound(concrete_url)
 
     @staticmethod

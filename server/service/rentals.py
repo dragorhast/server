@@ -25,4 +25,4 @@ async def get_rentals():
 
 
 async def get_rental(rental_id: int) -> Rental:
-    return await Rental.filter(id=rental_id)
+    return await Rental.filter(id=rental_id).first().prefetch_related('updates')
