@@ -179,13 +179,23 @@ epub_exclude_files = ['search.html']
 
 # -- Extension configuration -------------------------------------------------
 
+autodoc_default_options = {
+    'members': None,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': None,
+    'exclude-members': '__weakref__',
+    'show-inheritance': None
+}
+
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'aiohttp': ('https://aiohttp.readthedocs.io/en/stable/', None),
-    'tortoise': ('https://tortoise-orm.readthedocs.io/en/latest/', None)
+    'tortoise': ('https://tortoise-orm.readthedocs.io/en/latest/', None),
+    'marshmallow': ('https://marshmallow.readthedocs.io/en/latest/', None)
 }
 
 # -- Options for todo extension ----------------------------------------------

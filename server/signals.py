@@ -1,4 +1,7 @@
 """
+Signals
+-------
+
 Defines a number of signals that the aiohttp server uses
 to facilitate some of the advanced functionality.
 

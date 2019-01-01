@@ -1,3 +1,8 @@
+"""
+User
+---------------------------
+"""
+
 from tortoise import Model, fields
 
 

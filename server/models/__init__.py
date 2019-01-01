@@ -1,5 +1,8 @@
 """
 The models package contains all the models used on the server.
+
+.. todo: Implement PickupPoint
+.. todo: Implement Reservation
 """
 
 from .bike import Bike

@@ -189,7 +189,7 @@ class BikeSocketView(BaseView):
         if not await ws.receive_str() == "verified":
             raise Exception
 
-    For more detail about the auth process, see :doc:`/bike-protocol`.
+    For more detail about the auth process, see :doc:`/design/bike-protocol`.
     """
 
     url = "/bikes/connect"

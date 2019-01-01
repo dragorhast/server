@@ -1,3 +1,8 @@
+"""
+App
+-----
+"""
+
 import asyncio
 import weakref
 

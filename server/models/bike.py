@@ -1,4 +1,7 @@
 """
+Bike
+-------------------------
+
 Represents a bike on the server. The bike has a number of operations on
 it that proxy commands on the real world bike. This requires that an open
 socket to a bike is open before these operations are handled. To do this,

@@ -1,3 +1,8 @@
+"""
+Rentals
+-------
+"""
+
 from typing import Union
 
 from server.models import Bike, Rental

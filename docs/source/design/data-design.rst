@@ -1,7 +1,50 @@
 Data Design
 ===========
 
-`Rough Diagram`_
+.. mermaid ::
+
+    classDiagram
+    User <|-- Issue : Created By
+    User <|-- Rental : Created By
+    Bike <|-- Rental : Uses
+    Bike <|-- Issue : References
+    User <|-- Reservation : Created By
+    PickupPoint <|-- Reservation : Reserved At
+    Rental <|-- RentalUpdate : Describes
+    Bike <|-- LocationUpdate : Describes
+
+    Bike : int id
+    Bike : bytes public_key
+    Bike : type
+    Bike : bool locked
+    Bike : is_connected()
+    Bike : set_locked()
+
+    LocationUpdate : int id
+    LocationUpdate : Point location
+    LocationUpdate : Bike bike
+    LocationUpdate : datetime time
+
+    User : int id
+    User : bytes firebase_id
+    User : str first
+    User : str email
+
+    Issue : int id
+    Issue : User user
+    Issue : Bike bike
+    Issue : datetime time
+    Issue : str description
+
+    Rental : int id
+    Rental : User user
+    Rental : Bike bike
+    Rental : float price
+
+    RentalUpdate : int id
+    RentalUpdate : Rental rental
+    RentalUpdate : type
+    RentalUpdate : datetime time
 
 To support our design decisions we need to make accommodations in the way we store our data. We have opted to built an
 event-sourced database for the bike state and location updates so that we minimize the chances of database inconsistency.

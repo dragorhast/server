@@ -1,3 +1,8 @@
+"""
+Users
+-----
+"""
+
 from tortoise.exceptions import IntegrityError
 
 from server.models import User

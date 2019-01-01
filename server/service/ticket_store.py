@@ -1,4 +1,7 @@
 """
+Ticket Store
+------------
+
 Handles the connection tickets for bikes.
 
 The tickets are ephemeral and do not need
@@ -7,7 +10,7 @@ to be persisted.
 
 from asyncio import sleep
 from datetime import datetime, timedelta
-from typing import Set
+from typing import Set, NamedTuple
 
 from dataclasses import dataclass, field
 from nacl.utils import random
@@ -16,8 +19,7 @@ from server import logger
 from server.models.bike import Bike
 
 
-@dataclass
-class BikeConnectionTicket:
+class BikeConnectionTicket(NamedTuple):
     """
     Stores the challenge issued to a bike while the bike signs it.
     """
@@ -25,7 +27,7 @@ class BikeConnectionTicket:
     challenge: bytes
     bike: Bike
     remote: str
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime
 
     def __hash__(self):
         """Hashes the ticket based on the remote and the public key."""
@@ -61,7 +63,7 @@ class TicketStore:
         """
         Adds a ticket to the store.
 
-        :raise TooManyTicketError: The ticket queue is full.
+        :raises TooManyTicketError: The ticket queue is full.
         """
 
         tickets = {t for t in self._tickets if t.remote == remote}
@@ -70,7 +72,7 @@ class TicketStore:
             raise TooManyTicketError()
 
         challenge = random(64)
-        ticket = BikeConnectionTicket(challenge, bike, remote)
+        ticket = BikeConnectionTicket(challenge, bike, remote, datetime.now())
 
         self._tickets.add(ticket)
         return challenge
@@ -94,7 +96,7 @@ class TicketStore:
         """Clears expired tickets for a remote."""
         self._tickets = {t for t in self._tickets if not self._is_expired(t)}
 
-    def _is_expired(self, ticket):
+    def _is_expired(self, ticket: BikeConnectionTicket):
         return ticket.timestamp + self.expiry_period <= datetime.now()
 
     def __contains__(self, remote):

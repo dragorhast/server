@@ -1,4 +1,7 @@
 """
+Model Serializers
+-----------------
+
 Defines serializers for the various models in the system.
 """
 
@@ -17,6 +20,8 @@ class BikeSchema(Schema):
 
 
 class UserSchema(Schema):
+    """The schema corresponding to the :class:`~server.models.user.User` model."""
+
     id = Integer()
     firebase_id = BytesField(required=True)
     first = String()

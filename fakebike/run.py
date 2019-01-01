@@ -14,7 +14,7 @@ from nacl.encoding import RawEncoder
 from fakebike import logger
 from fakebike.bike import Bike
 from server.models.util import BikeType
-from server.views import BikeRegisterSchema
+from server.views.bikes import BikeRegisterSchema
 
 bikes = {
     0: Bike(0, bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55"),

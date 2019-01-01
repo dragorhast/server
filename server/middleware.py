@@ -1,3 +1,8 @@
+"""
+Middleware
+----------
+"""
+
 from aiohttp import web
 from aiohttp.abc import Request
 from aiohttp.web_middlewares import middleware

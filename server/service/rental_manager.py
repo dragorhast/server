@@ -1,4 +1,7 @@
 """
+Rental Manager
+--------------
+
 This module is what handles all the rentals in the system.
 """
 

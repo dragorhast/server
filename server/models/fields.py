@@ -1,3 +1,8 @@
+"""
+Fields
+---------------------------
+"""
+
 from enum import Enum
 from typing import Type
 

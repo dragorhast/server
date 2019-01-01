@@ -19,28 +19,28 @@ sent.
 .. mermaid ::
 
     sequenceDiagram
-        participant B as Bike
-        participant S as Server
-        Note left of B: POST request with public key.
-        B ->> S: Public Key
-        Note right of S: The key is checked against the known bike public keys.
-        alt Foreign Public Key
-        S ->> B: 401 Unauthorized
-        else
-        Note right of S: Auth ticket is made with IP, public key, and challenge.
-        S ->> B: Challenge
-        end
-        Note left of B: The bike signs the challenge.
-        Note left of B: The bike opens a web socket with the server.
-        B ->> S: Public Key
-        B ->> S: Signature
-        Note right of S: The signature is verified against the public key.
-        alt Signature Incorrect
-        S ->> B: "fail"
-        else
-        S ->> B: "verified"
-        B ->> S: "current-status"
-        end
+    participant B as Bike
+    participant S as Server
+    Note left of B: POST request with public key.
+    B ->> S: Public Key
+    Note right of S: The key is checked against the known bike public keys.
+    alt Foreign Public Key
+    S ->> B: 401 Unauthorized
+    else
+    Note right of S: Auth ticket is made with IP, public key, and challenge.
+    S ->> B: Challenge
+    end
+    Note left of B: The bike signs the challenge.
+    Note left of B: The bike opens a web socket with the server.
+    B ->> S: Public Key
+    B ->> S: Signature
+    Note right of S: The signature is verified against the public key.
+    alt Signature Incorrect
+    S ->> B: "fail"
+    else
+    S ->> B: "verified"
+    B ->> S: "current-status"
+    end
 
 The last message in the pair process updates the server with the status of the bike, via a simple json update. Currently
 this is only the locked status of the bike.

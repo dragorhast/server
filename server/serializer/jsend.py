@@ -1,4 +1,7 @@
 """
+JSend Schema
+------------
+
 Programmatically defines the JSend specification.
 """
 

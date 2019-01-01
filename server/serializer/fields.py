@@ -1,5 +1,9 @@
 """
-Defines some additional fields so that the Schemas can serialize to and from native python data types.
+Fields
+-------
+
+Defines some additional fields so that the Schemas can
+serialize to and from additional native python data types.
 """
 
 from enum import Enum, IntEnum
@@ -55,12 +59,12 @@ class BytesField(fields.Field):
 
 class EnumField(fields.Field):
     """
-    A fields the serializes an :class:`Enum` to a :class:`str` and back.
+    A field that serializes an :class:`~enum.Enum` to a :class:`str` and back.
     """
 
     def __init__(self, enum_type: Type[Enum], *args, use_name=False, as_string=False, **kwargs):
         """
-        :param enum_type: theEnum (or enum.IntEnum) subclass
+        :param enum_type: the :class:`~enum.Enum` (or :class:`~enum.IntEnum`) subclass
         :param use_name: use enum's property name instead of value when serialize
         :param as_string: serialize value as string
         """

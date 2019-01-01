@@ -1,3 +1,8 @@
+"""
+Bikes
+-----
+"""
+
 from typing import Iterable, Optional, Dict, Union
 
 from tortoise.exceptions import DoesNotExist

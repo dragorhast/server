@@ -3,7 +3,6 @@ Handles all the user CRUD
 """
 
 from aiohttp import web
-from aiohttp.abc import Request
 
 from server.models import User, Rental
 from server.permissions import UserMatchesFirebase
@@ -12,7 +11,6 @@ from server.permissions.permissions import ValidToken
 from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
 from server.serializer.decorators import expects, returns
 from server.service.users import get_users, get_user, delete_user, create_user, UserExistsError, update_user
-from server.service.verify_token import verifier, TokenVerificationError
 from server.views.base import BaseView
 from server.views.utils import getter
 
