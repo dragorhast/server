@@ -9,6 +9,7 @@ Welcome to the documentation for the tap2go server. If you are looking for api d
    :caption: Usage
 
    usage/users
+   usage/rentals
 
 .. toctree::
    :maxdepth: 2
