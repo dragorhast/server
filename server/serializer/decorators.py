@@ -13,6 +13,7 @@ validate the data coming in and out of the app.
 """
 
 from functools import wraps
+from http import HTTPStatus
 from json import JSONDecodeError
 from typing import Optional
 
@@ -69,7 +70,7 @@ def expects(schema: Optional[Schema], into="data"):
                         "schema": json_schema
                     }
                 })
-                return web.json_response(response_data, status=400)
+                return web.json_response(response_data, status=HTTPStatus.BAD_REQUEST)
 
             try:
                 self.request[into] = schema.load(await self.request.json())
@@ -80,7 +81,7 @@ def expects(schema: Optional[Schema], into="data"):
                     "status": JSendStatus.FAIL,
                     "data": {"json": f"Could not parse supplied JSON ({', '.join(err.args)})."}
                 })
-                return web.json_response(response_data, status=400)
+                return web.json_response(response_data, status=HTTPStatus.BAD_REQUEST)
             except ValidationError as err:
                 # if the json data does not match the schema, return the errors and the valid schema
                 response_schema = JSendSchema()
@@ -91,7 +92,7 @@ def expects(schema: Optional[Schema], into="data"):
                         "schema": json_schema
                     }
                 })
-                return web.json_response(response_data, status=400)
+                return web.json_response(response_data, status=HTTPStatus.BAD_REQUEST)
 
             # if everything passes, execute the original function
             return await original_function(self, **kwargs)
@@ -147,7 +148,7 @@ def returns(schema: Optional[Schema]):
                     "data": err.messages,
                     "message": "We tried to send you data back, but it came out wrong."
                 })
-                return web.json_response(response_data, status=500)
+                return web.json_response(response_data, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
         return new_func
 

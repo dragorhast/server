@@ -1,6 +1,7 @@
 """
 Handles all the bike CRUD
 """
+from http import HTTPStatus
 
 from aiohttp import web, WSMsgType
 from marshmallow import Schema
@@ -68,7 +69,7 @@ class BikesView(BaseView):
                 "status": JSendStatus.FAIL,
                 "data": error.args
             })
-            return web.json_response(response, status=400)
+            return web.json_response(response, status=HTTPStatus.BAD_REQUEST)
 
         response_schema = JSendSchema.of(BikeSchema(exclude=('connected', 'locked')))
         response = response_schema.dump({
@@ -106,7 +107,7 @@ class BikeView(BaseView):
                 "status": JSendStatus.FAIL,
                 "data": error.args
             })
-            return web.json_response(response, status=400)
+            return web.json_response(response, status=HTTPStatus.BAD_REQUEST)
 
         raise web.HTTPNoContent
 

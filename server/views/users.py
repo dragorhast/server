@@ -1,6 +1,7 @@
 """
 Handles all the user CRUD
 """
+from http import HTTPStatus
 
 from aiohttp import web
 
@@ -41,13 +42,13 @@ class UsersView(BaseView):
                 "status": JSendStatus.FAIL,
                 "data": err.errors
             })
-            return web.json_response(response_data, status=409)
+            return web.json_response(response_data, status=HTTPStatus.CONFLICT)
 
         response_schema = JSendSchema.of(UserSchema())
         return web.json_response(response_schema.dump({
             "status": JSendStatus.SUCCESS,
             "data": user.serialize()
-        }), status=201)
+        }), status=HTTPStatus.CREATED)
 
 
 class UserView(BaseView):
@@ -122,7 +123,7 @@ class UserCurrentRentalView(BaseView):
                 "status": JSendStatus.FAIL,
                 "data": {"rental": f"You have no current rental."}
             })
-            return web.json_response(response_data, status=404)
+            return web.json_response(response_data, status=HTTPStatus.NOT_FOUND)
 
         current_rental = await self.request.app["rental_manager"].active_rental(user)
         response_schema = JSendSchema.of(RentalSchema())
@@ -143,7 +144,7 @@ class UserCurrentRentalView(BaseView):
                 "status": JSendStatus.FAIL,
                 "data": {"rental": f"You have no current rental."}
             })
-            return web.json_response(response_data, status=404)
+            return web.json_response(response_data, status=HTTPStatus.NOT_FOUND)
 
         current_rental = await self.request.app["rental_manager"].active_rental(user)
         await self.request.app["rental_manager"].finish(current_rental)
@@ -224,7 +225,7 @@ class MeView(BaseView):
                     "url": create_user_url,
                     "method": "POST"
                 }
-            }), status=401)
+            }), status=HTTPStatus.BAD_REQUEST)
 
         concrete_url = MeView._get_concrete_user_url(self.request.path, self.request.match_info.get("tail"), user)
         raise web.HTTPFound(concrete_url)
