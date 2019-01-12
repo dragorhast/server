@@ -1,8 +1,3 @@
-.. tap2go server documentation master file, created by
-   sphinx-quickstart on Fri Nov 23 03:08:05 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 tap2go Server
 =============
 
@@ -11,30 +6,37 @@ Welcome to the documentation for the tap2go server. If you are looking for api d
 
 .. toctree::
    :maxdepth: 2
-   :caption: Design
+   :caption: Usage
 
-   style
-   bike-protocol
-   authentication
-   communication
-   design
-   database
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Server
-
-   server/models
-   server/store
-   server/views
-   server/server
-   server/service
+   usage/users
+   usage/rentals
 
 .. toctree::
    :maxdepth: 2
-   :caption: Fake Bike
+   :caption: Design
+
+   design/bike-protocol
+   design/authentication
+   design/system-design
+   design/data-design
+   design/style-guide
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Server Reference
+
+   server/models
+   server/views
+   server/server
+   server/service
+   server/serializer
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Fake Bike Reference
 
    fakebike/fakebike
+
 
 
 Indices and tables

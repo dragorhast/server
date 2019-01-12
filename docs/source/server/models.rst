@@ -2,22 +2,15 @@ Models
 =====================
 
 .. automodule:: server.models
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Bike
--------------------------
 
 .. automodule:: server.models.bike
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
-Rental
----------------------------
+.. automodule:: server.models.issue
+
+.. automodule:: server.models.location
 
 .. automodule:: server.models.rental
-    :members:
-    :undoc-members:
-    :show-inheritance:
+
+.. automodule:: server.models.user
+
+.. automodule:: server.models.fields

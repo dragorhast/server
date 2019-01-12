@@ -3,53 +3,79 @@ Handles all the bike CRUD
 """
 
 from aiohttp import web, WSMsgType
+from marshmallow import Schema
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
-from server.store.ticket_store import TicketStore
 
 from server import logger
-from server.permissions.auth import AuthenticatedPermission
-from server.permissions.util import require_permission
-from server.service import get_bike, get_bikes, create_bike, get_rentals, get_user, start_rental, lock_bike
+from server.models.bike import Bike
+from server.models.util import BikeType
+from server.permissions.decorators import requires
+from server.permissions.permissions import ValidToken, BikeNotInUse
+from server.serializer import BikeSchema, RentalSchema, BytesField, EnumField, JSendStatus, JSendSchema
+from server.serializer.decorators import returns, expects
+from server.service import TicketStore
+from server.service.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike
+from server.service.rentals import get_rentals_for_bike
+from server.service.users import get_user
 from server.views.base import BaseView
 from server.views.utils import getter
+
+
+class MasterKeySchema(Schema):
+    master_key = BytesField(required=True)
+    """The master key, used to perform operations on the bike."""
+
+
+class BikeRegisterSchema(MasterKeySchema):
+    """The schema of the bike register request."""
+
+    public_key = BytesField(required=True)
+    """The public key of the bike."""
+
+    type = EnumField(BikeType)
+    """The type of bike."""
 
 
 class BikesView(BaseView):
     """
     Gets the bikes, or adds a new bike.
 
-
     .. versionadded:: 0.1.0
     """
     url = "/bikes"
 
+    @returns(JSendSchema.of(BikeSchema(exclude=("connected", "locked")), many=True))
     async def get(self):
-        return web.json_response({
-            "status": "success",
-            "data": list(bike.serialize() for bike in await get_bikes())
-        })
+        """Gets all the bikes from the system."""
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": (bike.serialize() for bike in await get_bikes())
+        }
 
-    @require_permission(AuthenticatedPermission())
+    @expects(BikeRegisterSchema())
     async def post(self):
-        """
-        Accepts:
-            {"public_key": xxxx}
-        """
-        bike_data = await self.request.json()
-
-        if "public_key" not in bike_data:
-            raise web.HTTPBadRequest(reason="Must include public key.")
-
+        """ Registers a bike with the system."""
         try:
-            bike = await create_bike(bike_data["public_key"])
-        except ValueError as e:
-            raise web.HTTPBadRequest(reason=e)
-        return web.json_response({
-            "status": "success",
+            bike = await register_bike(
+                self.request["data"]["public_key"],
+                self.request["data"]["master_key"]
+            )
+        except (ValueError, BadKeyError) as error:
+            response_schema = JSendSchema()
+            response = response_schema.dump({
+                "status": JSendStatus.FAIL,
+                "data": error.args
+            })
+            return web.json_response(response, status=400)
+
+        response_schema = JSendSchema.of(BikeSchema(exclude=('connected', 'locked')))
+        response = response_schema.dump({
+            "status": JSendStatus.SUCCESS,
             "data": bike.serialize()
         })
+        return web.json_response(response)
 
 
 class BikeView(BaseView):
@@ -57,32 +83,40 @@ class BikeView(BaseView):
     Gets or updates a single bike.
     """
     url = "/bikes/{id:[0-9]+}"
-    bike_getter = getter(get_bike, 'id', 'bike_id')
+    bike_getter = getter(get_bike, 'id', 'bike_id', 'bike')
 
     @bike_getter
+    @returns(JSendSchema.of(BikeSchema(exclude=("connected", "locked"))))
     async def get(self, bike):
-        return web.json_response(bike.serialize())
+        """Gets a single bike by its id."""
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": bike.serialize()
+        }
 
     @bike_getter
+    @expects(MasterKeySchema())
     async def delete(self, bike):
-        pass
-
-    async def patch(self):
-        data = await self.request.json()
-
-        if "locked" not in data:
-            raise web.HTTPBadRequest(reason="Must specify locked or not.")
-
+        """Deletes a bike by its id."""
         try:
-            await lock_bike("", True)
-        except Exception:
-            raise web.HTTPServiceUnavailable(reason="Requested bike not connected to server.")
+            await delete_bike(bike, self.request["data"]["master_key"])
+        except BadKeyError as error:
+            response_schema = JSendSchema()
+            response = response_schema.dump({
+                "status": JSendStatus.FAIL,
+                "data": error.args
+            })
+            return web.json_response(response, status=400)
 
-        return web.Response(text="updated")
+        raise web.HTTPNoContent
+
+    @bike_getter
+    async def patch(self, bike):
+        raise NotImplementedError()
 
     @bike_getter
     async def put(self, bike):
-        pass
+        raise NotImplementedError()
 
 
 class BikeRentalsView(BaseView):
@@ -90,29 +124,47 @@ class BikeRentalsView(BaseView):
     Gets the rentals for a single bike.
     """
     url = "/bikes/{id:[0-9]+}/rentals"
-    bike_getter = getter(get_bike, 'id', 'bike_id')
+    bike_getter = getter(get_bike, 'id', 'bike_id', 'bike')
 
     @bike_getter
-    async def get(self, bike):
-        """
-
-
-        :param bike:
-        :return:
-        """
-        return web.json_response([rental.serialize() for rental in await get_rentals(bike=bike)])
+    @returns(JSendSchema.of(RentalSchema(), many=True))
+    async def get(self, bike: Bike):
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in
+                     (await get_rentals_for_bike(bike=bike))]
+        }
 
     @bike_getter
-    async def post(self, bike):
+    @requires(ValidToken() & BikeNotInUse())
+    async def post(self, bike: Bike):
         """
         Starts a new rental.
 
         If the rental could not be made, (not authenticated
         or bike in use) it will fail with the appropriate message.
         """
-        user = await get_user()
-        rental = await start_rental(bike, user)
-        return web.json_response(rental.serialize())
+        user = await get_user(firebase_id=self.request["token"])
+
+        if user is None:
+            response_schema = JSendSchema()
+            response_data = response_schema.dump({
+                "status": JSendStatus.FAIL,
+                "data": {
+                    "firebase_id":
+                        f"No such user exists, but your key is valid."
+                        f"Create a new one at '{self.request.app.router['users'].url_for()}'."
+                }
+            })
+            return web.json_response(response_data)
+
+        rental = await self.request.app["rental_manager"].create(user, bike)
+        response_schema = JSendSchema.of(RentalSchema())
+        response_data = response_schema.dump({
+            "status": JSendStatus.SUCCESS,
+            "data": await rental.serialize(self.request.app["rental_manager"])
+        })
+        return web.json_response(response_data)
 
 
 class BikeSocketView(BaseView):
@@ -137,7 +189,7 @@ class BikeSocketView(BaseView):
         if not await ws.receive_str() == "verified":
             raise Exception
 
-    For more detail about the auth process, see :doc:`/communication`.
+    For more detail about the auth process, see :doc:`/design/bike-protocol`.
     """
 
     url = "/bikes/connect"
@@ -179,7 +231,7 @@ class BikeSocketView(BaseView):
 
         try:
             # handle messages
-            logger.info("Bike %s connected", ticket.bike.bid)
+            logger.info("Bike %s connected", ticket.bike.id)
             self.request.app['bike_connections'].add(socket)
             ticket.bike.socket = socket
 
@@ -192,7 +244,7 @@ class BikeSocketView(BaseView):
                 elif msg.type == WSMsgType.ERROR:
                     print('ws connection closed with exception %s', socket.exception())
         finally:
-            logger.info("Bike %s disconnected", ticket.bike.bid)
+            logger.info("Bike %s disconnected", ticket.bike.id)
             self.request.app['bike_connections'].discard(socket)
 
         return socket

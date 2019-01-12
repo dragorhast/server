@@ -1,8 +1,12 @@
+"""
+Issue
+---------------------------
+"""
+
 from tortoise import Model, fields
 
 
 class Issue(Model):
-
     id = fields.IntField(pk=True)
     user = fields.ForeignKeyField("models.User")
     bike = fields.ForeignKeyField("models.Bike", null=True)

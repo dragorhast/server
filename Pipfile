@@ -5,8 +5,8 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
-pytest-asyncio = "*"
 pytest-cov = "*"
+pytest-aiohttp = "*"
 codecov = "*"
 pylint = "*"
 mypy = "*"
@@ -20,7 +20,7 @@ idna-ssl = "*"
 gunicorn = "*"
 #uvloop
 cython = "*"
-uvloop = {git = "https://github.com/MagicStack/uvloop.git",ref = "v0.12.0rc1"}
+uvloop = {git = "https://github.com/MagicStack/uvloop.git",ref = "releases"}
 #sentry
 sentry-sdk = "*"
 aiohttp-sentry = "*"
@@ -29,6 +29,7 @@ hyperion-cli = "*"
 pynacl = "*"
 aiobreaker = "*"
 dataclasses = "*"
+marshmallow = ">=3rc1"
 tortoise-orm = "*"
 aiosqlite = "*"
 # docs
@@ -37,6 +38,10 @@ sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
 sphinxcontrib-mermaid = "*"
 sphinx-autodoc-typehints = "*"
+python-jose = "*"
+aiohttp-cors = "*"
+marshmallow-jsonschema = "*"
+aiocontextvars = "*"
 
 [requires]
 python_version = "3.6"
@@ -46,3 +51,6 @@ server = "python -m server"
 test = "python -m pytest --cov=server tests"
 docs = "sphinx-build docs/source docs/build"
 auto-docs = "sphinx-autobuild docs/source docs/build"
+
+[pipenv]
+allow_prereleases = true

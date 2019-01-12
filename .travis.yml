@@ -1,8 +1,6 @@
 language: python
 python:
-  - 3.7
-sudo: required
-dist: xenial
+  - 3.6
 
 cache:
   directories:
@@ -21,23 +19,23 @@ install:
 
 jobs:
   include:
-  - stage: test
-    name: PyLint
-    script: pipenv run pylint server; true
-  - stage: test
-    name: Test Runner
-    script: pipenv run test
-    after_success: pipenv run codecov
-  - stage: test
-    name: Type Analysis
-    script: pipenv run mypy server; true
-  - stage: secure
-    name: Dependency Warnings
-    script: pipenv run safety check
-  - stage: secure
-    name: Security Warnings
-    script: pipenv run bandit -r server
+    - stage: test
+      name: PyLint
+      script: pipenv run pylint server; true
+    - stage: test
+      name: Test Runner
+      script: pipenv run test
+      after_success: pipenv run codecov
+    - stage: test
+      name: Type Analysis
+      script: pipenv run mypy server; true
+    - stage: secure
+      name: Dependency Warnings
+      script: pipenv run safety check
+    - stage: secure
+      name: Security Warnings
+      script: pipenv run bandit -r server
 
 stages:
-- test
-- secure
+  - test
+  - secure

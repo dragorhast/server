@@ -1,4 +1,7 @@
 """
+Bike
+-------------------------
+
 Represents a bike on the server. The bike has a number of operations on
 it that proxy commands on the real world bike. This requires that an open
 socket to a bike is open before these operations are handled. To do this,
@@ -9,11 +12,13 @@ For an example of this, see :class:`~server.views.bikes.BikeSocketView`.
 """
 
 import weakref
-
-from aiohttp.web_ws import WebSocketResponse
 from typing import Optional, Callable, Dict, Any
 
+from aiohttp.web_ws import WebSocketResponse
 from tortoise import Model, fields
+
+from server.models.fields import EnumField
+from server.models.util import BikeType
 
 
 class Bike(Model):
@@ -28,15 +33,16 @@ class Bike(Model):
     """
 
     id = fields.IntField(pk=True)
-    public_key_hex = fields.TextField()
-    type = fields.TextField()
+    public_key_hex = fields.CharField(max_length=64)
+    type = EnumField(enum_type=BikeType, default=BikeType.ROAD)
 
     locked: bool = True
-    _socket: Optional[Callable[[], Optional[WebSocketResponse]]] = None
+    _socket: Callable[..., Optional[WebSocketResponse]] = lambda *args: None
+    _public_key: bytes
     """
     A weak reference to the websocket. Weak references, when called,
     return the object they are supposed to reference, or None if it
-    has been deleted.
+    has been deleted. We set it to lambda None to emulate this behaviour.
     """
 
     def serialize(self) -> Dict[str, Any]:
@@ -45,24 +51,20 @@ class Bike(Model):
 
         :return: A dictionary.
         """
-        data = {
+        return {
             "id": self.id,
-            "public_key": self.public_key.hex(),
+            "public_key": self.public_key,
             "connected": self._is_connected,
+            "locked": self.locked
         }
-
-        if data["connected"]:
-            data["locked"] = self.locked
-
-        return data
 
     @property
     def public_key(self):
         if hasattr(self, '_public_key'):
             return self._public_key
-        else:
-            self._public_key = bytes.fromhex(self.public_key_hex)
-            return self._public_key
+
+        self._public_key = bytes.fromhex(self.public_key_hex)
+        return self._public_key
 
     @property
     def _is_connected(self):
@@ -70,7 +72,7 @@ class Bike(Model):
         Checks if the bike has been assigned a weak reference
         to a socket and if the socket is still alive.
         """
-        return self._socket is not None and self._socket() is not None
+        return self._socket() is not None
 
     def _set_socket(self, socket):
         self._socket = weakref.ref(socket)
@@ -83,10 +85,12 @@ class Bike(Model):
         Locks or unlocks the bike.
 
         :param locked: The status to set the bike to.
-        :return: None
         :raises ConnectionError: If the socket is not open.
         """
-        if not self._is_connected:
+        socket = self._socket()
+
+        if not self._is_connected or socket is None:
             raise ConnectionError("No open socket.")
-        await self._socket().send_str("lock" if locked else "unlock")
+
+        await socket.send_str("lock" if locked else "unlock")
         self.locked = locked

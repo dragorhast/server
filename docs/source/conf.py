@@ -70,11 +70,6 @@ master_doc = 'index'
 # Usually you set "language" from the command line for these cases.
 language = None
 
-intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'aiohttp': ('http://aiohttp.readthedocs.io/en/stable/', None),
-}
-
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
@@ -184,10 +179,24 @@ epub_exclude_files = ['search.html']
 
 # -- Extension configuration -------------------------------------------------
 
+autodoc_default_options = {
+    'members': None,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': None,
+    'exclude-members': '__weakref__',
+    'show-inheritance': None
+}
+
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'aiohttp': ('https://aiohttp.readthedocs.io/en/stable/', None),
+    'tortoise': ('https://tortoise-orm.readthedocs.io/en/latest/', None),
+    'marshmallow': ('https://marshmallow.readthedocs.io/en/latest/', None)
+}
 
 # -- Options for todo extension ----------------------------------------------
 
