@@ -1,4 +1,7 @@
 """
+Rental Related Views
+---------------------------
+
 Handles all the rentals CRUD.
 
 To start a rental, go through the bike.

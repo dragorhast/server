@@ -1,4 +1,7 @@
 """
+Base
+------------------------
+
 The base view for the API. This view contains functionality
 required in all other views.
 """

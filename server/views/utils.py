@@ -1,3 +1,8 @@
+"""
+Utilities
+-------------------------
+"""
+
 from functools import wraps
 
 from aiohttp import web

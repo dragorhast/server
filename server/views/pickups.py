@@ -1,4 +1,7 @@
 """
+Pick-up Related Views
+---------------------------
+
 Handles all the pick-up point CRUD
 
 - Customer can reserve a bike from a rack

@@ -1,4 +1,11 @@
+"""
+Decorators
+----------
+"""
+
+
 from functools import wraps
+from http import HTTPStatus
 from typing import List
 
 from aiohttp import web
@@ -42,7 +49,7 @@ def requires(permission: Permission):
                 return web.json_response(response_schema.dump({
                     "status": JSendStatus.FAIL,
                     "data": {"authorization": errors}
-                }), status=401)
+                }), status=HTTPStatus.UNAUTHORIZED)
 
             return await original_function(self, **kwargs)
 

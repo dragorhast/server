@@ -1,3 +1,8 @@
+"""
+Permission
+----------
+"""
+
 from abc import ABC, abstractmethod
 
 from aiohttp.web_urldispatcher import View

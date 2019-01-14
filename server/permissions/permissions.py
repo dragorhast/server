@@ -1,3 +1,12 @@
+"""
+Permissions
+-----------
+
+This module contains the various permission types. A permission is essentially
+just an object (either function or class) that can be called asynchronously
+and raises a PermissionError in the case of a failed permission.
+"""
+
 from aiohttp.web_urldispatcher import View
 
 from server.permissions.permission import Permission
