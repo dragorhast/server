@@ -1,4 +1,7 @@
 """
+User Related Views
+-------------------------
+
 Handles all the user CRUD
 """
 from http import HTTPStatus
@@ -8,7 +11,7 @@ from aiohttp import web
 from server.models import User, Rental
 from server.permissions import UserMatchesFirebase
 from server.permissions.decorators import requires
-from server.permissions.permissions import ValidToken
+from server.permissions.permissions import ValidToken, BikeNotInUse
 from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
 from server.serializer.decorators import expects, returns
 from server.service.users import get_users, get_user, delete_user, create_user, UserExistsError, update_user

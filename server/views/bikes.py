@@ -1,4 +1,7 @@
 """
+Bike Related Views
+-------------------------
+
 Handles all the bike CRUD
 """
 from http import HTTPStatus

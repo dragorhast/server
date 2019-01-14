@@ -1,4 +1,7 @@
 """
+Reservation Related Views
+--------------------------------
+
 Handles all the reservations CRUD
 
 To create a new reservation, go through the pickup point.

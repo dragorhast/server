@@ -11,7 +11,8 @@ import uvloop
 from aiohttp import web
 from aiohttp_sentry import SentryMiddleware
 
-from server import api_root, server_mode
+from server import server_mode
+from server.config import api_root
 from server.middleware import validate_token_middleware
 from server.service.rental_manager import RentalManager
 from server.signals import register_signals

@@ -1,6 +1,6 @@
 from aiohttp import web
 
-from server import api_root
+from server.config import api_root
 
 
 async def send_to_developer_portal(request):

@@ -1,3 +1,9 @@
+"""
+Decorators
+----------
+"""
+
+
 from functools import wraps
 from http import HTTPStatus
 from typing import List

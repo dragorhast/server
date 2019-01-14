@@ -26,6 +26,7 @@ Welcome to the documentation for the tap2go server. If you are looking for api d
    :caption: Server Reference
 
    server/models
+   server/permissions
    server/views
    server/server
    server/service
