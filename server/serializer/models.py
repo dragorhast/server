@@ -24,8 +24,8 @@ class UserSchema(Schema):
 
     id = Integer()
     firebase_id = BytesField(required=True)
-    first = String()
-    email = Email()
+    first = String(required=True)
+    email = Email(required=True)
 
 
 class RentalUpdateSchema(Schema):
@@ -34,11 +34,11 @@ class RentalUpdateSchema(Schema):
 
 
 class RentalSchema(Schema):
-    id = Integer()
+    id = Integer(required=True)
     user = Nested(UserSchema())
-    user_id = Integer()
+    user_id = Integer(required=True)
     bike = Nested(BikeSchema())
-    bike_id = Integer()
+    bike_id = Integer(required=True)
     events = Nested(RentalUpdateSchema(), many=True)
     start_time = DateTime(required=True)
     end_time = DateTime()

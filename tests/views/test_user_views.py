@@ -57,7 +57,7 @@ class TestUsersView:
         assert any("Unknown field." in err for err in response_data["data"]["errors"]["bad_schema"])
 
     async def test_create_user_duplicate(self, client: TestClient, random_user):
-        """Assert that creating a user that already exists gives a descriptive error."""
+        """Assert that creating a user that already exists just updates the user."""
         response_schema = JSendSchema()
         response = await client.post('/api/v1/users', json={
             "first": "Alex",
@@ -65,9 +65,9 @@ class TestUsersView:
         }, headers={"Authorization": f"Bearer {random_user.firebase_id}"})
 
         response_data = response_schema.load(await response.json())
-        assert response_data["status"] == JSendStatus.FAIL
+        assert response_data["status"] == JSendStatus.SUCCESS
         assert "firebase_id" in response_data["data"]
-        assert "first" not in response_data["data"]
+        assert "first" in response_data["data"]
 
 
 class TestUserView:

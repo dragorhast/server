@@ -36,22 +36,18 @@ class UsersView(BaseView):
 
     @requires(ValidToken())
     @expects(UserSchema(only=('first', 'email')))
+    @returns(JSendSchema.of(UserSchema()), HTTPStatus.CREATED)
     async def post(self):
         try:
             user = await create_user(**self.request["data"], firebase_id=self.request["token"])
-        except UserExistsError as err:
-            response_schema = JSendSchema()
-            response_data = response_schema.dump({
-                "status": JSendStatus.FAIL,
-                "data": err.errors
-            })
-            return web.json_response(response_data, status=HTTPStatus.CONFLICT)
+        except UserExistsError:
+            user = await User.get(firebase_id=self.request["token"])
+            user = await update_user(user, **self.request["data"])
 
-        response_schema = JSendSchema.of(UserSchema())
-        return web.json_response(response_schema.dump({
+        return {
             "status": JSendStatus.SUCCESS,
-            "data": user.serialize()
-        }), status=HTTPStatus.CREATED)
+            "data": user
+        }
 
 
 class UserView(BaseView):
@@ -74,13 +70,13 @@ class UserView(BaseView):
 
     @user_getter
     @requires(UserMatchesFirebase())
-    @expects(UserSchema(exclude=('id', 'firebase_id')))
+    @expects(UserSchema(only=('first', 'email')))
     @returns(JSendSchema.of(UserSchema()))
     async def put(self, user: User):
         user = await update_user(user, **self.request["data"])
         return {
             "status": JSendStatus.SUCCESS,
-            "data": user.serialize()
+            "data": user
         }
 
     @user_getter
@@ -119,45 +115,43 @@ class UserCurrentRentalView(BaseView):
 
     @with_user
     @requires(UserMatchesFirebase())
+    @returns(
+        no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
+        rental_exists=JSendSchema.of(RentalSchema())
+    )
     async def get(self, user: User):
         if user.id not in self.request.app["rental_manager"].active_rental_ids:
-            response_schema = JSendSchema()
-            response_data = response_schema.dump({
+            return "no_rental", {
                 "status": JSendStatus.FAIL,
                 "data": {"rental": f"You have no current rental."}
-            })
-            return web.json_response(response_data, status=HTTPStatus.NOT_FOUND)
+            }
 
         current_rental = await self.request.app["rental_manager"].active_rental(user)
-        response_schema = JSendSchema.of(RentalSchema())
-        response_data = response_schema.dump({
+        return "rental_exists", {
             "status": JSendStatus.SUCCESS,
             "data": await current_rental.serialize(self.request.app["rental_manager"])
-        })
-
-        return web.json_response(response_data)
+        }
 
     @with_user
     @requires(UserMatchesFirebase())
+    @returns(
+        no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
+        rental_deleted=JSendSchema.of(RentalSchema()),
+    )
     async def delete(self, user: User):
         """Ends a rental."""
         if user.id not in self.request.app["rental_manager"].active_rental_ids:
-            response_schema = JSendSchema()
-            response_data = response_schema.dump({
+            return "no_rental", {
                 "status": JSendStatus.FAIL,
                 "data": {"rental": f"You have no current rental."}
-            })
-            return web.json_response(response_data, status=HTTPStatus.NOT_FOUND)
+            }
 
         current_rental = await self.request.app["rental_manager"].active_rental(user)
         await self.request.app["rental_manager"].finish(current_rental)
-        response_schema = JSendSchema.of(RentalSchema())
-        response_data = response_schema.dump({
+        return "rental_deleted", {
             "status": JSendStatus.SUCCESS,
             "data": await current_rental.serialize(self.request.app["rental_manager"])
-        })
-
-        return web.json_response(response_data)
+        }
 
 
 class UserReservationsView(BaseView):

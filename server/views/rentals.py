@@ -20,12 +20,14 @@ class RentalsView(BaseView):
     """
     url = "/rentals"
 
-    @returns(JSendSchema.of(RentalSchema(), many=True))
+    @returns(JSendSchema.of(RentalSchema(only=("id", "user_id", "bike_id", "start_time")), many=True))
     async def get(self):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in
-                     await self.request.app["rental_manager"].active_rentals()]
+            "data": [
+                await rental.serialize(self.request.app["rental_manager"]) for rental in
+                await self.request.app["rental_manager"].active_rentals()
+            ]
         }
 
 
@@ -37,7 +39,7 @@ class RentalView(BaseView):
     with_rental = getter(get_rental, 'id', 'rental_id', 'rental')
 
     @with_rental
-    @returns(JSendSchema.of(RentalSchema()))
+    @returns(JSendSchema.of(RentalSchema(only=("id", "user_id", "bike_id", "start_time"))))
     async def get(self, rental: Rental):
         return {
             "status": JSendStatus.SUCCESS,
