@@ -12,7 +12,6 @@ from asyncio import sleep
 from datetime import datetime, timedelta
 from typing import Set, NamedTuple
 
-from dataclasses import dataclass, field
 from nacl.utils import random
 
 from server import logger
