@@ -99,7 +99,7 @@ class TestBikeView:
         schema = JSendSchema.of(BikeSchema())
         data = schema.load(await resp.json())
 
-        assert data["data"]["id"] == random_bike.id
+        assert data["data"]["public_key"] == random_bike.public_key
 
     async def test_get_bike_missing(self, client: TestClient):
         """Assert that getting a non-existent bike causes a failure."""

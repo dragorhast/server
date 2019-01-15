@@ -13,7 +13,6 @@ from .fields import BytesField, EnumField
 
 
 class BikeSchema(Schema):
-    id = Integer()
     public_key = BytesField(required=True)
     connected = Boolean()
     locked = Boolean()

@@ -50,7 +50,7 @@ class BikesView(BaseView):
     """
     url = "/bikes"
 
-    @returns(JSendSchema.of(BikeSchema(only=("id", "public_key")), many=True))
+    @returns(JSendSchema.of(BikeSchema(only=("public_key",)), many=True))
     async def get(self):
         """Gets all the bikes from the system."""
         return {
@@ -61,7 +61,7 @@ class BikesView(BaseView):
     @expects(BikeRegisterSchema())
     @returns(
         bad_key=(JSendSchema(), HTTPStatus.BAD_REQUEST),
-        registered=JSendSchema.of(BikeSchema(only=('id', 'public_key')))
+        registered=JSendSchema.of(BikeSchema(only=('public_key',)))
     )
     async def post(self):
         """ Registers a bike with the system."""
@@ -93,7 +93,7 @@ class BikeView(BaseView):
     bike_getter = getter(get_bike, 'id', 'bike_id', 'bike')
 
     @bike_getter
-    @returns(JSendSchema.of(BikeSchema(only=("id", "public_key"))))
+    @returns(JSendSchema.of(BikeSchema(only=("public_key",))))
     async def get(self, bike):
         """Gets a single bike by its id."""
         return {
