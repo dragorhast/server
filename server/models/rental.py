@@ -42,6 +42,7 @@ class Rental(Model):
             "user_id": self.user_id,
             "bike_id": self.bike_id,
             "start_time": self.start_date,
+            "is_active": rental_manager.has_active_rental(self)
         }
 
         if self.end_date is not None:

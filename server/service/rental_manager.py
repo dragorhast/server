@@ -46,6 +46,12 @@ class RentalManager:
         rental_id = self.active_rental_ids[user_id]
         return await Rental.filter(id=rental_id).first().prefetch_related('updates')
 
+    def has_active_rental(self, target: Union[User, Rental]) -> bool:
+        if isinstance(target, User):
+            return target.id in self.active_rental_ids.keys()
+        elif isinstance(target, Rental):
+            return target.id in self.active_rental_ids.values()
+
     async def get_price_estimate(self, target: Union[Rental, int]):
         """Gets the price of the rental so far."""
 

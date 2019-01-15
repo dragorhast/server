@@ -42,6 +42,7 @@ class RentalSchema(Schema):
     events = Nested(RentalUpdateSchema(), many=True)
     start_time = DateTime(required=True)
     end_time = DateTime()
+    is_active = Boolean(required=True)
     estimated_price = Float()
     price = Float()
 
