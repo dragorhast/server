@@ -75,11 +75,14 @@ def expects(schema: Optional[Schema], into="data"):
             try:
                 self.request[into] = schema.load(await self.request.json())
             except JSONDecodeError as err:
-                # if the data is not valid json, return a warning and the valid schema
+                # if the data is not valid json, return a warning
                 response_schema = JSendSchema()
                 response_data = response_schema.dump({
                     "status": JSendStatus.FAIL,
-                    "data": {"json": f"Could not parse supplied JSON ({', '.join(err.args)})."}
+                    "data": {
+                        "message": f"Could not parse supplied JSON.",
+                        "errors": err.args
+                    }
                 })
                 return web.json_response(response_data, status=HTTPStatus.BAD_REQUEST)
             except ValidationError as err:
@@ -88,6 +91,7 @@ def expects(schema: Optional[Schema], into="data"):
                 response_data = response_schema.dump({
                     "status": JSendStatus.FAIL,
                     "data": {
+                        "message": "The request did not validate properly.",
                         "errors": err.messages,
                         "schema": json_schema
                     }

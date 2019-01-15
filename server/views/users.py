@@ -123,7 +123,7 @@ class UserCurrentRentalView(BaseView):
         if user.id not in self.request.app["rental_manager"].active_rental_ids:
             return "no_rental", {
                 "status": JSendStatus.FAIL,
-                "data": {"rental": f"You have no current rental."}
+                "data": {"message": f"You have no current rental."}
             }
 
         current_rental = await self.request.app["rental_manager"].active_rental(user)
@@ -143,7 +143,7 @@ class UserCurrentRentalView(BaseView):
         if user.id not in self.request.app["rental_manager"].active_rental_ids:
             return "no_rental", {
                 "status": JSendStatus.FAIL,
-                "data": {"rental": f"You have no current rental."}
+                "data": {"message": f"You have no current rental."}
             }
 
         current_rental = await self.request.app["rental_manager"].active_rental(user)
@@ -218,7 +218,7 @@ class MeView(BaseView):
             return web.json_response(response_schema.dump({
                 "status": JSendStatus.FAIL,
                 "data": {
-                    "authorization": "User does not exist. Please use your token to create a user and try again.",
+                    "message": "User does not exist. Please use your token to create a user and try again.",
                     "url": create_user_url,
                     "method": "POST"
                 }

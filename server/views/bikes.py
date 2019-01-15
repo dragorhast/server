@@ -70,10 +70,13 @@ class BikesView(BaseView):
                 self.request["data"]["public_key"],
                 self.request["data"]["master_key"]
             )
-        except (ValueError, BadKeyError) as error:
+        except BadKeyError as error:
             return "bad_key", {
                 "status": JSendStatus.FAIL,
-                "data": error.args
+                "data": {
+                    "message": "The supplied master key is invalid.",
+                    "errors": error.args
+                },
             }
         else:
             return "registered", {
@@ -108,7 +111,10 @@ class BikeView(BaseView):
         except BadKeyError as error:
             return {
                 "status": JSendStatus.FAIL,
-                "data": error.args
+                "data": {
+                    "message": "The supplied master key is invalid.",
+                    "errors": error.args
+                }
             }
         else:
             raise web.HTTPNoContent
@@ -157,8 +163,8 @@ class BikeRentalsView(BaseView):
             return "missing_user", {
                 "status": JSendStatus.FAIL,
                 "data": {
-                    "firebase_id":
-                        f"No such user exists, but your key is valid."
+                    "message":
+                        f"No such user exists, but your key is valid. "
                         f"Create a new one at '{self.request.app.router['users'].url_for()}'."
                 }
             }

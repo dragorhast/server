@@ -43,6 +43,7 @@ aiohttp-cors = "*"
 marshmallow-jsonschema = "*"
 aiocontextvars = "*"
 asyncpg = "*"
+contextvars = "*"
 
 [requires]
 python_version = "3.6"

@@ -46,7 +46,10 @@ def getter(getter_function, url_var_name, getter_key, parameter_name):
                 schema = JSendSchema()
                 response = {
                     "status": JSendStatus.FAIL,
-                    "data": {url_var_name: f"No such resource of {url_var_name} {item_id}."}
+                    "data": {
+                        url_var_name: f"No such resource of {url_var_name} {item_id}.",
+                        "message": "Requested item does not exist."
+                    }
                 }
 
                 raise web.HTTPNotFound(text=schema.dumps(response), content_type='application/json')

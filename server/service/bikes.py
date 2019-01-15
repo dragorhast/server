@@ -93,6 +93,13 @@ async def lock_bike(public_key, value) -> None:
 
 
 async def delete_bike(bike, master_key) -> None:
+    """
+    Deletes a bike.
+
+    :param bike:
+    :param master_key:
+    :raises BadKeyError: If the master key is invalid.
+    """
     if not master_key == MASTER_KEY:
         raise BadKeyError("Incorrect master key")
 

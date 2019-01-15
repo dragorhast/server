@@ -37,9 +37,8 @@ class JSendSchema(Schema):
     message = fields.String()
     code = fields.Integer()
 
-    @staticmethod
     @validates_schema
-    def assert_fields(data):
+    def assert_fields(self, data):
         """
         Asserts that, according to the specification:
 
@@ -49,7 +48,10 @@ class JSendSchema(Schema):
         if data["status"] == JSendStatus.SUCCESS or data["status"] == JSendStatus.FAIL:
             if "data" not in data:
                 raise ValidationError(f"When status is {data['status']}, the data field must be populated.")
-        elif data["status"] == JSendStatus.ERROR:
+        if data["status"] == JSendStatus.FAIL:
+            if "message" not in data["data"]:
+                raise ValidationError(f"All failures must return user-friendly error message.")
+        if data["status"] == JSendStatus.ERROR:
             if "message" not in data:
                 raise ValidationError(f"When the status is {data['status']}, the message fields must be populated.")
 

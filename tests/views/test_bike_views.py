@@ -37,7 +37,6 @@ class TestBikesView:
         response = await client.post('/api/v1/bikes', json=request_json)
         response_schema = JSendSchema.of(BikeSchema())
 
-        text = await response.text()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
 
@@ -139,7 +138,7 @@ class TestBikeView:
         response_data = response_schema.load(await response.json())
 
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("Incorrect master key" in error for error in response_data["data"])
+        assert "master key is invalid" in response_data["data"]["message"]
 
 
 class TestBikeRentalsView:
@@ -175,7 +174,7 @@ class TestBikeRentalsView:
         response_data = response_schema.load(await response.json())
 
         assert response_data["status"] == JSendStatus.FAIL
-        assert "No such user exists" in response_data["data"]["firebase_id"]
+        assert "No such user exists" in response_data["data"]["message"]
 
     async def test_create_bike_rental_invalid_key(self, client: TestClient, random_bike):
         """Assert that creating a rental with an invalid firebase key fails."""
@@ -188,4 +187,4 @@ class TestBikeRentalsView:
                                      headers={"Authorization": "Bearer invalid"})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("Not a valid hex string." == error for error in response_data["data"]["authorization"])
+        assert any("Not a valid hex string." == error for error in response_data["data"]["errors"])
