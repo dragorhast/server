@@ -101,7 +101,7 @@ class UserRentalsView(BaseView):
         rentals = await Rental.filter(user__id=user.id)
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in rentals]
+            "data": [await rental.serialize(self.request.app["rental_manager"], self.request.app.router) for rental in rentals]
         }
 
 
@@ -129,7 +129,7 @@ class UserCurrentRentalView(BaseView):
         current_rental = await self.request.app["rental_manager"].active_rental(user)
         return "rental_exists", {
             "status": JSendStatus.SUCCESS,
-            "data": await current_rental.serialize(self.request.app["rental_manager"])
+            "data": await current_rental.serialize(self.request.app["rental_manager"], self.request.app.router)
         }
 
     @with_user
@@ -150,7 +150,7 @@ class UserCurrentRentalView(BaseView):
         await self.request.app["rental_manager"].finish(current_rental)
         return "rental_deleted", {
             "status": JSendStatus.SUCCESS,
-            "data": await current_rental.serialize(self.request.app["rental_manager"])
+            "data": await current_rental.serialize(self.request.app["rental_manager"], self.request.app.router)
         }
 
 

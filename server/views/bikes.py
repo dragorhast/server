@@ -91,6 +91,7 @@ class BikeView(BaseView):
     """
     url = "/bikes/{id:[0-9]+}"
     bike_getter = getter(get_bike, 'id', 'bike_id', 'bike')
+    name = "bike"
 
     @bike_getter
     @returns(JSendSchema.of(BikeSchema(only=("public_key",))))
@@ -140,7 +141,7 @@ class BikeRentalsView(BaseView):
     async def get(self, bike: Bike):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in
+            "data": [await rental.serialize(self.request.app["rental_manager"], self.request.app.router) for rental in
                      (await get_rentals_for_bike(bike=bike))]
         }
 
@@ -172,7 +173,7 @@ class BikeRentalsView(BaseView):
             rental = await self.request.app["rental_manager"].create(user, bike)
             return "rental_created", {
                 "status": JSendStatus.SUCCESS,
-                "data": await rental.serialize(self.request.app["rental_manager"])
+                "data": await rental.serialize(self.request.app["rental_manager"], self.request.app.router)
             }
 
 

@@ -6,7 +6,7 @@ Defines serializers for the various models in the system.
 """
 
 from marshmallow import Schema, validates_schema, ValidationError
-from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float
+from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float, Url
 
 from server.models.util import RentalUpdateType
 from .fields import BytesField, EnumField
@@ -34,13 +34,19 @@ class RentalUpdateSchema(Schema):
 
 class RentalSchema(Schema):
     id = Integer(required=True)
+
     user = Nested(UserSchema())
-    user_id = Integer(required=True)
+    user_id = Integer()
+    user_url = Url(relative=True)
+
     bike = Nested(BikeSchema())
-    bike_id = Integer(required=True)
+    bike_id = Integer()
+    bike_url = Url(relative=True)
+
     events = Nested(RentalUpdateSchema(), many=True)
     start_time = DateTime(required=True)
     end_time = DateTime()
+
     is_active = Boolean(required=True)
     estimated_price = Float()
     price = Float()
@@ -56,3 +62,13 @@ class RentalSchema(Schema):
             raise ValidationError("If the end time is included, you must also include the price.")
         if "price" in data and "estimated_price" in data:
             raise ValidationError("Rental should have one of either price or estimated_price.")
+
+    @validates_schema
+    def assert_url_included_with_foreign_key(self, data):
+        """
+        Asserts that when a user_id or bike_id is sent that a user_url or bike_url is sent with it.
+        """
+        if "user_id" in data and "user_url" not in data:
+            raise ValidationError("User ID was included, but User URL was not.")
+        if "bike_id" in data and "bike_url" not in data:
+            raise ValidationError("Bike ID was included, but User URL was not.")
