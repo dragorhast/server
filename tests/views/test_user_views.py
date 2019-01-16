@@ -41,8 +41,7 @@ class TestUsersView:
         response = await client.post('/api/v1/users', json=request_data, headers={"Authorization": "Bearer invalid"})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert "authorization" in response_data["data"]
-        assert any("Not a valid hex string" in error for error in response_data["data"]["authorization"])
+        assert any("Not a valid hex string" in error for error in response_data["data"]["errors"])
 
     async def test_create_user_bad_schema(self, client: TestClient):
         """Assert that creating a user with a bad schema gives a descriptive error."""
@@ -57,7 +56,7 @@ class TestUsersView:
         assert any("Unknown field." in err for err in response_data["data"]["errors"]["bad_schema"])
 
     async def test_create_user_duplicate(self, client: TestClient, random_user):
-        """Assert that creating a user that already exists gives a descriptive error."""
+        """Assert that creating a user that already exists just updates the user."""
         response_schema = JSendSchema()
         response = await client.post('/api/v1/users', json={
             "first": "Alex",
@@ -65,9 +64,9 @@ class TestUsersView:
         }, headers={"Authorization": f"Bearer {random_user.firebase_id}"})
 
         response_data = response_schema.load(await response.json())
-        assert response_data["status"] == JSendStatus.FAIL
+        assert response_data["status"] == JSendStatus.SUCCESS
         assert "firebase_id" in response_data["data"]
-        assert "first" not in response_data["data"]
+        assert "first" in response_data["data"]
 
 
 class TestUserView:
@@ -170,7 +169,7 @@ class TestUserCurrentRentalView:
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert response_data["data"]["rental"] == "You have no current rental."
+        assert response_data["data"]["message"] == "You have no current rental."
 
     async def test_end_current_rental(self, client: TestClient, random_user, random_bike, rental_manager):
         """Assert that a user can end their rental by performing a DELETE"""
@@ -198,7 +197,7 @@ class TestUserCurrentRentalView:
         )
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert response_data["data"]["rental"] == "You have no current rental."
+        assert response_data["data"]["message"] == "You have no current rental."
 
 
 class TestMeView:
@@ -223,8 +222,7 @@ class TestMeView:
         response_schema = JSendSchema()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert "authorization" in response_data["data"]
-        assert any("valid hex string" in error for error in response_data["data"]["authorization"])
+        assert any("valid hex string" in error for error in response_data["data"]["errors"])
 
     async def test_get_me_missing_user(self, client: TestClient):
         """Assert that calling me gives a descriptive error."""
@@ -232,5 +230,5 @@ class TestMeView:
         response_schema = JSendSchema()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert "authorization" in response_data["data"]
-        assert "User does not exist" in response_data["data"]["authorization"]
+        print(response_data)
+        assert "User does not exist" in response_data["data"]["message"]

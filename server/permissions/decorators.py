@@ -48,7 +48,10 @@ def requires(permission: Permission):
                 response_schema = JSendSchema()
                 return web.json_response(response_schema.dump({
                     "status": JSendStatus.FAIL,
-                    "data": {"authorization": errors}
+                    "data": {
+                        "message": "You do not have all the required permissions.",
+                        "authorization": errors
+                    }
                 }), status=HTTPStatus.UNAUTHORIZED)
 
             return await original_function(self, **kwargs)

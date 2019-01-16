@@ -36,12 +36,15 @@ class Rental(Model):
         last_update: RentalUpdate = self.updates[-1]
         return last_update.time if last_update.type == RentalUpdateType.RETURN else None
 
-    async def serialize(self, rental_manager) -> Dict[str, Any]:
+    async def serialize(self, rental_manager, router) -> Dict[str, Any]:
         data = {
             "id": self.id,
             "user_id": self.user_id,
+            "user_url": router["user"].url_for(id=str(self.user_id)).path,
             "bike_id": self.bike_id,
+            "bike_url": router["bike"].url_for(id=str(self.bike_id)).path,
             "start_time": self.start_date,
+            "is_active": rental_manager.has_active_rental(self)
         }
 
         if self.end_date is not None:

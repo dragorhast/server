@@ -4,7 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest = "*"
+pytest = "==4.*"
 pytest-cov = "*"
 pytest-aiohttp = "*"
 codecov = "*"
@@ -15,34 +15,34 @@ bandit = "*"
 
 [packages]
 # aiohttp
-aiohttp = "*"
+aiohttp = "==3.*"
 idna-ssl = "*"
 gunicorn = "*"
+aiohttp-cors = "*"
 #uvloop
 cython = "*"
-uvloop = {git = "https://github.com/MagicStack/uvloop.git",ref = "releases"}
+uvloop = ">=0.12rc1"
 #sentry
 sentry-sdk = "*"
 aiohttp-sentry = "*"
-# misc
-hyperion-cli = "*"
-pynacl = "*"
-aiobreaker = "*"
-dataclasses = "*"
+# data
 marshmallow = ">=3rc1"
+marshmallow-jsonschema = "*"
 tortoise-orm = "*"
+asyncpg = "*"
 aiosqlite = "*"
+contextvars = "*"
 # docs
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
 sphinxcontrib-mermaid = "*"
 sphinx-autodoc-typehints = "*"
+# misc
+hyperion-cli = "*"
+pynacl = "*"
+aiobreaker = "*"
 python-jose = "*"
-aiohttp-cors = "*"
-marshmallow-jsonschema = "*"
-aiocontextvars = "*"
-asyncpg = "*"
 
 [requires]
 python_version = "3.6"
@@ -50,6 +50,7 @@ python_version = "3.6"
 [scripts]
 server = "python -m server"
 test = "python -m pytest --cov=server tests"
+lint = "python -m mypy"
 docs = "sphinx-build docs/source docs/build"
 auto-docs = "sphinx-autobuild docs/source docs/build"
 

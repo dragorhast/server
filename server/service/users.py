@@ -2,6 +2,7 @@
 Users
 -----
 """
+from typing import Union
 
 from tortoise.exceptions import IntegrityError
 
@@ -68,7 +69,12 @@ async def create_user(first: str, email: str, firebase_id: str) -> User:
         raise UserExistsError(errors)
 
 
-async def update_user(user: User, *, first=None, email=None):
+async def update_user(target: Union[User, int], *, first=None, email=None):
+    if isinstance(target, int):
+        user = User.get(id=target).first()
+    else:
+        user = target
+
     if first:
         user.first = first
 

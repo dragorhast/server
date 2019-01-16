@@ -50,15 +50,19 @@ class BikesView(BaseView):
     """
     url = "/bikes"
 
-    @returns(JSendSchema.of(BikeSchema(exclude=("connected", "locked")), many=True))
+    @returns(JSendSchema.of(BikeSchema(only=("public_key",)), many=True))
     async def get(self):
         """Gets all the bikes from the system."""
         return {
             "status": JSendStatus.SUCCESS,
-            "data": (bike.serialize() for bike in await get_bikes())
+            "data": [bike.serialize() for bike in await get_bikes()]
         }
 
     @expects(BikeRegisterSchema())
+    @returns(
+        bad_key=(JSendSchema(), HTTPStatus.BAD_REQUEST),
+        registered=JSendSchema.of(BikeSchema(only=('public_key',)))
+    )
     async def post(self):
         """ Registers a bike with the system."""
         try:
@@ -66,20 +70,19 @@ class BikesView(BaseView):
                 self.request["data"]["public_key"],
                 self.request["data"]["master_key"]
             )
-        except (ValueError, BadKeyError) as error:
-            response_schema = JSendSchema()
-            response = response_schema.dump({
+        except BadKeyError as error:
+            return "bad_key", {
                 "status": JSendStatus.FAIL,
-                "data": error.args
-            })
-            return web.json_response(response, status=HTTPStatus.BAD_REQUEST)
-
-        response_schema = JSendSchema.of(BikeSchema(exclude=('connected', 'locked')))
-        response = response_schema.dump({
-            "status": JSendStatus.SUCCESS,
-            "data": bike.serialize()
-        })
-        return web.json_response(response)
+                "data": {
+                    "message": "The supplied master key is invalid.",
+                    "errors": error.args
+                },
+            }
+        else:
+            return "registered", {
+                "status": JSendStatus.SUCCESS,
+                "data": bike.serialize()
+            }
 
 
 class BikeView(BaseView):
@@ -88,9 +91,10 @@ class BikeView(BaseView):
     """
     url = "/bikes/{id:[0-9]+}"
     bike_getter = getter(get_bike, 'id', 'bike_id', 'bike')
+    name = "bike"
 
     @bike_getter
-    @returns(JSendSchema.of(BikeSchema(exclude=("connected", "locked"))))
+    @returns(JSendSchema.of(BikeSchema(only=("public_key",))))
     async def get(self, bike):
         """Gets a single bike by its id."""
         return {
@@ -100,19 +104,21 @@ class BikeView(BaseView):
 
     @bike_getter
     @expects(MasterKeySchema())
+    @returns(JSendSchema(), HTTPStatus.BAD_REQUEST)
     async def delete(self, bike):
         """Deletes a bike by its id."""
         try:
             await delete_bike(bike, self.request["data"]["master_key"])
         except BadKeyError as error:
-            response_schema = JSendSchema()
-            response = response_schema.dump({
+            return {
                 "status": JSendStatus.FAIL,
-                "data": error.args
-            })
-            return web.json_response(response, status=HTTPStatus.BAD_REQUEST)
-
-        raise web.HTTPNoContent
+                "data": {
+                    "message": "The supplied master key is invalid.",
+                    "errors": error.args
+                }
+            }
+        else:
+            raise web.HTTPNoContent
 
     @bike_getter
     async def patch(self, bike):
@@ -135,12 +141,16 @@ class BikeRentalsView(BaseView):
     async def get(self, bike: Bike):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.request.app["rental_manager"]) for rental in
+            "data": [await rental.serialize(self.request.app["rental_manager"], self.request.app.router) for rental in
                      (await get_rentals_for_bike(bike=bike))]
         }
 
     @bike_getter
     @requires(ValidToken() & BikeNotInUse())
+    @returns(
+        missing_user=JSendSchema(),
+        rental_created=JSendSchema.of(RentalSchema())
+    )
     async def post(self, bike: Bike):
         """
         Starts a new rental.
@@ -151,24 +161,20 @@ class BikeRentalsView(BaseView):
         user = await get_user(firebase_id=self.request["token"])
 
         if user is None:
-            response_schema = JSendSchema()
-            response_data = response_schema.dump({
+            return "missing_user", {
                 "status": JSendStatus.FAIL,
                 "data": {
-                    "firebase_id":
-                        f"No such user exists, but your key is valid."
+                    "message":
+                        f"No such user exists, but your key is valid. "
                         f"Create a new one at '{self.request.app.router['users'].url_for()}'."
                 }
-            })
-            return web.json_response(response_data)
-
-        rental = await self.request.app["rental_manager"].create(user, bike)
-        response_schema = JSendSchema.of(RentalSchema())
-        response_data = response_schema.dump({
-            "status": JSendStatus.SUCCESS,
-            "data": await rental.serialize(self.request.app["rental_manager"])
-        })
-        return web.json_response(response_data)
+            }
+        else:
+            rental = await self.request.app["rental_manager"].create(user, bike)
+            return "rental_created", {
+                "status": JSendStatus.SUCCESS,
+                "data": await rental.serialize(self.request.app["rental_manager"], self.request.app.router)
+            }
 
 
 class BikeSocketView(BaseView):
