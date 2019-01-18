@@ -58,3 +58,8 @@ async def test_create_bike_get_same(database, random_bike: Bike):
     """Assert that creating a new bike with an existing public key just returns the existing bike."""
     bike = await register_bike(public_key=random_bike.public_key, master_key=MASTER_KEY)
     assert bike == random_bike
+
+
+async def test_create_bike_same_short_key(database, random_bike: Bike):
+    with pytest.raises(BadKeyError):
+        await register_bike(public_key=random_bike.public_key[:30] + bytes.fromhex("abcd"), master_key=MASTER_KEY)

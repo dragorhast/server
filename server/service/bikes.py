@@ -17,7 +17,8 @@ async def get_bikes() -> Iterable[Bike]:
 
 
 async def get_bike(*, bike_id: Optional[int] = None,
-                   public_key: Optional[bytes] = None) -> Optional[Bike]:
+                   public_key: Optional[bytes] = None,
+                   public_key_short: Optional[bytes] = None) -> Optional[Bike]:
     """Gets a bike from the system."""
     kwargs: Dict = {}
 
@@ -25,6 +26,8 @@ async def get_bike(*, bike_id: Optional[int] = None,
         kwargs["id"] = bike_id
     if public_key:
         kwargs["public_key_hex"] = public_key.hex()
+    if public_key_short:
+        kwargs["public_key_hex__startswith"] = public_key_short.hex()
 
     try:
         return await Bike.get(**kwargs).first()
@@ -55,25 +58,20 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
 
         return key
 
-    keys = {
-        "public_key": public_key,
-        "master_key": master_key
-    }
+    public_key = clean_key("Public Key", public_key)
+    master_key = clean_key("Master Key", master_key)
 
-    cleaned_keys = {
-        name: clean_key(name, key)
-        for name, key in keys.items()
-    }
-
-    if not cleaned_keys["master_key"] == MASTER_KEY:
+    if not master_key == MASTER_KEY:
         raise BadKeyError("Incorrect master key")
 
-    existing = await get_bike(public_key=cleaned_keys["public_key"])
+    existing = await get_bike(public_key_short=public_key[:3])
 
     if existing is not None:
+        if existing.public_key != public_key:
+            raise BadKeyError("Bike with that shortened key exists.")
         return existing
 
-    return await Bike.create(public_key_hex=cleaned_keys["public_key"].hex())
+    return await Bike.create(public_key_hex=public_key.hex())
 
 
 async def lock_bike(public_key, value) -> None:

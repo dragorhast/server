@@ -33,7 +33,7 @@ class Bike(Model):
     """
 
     id = fields.IntField(pk=True)
-    public_key_hex = fields.CharField(max_length=64)
+    public_key_hex = fields.CharField(max_length=64, unique=True)
     type = EnumField(enum_type=BikeType, default=BikeType.ROAD)
 
     locked: bool = True
