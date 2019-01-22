@@ -8,15 +8,18 @@ from http import HTTPStatus
 
 from aiohttp import web
 
-from server.models import User, Rental
+from server.models import User
 from server.permissions import UserMatchesFirebase
 from server.permissions.decorators import requires
-from server.permissions.permissions import ValidToken, BikeNotInUse
+from server.permissions.permissions import ValidToken
 from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
 from server.serializer.decorators import expects, returns
+from server.serializer.models import CurrentRentalSchema, IssueSchema
+from server.service.issues import get_issues, create_issue
+from server.service.rentals import get_rentals
 from server.service.users import get_users, get_user, delete_user, create_user, UserExistsError, update_user
 from server.views.base import BaseView
-from server.views.utils import getter
+from server.views.utils import match_getter
 
 
 class UsersView(BaseView):
@@ -56,7 +59,7 @@ class UserView(BaseView):
     """
     url = "/users/{id:[0-9]+}"
     name = "user"
-    user_getter = getter(get_user, 'id', 'user_id', 'user')
+    user_getter = match_getter(get_user, 'user', user_id='id')
 
     @user_getter
     @requires(UserMatchesFirebase())
@@ -83,7 +86,7 @@ class UserView(BaseView):
     @requires(UserMatchesFirebase())
     async def delete(self, user: User):
         await delete_user(user)
-        raise web.HTTPNoContent()
+        raise web.HTTPNoContent
 
 
 class UserRentalsView(BaseView):
@@ -92,16 +95,17 @@ class UserRentalsView(BaseView):
     """
     url = "/users/{id:[0-9]+}/rentals"
     name = "user_rentals"
-    with_user = getter(get_user, 'id', 'user_id', 'user')
+    with_user = match_getter(get_user, 'user', user_id='id')
+    with_rentals = match_getter(get_rentals, 'rentals', user='id')
 
     @with_user
+    @with_rentals
     @requires(UserMatchesFirebase())
     @returns(JSendSchema.of(RentalSchema(), many=True))
-    async def get(self, user):
-        rentals = await Rental.filter(user__id=user.id)
+    async def get(self, user, rentals):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.request.app["rental_manager"], self.request.app.router) for rental in rentals]
+            "data": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in rentals]
         }
 
 
@@ -111,46 +115,55 @@ class UserCurrentRentalView(BaseView):
     """
     url = "/users/{id:[0-9]+}/rentals/current"
     name = "user_current_rental"
-    with_user = getter(get_user, 'id', 'user_id', 'user')
+    with_user = match_getter(get_user, 'user', user_id='id')
 
     @with_user
     @requires(UserMatchesFirebase())
     @returns(
         no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        rental_exists=JSendSchema.of(RentalSchema())
+        rental_exists=JSendSchema.of(CurrentRentalSchema(only=(
+            'id', 'bike_id', 'bike_url', 'user_id', 'user_url', 'start_time',
+            'is_active', 'estimated_price', 'start_location', 'current_location'
+        )))
     )
     async def get(self, user: User):
-        if user.id not in self.request.app["rental_manager"].active_rental_ids:
+        if user.id not in self.rental_manager.active_rental_ids:
             return "no_rental", {
                 "status": JSendStatus.FAIL,
                 "data": {"message": f"You have no current rental."}
             }
 
-        current_rental = await self.request.app["rental_manager"].active_rental(user)
+        current_rental, start_location, current_location = await self.rental_manager.active_rental(user,
+                                                                                                   with_locations=True)
         return "rental_exists", {
             "status": JSendStatus.SUCCESS,
-            "data": await current_rental.serialize(self.request.app["rental_manager"], self.request.app.router)
+            "data": await current_rental.serialize(
+                self.rental_manager,
+                self.request.app.router,
+                start_location=start_location,
+                current_location=current_location
+            )
         }
 
     @with_user
     @requires(UserMatchesFirebase())
     @returns(
         no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        rental_deleted=JSendSchema.of(RentalSchema()),
+        rental_deleted=(JSendSchema.of(RentalSchema())),
     )
     async def delete(self, user: User):
         """Ends a rental."""
-        if user.id not in self.request.app["rental_manager"].active_rental_ids:
+        if user.id not in self.rental_manager.active_rental_ids:
             return "no_rental", {
                 "status": JSendStatus.FAIL,
                 "data": {"message": f"You have no current rental."}
             }
 
-        current_rental = await self.request.app["rental_manager"].active_rental(user)
-        await self.request.app["rental_manager"].finish(current_rental)
+        current_rental = await self.rental_manager.active_rental(user)
+        await self.rental_manager.finish(current_rental)
         return "rental_deleted", {
             "status": JSendStatus.SUCCESS,
-            "data": await current_rental.serialize(self.request.app["rental_manager"], self.request.app.router)
+            "data": await current_rental.serialize(self.rental_manager, self.request.app.router)
         }
 
 
@@ -174,11 +187,34 @@ class UserIssuesView(BaseView):
     """
     url = "/users/{id:[0-9]+}/issues"
     name = "user_issues"
+    with_issues = match_getter(get_issues, "issues", user_id='id')
+    with_user = match_getter(get_user, 'user', user_id='id')
 
-    async def get(self):
-        raise NotImplementedError()
+    @with_issues
+    @returns(JSendSchema.of(IssueSchema(), many=True))
+    async def get(self, issues):
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": [issue.serialize() for issue in issues]
+        }
 
+    @with_user
+    @expects(IssueSchema(only=('bike_id', 'description')))
+    @returns(JSendSchema.of(IssueSchema()))
     async def post(self):
+        kwargs = {
+            "description": self.request["data"]["description"]
+        }
+        if "bike_id" in self.request["data"]:
+            kwargs["bike"] = self.request["data"]["bike_id"]
+
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": (await create_issue(**kwargs)).serialize(self.request.app.router)
+        }
+
+    async def patch(self):
+        """Allows someone to close their issue."""
         raise NotImplementedError()
 
 

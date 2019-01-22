@@ -2,13 +2,43 @@
 Bikes
 -----
 """
+from datetime import datetime
+from typing import Iterable, Optional, Dict, Union, Tuple
 
-from typing import Iterable, Optional, Dict, Union
-
+from shapely.geometry import Point
+from shapely.wkt import loads
 from tortoise.exceptions import DoesNotExist
 
 from server.models import Bike
+from server.models.location_update import LocationUpdate
 from server.service import MASTER_KEY
+
+
+class BikeLocationManager:
+    """
+    Maintains bike location state.
+    """
+
+    def __init__(self):
+        self._bike_locations: Dict[int, Tuple[Point, datetime]] = {}
+
+    def most_recent_location(self, target: Union[Bike, int]) -> Tuple[Point, datetime]:
+        bid = target.id if isinstance(target, Bike) else target
+        return self._bike_locations[bid]
+
+    def update_location(self, target: Union[Bike, int], location: Point, time: Optional[datetime] = None):
+        bid = target.id if isinstance(target, Bike) else target
+        time = time if time is not None else datetime.now()
+        LocationUpdate.create(bike=bid, location=location, time=time)
+        self._bike_locations[bid] = (location, time)
+
+    async def rebuild(self):
+        """Rebuilds the bike location state from the database."""
+        recent_updates = await LocationUpdate._meta.db.execute_query(
+            "select U.bike_id, max(U.time) as 'time', ST_AsText(U.location) as 'location' from locationupdate U group by U.bike_id")
+        for update in recent_updates:
+            self._bike_locations[update["bike_id"]] = (
+            loads(update["location"]), datetime.strptime(update["time"], "%Y-%m-%d %H:%M:%S"))
 
 
 async def get_bikes() -> Iterable[Bike]:

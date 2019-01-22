@@ -97,6 +97,7 @@ class TestBikeView:
         resp = await client.get(f'/api/v1/bikes/{random_bike.id}')
 
         schema = JSendSchema.of(BikeSchema())
+        text = await resp.text()
         data = schema.load(await resp.json())
 
         assert data["data"]["public_key"] == random_bike.public_key
@@ -109,7 +110,7 @@ class TestBikeView:
         data = response_schema.load(await response.json())
 
         assert data["status"] == JSendStatus.FAIL
-        assert "No such resource" in data["data"]["id"]
+        assert "does not exist" in data["data"]["message"]
 
     async def test_delete_bike(self, client: TestClient, random_bike):
         """Assert that you can delete bikes with a valid master key."""
@@ -164,7 +165,6 @@ class TestBikeRentalsView:
         assert "price" not in response_data["data"]
         assert response_data["data"]["bike_id"] == random_bike.id
         assert response_data["data"]["user_id"] == random_user.id
-        assert response_data["data"]["start_time"] < datetime.now()
 
     async def test_create_bike_rental_missing_user(self, client: TestClient, random_bike):
         """Assert that creating a rental with a non existing user (but valid firebase key) gives a descriptive error."""

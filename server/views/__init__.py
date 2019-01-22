@@ -60,5 +60,5 @@ def register_views(app: Application, base: str):
 
     for view in views:
         logger.info("Registered %s at %s", view.__name__, base + view.url)
-        view.register_route(app.router, base)
+        view.register_route(app, base)
         view.enable_cors(cors)

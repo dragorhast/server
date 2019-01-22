@@ -16,6 +16,8 @@ from server.serializer import JSendSchema, JSendStatus
 
 
 def flatten(permission_error) -> List[str]:
+    """Extracts all the args from a (potentially nested) list of Permission Errors."""
+
     elements: List[str] = []
 
     for arg in permission_error.args:

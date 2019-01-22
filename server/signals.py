@@ -32,7 +32,7 @@ async def close_bike_connections(app: Application):
         await connection.close(code=WSCloseCode.GOING_AWAY)
 
 
-async def close_database_connections(app):
+async def close_database_connections(app: Application):
     """Closes the open database connections."""
     await Tortoise.close_connections()
 
@@ -47,6 +47,12 @@ async def initialize_database(app: Application):
         await Tortoise.generate_schemas()
     except OperationalError:
         pass
+
+
+async def rebuild_event_states(app: Application):
+    """Rebuilds the event-based state from the database."""
+    await app['rental_manager'].rebuild()
+    await app['bike_location_manager'].rebuild()
 
 
 async def start_background_tasks(app):
@@ -70,6 +76,7 @@ def register_signals(app):
     """Registers all the signals at the appropriate hooks."""
     app.on_startup.append(start_background_tasks)
     app.on_startup.append(initialize_database)
+    app.on_startup.append(rebuild_event_states)
 
     app.on_shutdown.append(close_bike_connections)
 

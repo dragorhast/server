@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Dict
 
 from aiohttp import ClientSession
-from jose.jwt import decode
+from jose import jwt, ExpiredSignatureError, JWTError
 
 
 class TokenVerificationError(Exception):
@@ -40,17 +40,25 @@ class FirebaseVerifier(TokenVerifier):
             request = await session.get(self._public_key_url)
             self._certificates = await request.json()
 
-    def verify_token(self, token):
+    def verify_token(self, token, verify_exp=True):
         if not self._certificates:
-            raise Exception
+            raise TokenVerificationError("You must fetch the certs.")
 
-        claims = decode(
-            token,
-            next(self._certificates.keys()),
-            algorithms=['RS256'],
-            audience=self.audience,
-            issuer=f"https://securetoken.google.com/{self.audience}"
-        )
+        if not isinstance(token, str):
+            raise TypeError(f"Token must be of type string, not {type(token)}")
+
+        try:
+            claims = jwt.decode(
+                token,
+                self._certificates,
+                algorithms='RS256',
+                audience=self.audience,
+                options={'verify_exp': verify_exp}
+            )
+        except ExpiredSignatureError as e:
+            raise TokenVerificationError("Token is expired.") from e
+        except JWTError as e:
+            raise TokenVerificationError("Token could not be parsed.") from e
 
         return claims.get("sub")
 
@@ -60,10 +68,10 @@ class DummyVerifier(TokenVerifier):
     Verifies a dummy token.
     """
 
-    def verify_token(self, token) -> str:
+    def verify_token(self, token: str) -> str:
         try:
             bytes.fromhex(token)
-        except ValueError:
+        except (ValueError, TypeError):
             raise TokenVerificationError("Not a valid hex string.")
 
         return token

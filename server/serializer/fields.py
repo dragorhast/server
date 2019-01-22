@@ -75,9 +75,11 @@ class EnumField(fields.Field):
         self.use_name = use_name
         self.as_string = as_string
 
-    def _serialize(self, value: Enum, attr, obj, **kwargs):
+    def _serialize(self, value: Union[Enum, str], attr, obj, **kwargs):
         """Converts an enum to a string representation."""
-        if value is not None:
+        if isinstance(value, str) and value in (enum.value for enum in self._enum_type):
+            return value
+        elif isinstance(value, self._enum_type):
             if self.use_name:
                 return value.name
             if self.as_string:

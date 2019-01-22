@@ -77,6 +77,7 @@ class TestUserView:
         response = await client.get(f'/api/v1/users/{random_user.id}',
                                     headers={"Authorization": f"Bearer {random_user.firebase_id}"})
 
+        text = await response.text()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["first"] == random_user.first
@@ -150,6 +151,7 @@ class TestUserCurrentRentalView:
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
 
+        text = await response.text()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["id"] == rental.id

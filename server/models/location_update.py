@@ -4,6 +4,7 @@ Location
 """
 
 from tortoise import Model, fields
+from tortoise.contrib.gis import gis_fields
 
 
 class LocationUpdate(Model):
@@ -11,13 +12,8 @@ class LocationUpdate(Model):
     A location update places a bike
     at some set of coordinates
     at a specific point in time.
-
-    .. note:: Currently the location is a :class:`tortoise.fields.CharField`
-        because there is no native GIS support.
-        This will be eventually changed,
-        and storing it as a sting is a "brute force" solution.
     """
     id = fields.IntField(pk=True)
-    location = fields.CharField(max_length=63)  # 52.432,-34.432
     bike = fields.ForeignKeyField("models.Bike")
+    location = gis_fields.PointField(srid=27700)
     time = fields.DatetimeField(auto_now_add=True)

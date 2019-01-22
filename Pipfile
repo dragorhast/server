@@ -7,6 +7,7 @@ verify_ssl = true
 pytest = "==4.*"
 pytest-cov = "*"
 pytest-aiohttp = "*"
+faker = "*"
 codecov = "*"
 pylint = "*"
 mypy = "*"
@@ -28,9 +29,9 @@ aiohttp-sentry = "*"
 # data
 marshmallow = ">=3rc1"
 marshmallow-jsonschema = "*"
-tortoise-orm = "*"
+tortoise-orm = {git = "https://github.com/arlyon/tortoise-orm.git",ref = "gis-experimental"}
 asyncpg = "*"
-aiosqlite = "*"
+aiosqlite = {git = "https://github.com/jreese/aiosqlite.git",ref = "master"}
 contextvars = "*"
 # docs
 sphinx = "*"
@@ -43,6 +44,7 @@ hyperion-cli = "*"
 pynacl = "*"
 aiobreaker = "*"
 python-jose = "*"
+shapely = {extras = ["vectorized"],version = "*"}
 
 [requires]
 python_version = "3.6"

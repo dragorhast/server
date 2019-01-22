@@ -24,7 +24,7 @@ from server.service.bikes import get_bikes, get_bike, register_bike, BadKeyError
 from server.service.rentals import get_rentals_for_bike
 from server.service.users import get_user
 from server.views.base import BaseView
-from server.views.utils import getter
+from server.views.utils import match_getter
 
 
 class MasterKeySchema(Schema):
@@ -90,7 +90,7 @@ class BikeView(BaseView):
     Gets or updates a single bike.
     """
     url = "/bikes/{id:[0-9]+}"
-    bike_getter = getter(get_bike, 'id', 'bike_id', 'bike')
+    bike_getter = match_getter(get_bike, 'bike', bike_id='id')
     name = "bike"
 
     @bike_getter
@@ -134,14 +134,14 @@ class BikeRentalsView(BaseView):
     Gets the rentals for a single bike.
     """
     url = "/bikes/{id:[0-9]+}/rentals"
-    bike_getter = getter(get_bike, 'id', 'bike_id', 'bike')
+    bike_getter = match_getter(get_bike, 'bike', bike_id='id')
 
     @bike_getter
     @returns(JSendSchema.of(RentalSchema(), many=True))
     async def get(self, bike: Bike):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.request.app["rental_manager"], self.request.app.router) for rental in
+            "data": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in
                      (await get_rentals_for_bike(bike=bike))]
         }
 
@@ -170,10 +170,10 @@ class BikeRentalsView(BaseView):
                 }
             }
         else:
-            rental = await self.request.app["rental_manager"].create(user, bike)
+            rental = await self.rental_manager.create(user, bike)
             return "rental_created", {
                 "status": JSendStatus.SUCCESS,
-                "data": await rental.serialize(self.request.app["rental_manager"], self.request.app.router)
+                "data": await rental.serialize(self.rental_manager, self.request.app.router)
             }
 
 

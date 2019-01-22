@@ -6,7 +6,6 @@ Programmatically defines the JSend specification.
 """
 
 from enum import Enum
-from typing import Type
 
 from marshmallow import Schema, fields, validates_schema, ValidationError
 
@@ -33,7 +32,7 @@ class JSendSchema(Schema):
     .. _`JSend Format`: https://labs.omniti.com/labs/jsend
     """
     status = EnumField(JSendStatus, required=True)
-    data = fields.Field()
+    data = fields.Dict()
     message = fields.String()
     code = fields.Integer()
 
@@ -56,7 +55,7 @@ class JSendSchema(Schema):
                 raise ValidationError(f"When the status is {data['status']}, the message fields must be populated.")
 
     @staticmethod
-    def of(data_type: Type, *args, **kwargs):
+    def of(data_schema: Schema, *args, **kwargs):
         """
         Creates a subclass of JSendSchema of a specific data type.
 
@@ -68,6 +67,6 @@ class JSendSchema(Schema):
         """
 
         class TypedJSendSchema(JSendSchema):
-            data = fields.Nested(data_type, *args, **kwargs)
+            data = fields.Nested(data_schema, *args, **kwargs)
 
         return TypedJSendSchema()

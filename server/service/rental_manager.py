@@ -9,7 +9,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Dict, Set, Callable, Union, Tuple
 
-from server.models import Bike, Rental, User, RentalUpdate
+from server.models import Bike, Rental, User, RentalUpdate, LocationUpdate
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
 
@@ -37,14 +37,22 @@ class RentalManager:
     async def active_rentals(self):
         return await Rental.filter(id__in=self.active_rental_ids.keys()).prefetch_related('updates')
 
-    async def active_rental(self, user: Union[int, User]):
+    async def active_rental(self, user: Union[int, User], *, with_locations=False):
         if isinstance(user, int):
             user_id = user
         if isinstance(user, User):
             user_id = user.id
 
         rental_id = self.active_rental_ids[user_id]
-        return await Rental.filter(id=rental_id).first().prefetch_related('updates')
+        rental = await Rental.filter(id=rental_id).first().prefetch_related('updates')
+        if with_locations:
+            locations = await LocationUpdate.filter(bike_id=rental.bike_id, time__gte=rental.updates[0].time.strftime("%Y-%m-%d %H:%M:%S"))
+            if locations:
+                return rental, locations[0], locations[-1]
+            else:
+                return rental, None, None
+        else:
+            return rental
 
     def has_active_rental(self, target: Union[User, Rental]) -> bool:
         if isinstance(target, User):
@@ -60,7 +68,7 @@ class RentalManager:
         elif isinstance(target, Rental):
             rental = target
 
-        return await get_price(rental.start_date, datetime.now())
+        return await get_price(rental.start_time, datetime.now())
 
     async def bike_in_use(self, target: Union[Bike, int]):
         """Checks whether the given bike is in use."""

@@ -9,6 +9,7 @@ from marshmallow import Schema, validates_schema, ValidationError
 from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float, Url
 
 from server.models.util import RentalUpdateType
+from server.serializer.geojson import GeoJSON, GeoJSONType
 from .fields import BytesField, EnumField
 
 
@@ -50,6 +51,7 @@ class RentalSchema(Schema):
     is_active = Boolean(required=True)
     estimated_price = Float()
     price = Float()
+    distance = Float()
 
     @validates_schema
     def assert_end_time_with_price(self, data):
@@ -71,4 +73,48 @@ class RentalSchema(Schema):
         if "user_id" in data and "user_url" not in data:
             raise ValidationError("User ID was included, but User URL was not.")
         if "bike_id" in data and "bike_url" not in data:
-            raise ValidationError("Bike ID was included, but User URL was not.")
+            raise ValidationError("Bike ID was included, but Bike URL was not.")
+
+
+class CurrentRentalSchema(RentalSchema):
+    start_location = Nested(GeoJSON(GeoJSONType.FEATURE))
+    current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
+
+
+class PickupPointData(Schema):
+    id = Integer()
+    name = String(required=True)
+    bikes = BikeSchema(many=True)
+
+
+class PickupPointSchema(GeoJSON):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(GeoJSONType.FEATURE, *args, **kwargs)
+
+    properties = Nested(PickupPointData())
+
+
+class IssueSchema(Schema):
+    id = Integer()
+
+    user = Nested(UserSchema())
+    user_id = Integer()
+    user_url = Url(relative=True)
+
+    bike = Nested(BikeSchema())
+    bike_id = Integer()
+    bike_url = Url(relative=True)
+
+    time = DateTime()
+    description = String(required=True)
+
+    @validates_schema
+    def assert_url_included_with_foreign_key(self, data):
+        """
+        Asserts that when a user_id or bike_id is sent that a user_url or bike_url is sent with it.
+        """
+        if "user_id" in data and "user_url" not in data:
+            raise ValidationError("User ID was included, but User URL was not.")
+        if "bike_id" in data and "bike_url" not in data:
+            raise ValidationError("Bike ID was included, but Bike URL was not.")
