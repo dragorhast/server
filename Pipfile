@@ -6,7 +6,6 @@ verify_ssl = true
 [dev-packages]
 pytest = "==4.*"
 pytest-cov = "*"
-pytest-aiohttp = "*"
 faker = "*"
 codecov = "*"
 pylint = "*"

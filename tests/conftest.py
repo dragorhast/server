@@ -19,6 +19,8 @@ from server.service.rental_manager import RentalManager
 from server.signals import register_signals
 from server.views import register_views
 
+pytest_plugins = 'aiohttp.pytest_plugin'
+
 fake = Faker()
 fake.add_provider(address)
 fake.add_provider(internet)
