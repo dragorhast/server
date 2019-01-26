@@ -1,6 +1,19 @@
-from server.service.pickup_point import get_pickup_points
+from server.service.pickup_point import get_pickup_points, get_pickup_at
 
 
-async def test_get_pickup_points(random_pickup_point):
-    points = await get_pickup_points()
-    assert random_pickup_point in points
+class TestPickups:
+
+    async def test_get_pickups(self, random_pickup_point):
+        points = await get_pickup_points()
+        assert random_pickup_point in points
+
+    async def test_get_pickups_by_name(self, random_pickup_point):
+        pass
+
+    async def test_get_pickups_at_location(self, random_pickup_point):
+        location = random_pickup_point.area.centroid
+        await get_pickup_at(location)
+
+    async def test_get_pickups_near(self):
+        """Assert that you can get pickup points near a location from the server."""
+        await get_pickups_near(location, distance=10)

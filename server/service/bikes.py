@@ -1,47 +1,26 @@
 """
 Bikes
 -----
-"""
-from datetime import datetime
-from typing import Iterable, Optional, Dict, Union, Tuple
 
-from shapely.geometry import Point
-from shapely.wkt import loads
+Handles the CRUD for aw bike.
+
+Bike registration is protected with a pass code such that new bikes may not
+be registered without it. The password is (for now) a simple hex string but,
+upon actual deployment, will be replaced with a more secure method.
+"""
+from typing import Optional, Dict, Union, List
+
 from tortoise.exceptions import DoesNotExist
 
 from server.models import Bike
-from server.models.location_update import LocationUpdate
 from server.service import MASTER_KEY
 
 
-class BikeLocationManager:
-    """
-    Maintains bike location state.
-    """
-
-    def __init__(self):
-        self._bike_locations: Dict[int, Tuple[Point, datetime]] = {}
-
-    def most_recent_location(self, target: Union[Bike, int]) -> Tuple[Point, datetime]:
-        bid = target.id if isinstance(target, Bike) else target
-        return self._bike_locations[bid]
-
-    def update_location(self, target: Union[Bike, int], location: Point, time: Optional[datetime] = None):
-        bid = target.id if isinstance(target, Bike) else target
-        time = time if time is not None else datetime.now()
-        LocationUpdate.create(bike=bid, location=location, time=time)
-        self._bike_locations[bid] = (location, time)
-
-    async def rebuild(self):
-        """Rebuilds the bike location state from the database."""
-        recent_updates = await LocationUpdate._meta.db.execute_query(
-            "select U.bike_id, max(U.time) as 'time', ST_AsText(U.location) as 'location' from locationupdate U group by U.bike_id")
-        for update in recent_updates:
-            self._bike_locations[update["bike_id"]] = (
-            loads(update["location"]), datetime.strptime(update["time"], "%Y-%m-%d %H:%M:%S"))
+class BadKeyError(Exception):
+    pass
 
 
-async def get_bikes() -> Iterable[Bike]:
+async def get_bikes() -> List[Bike]:
     """Gets all the bikes from the system."""
     return await Bike.all()
 
@@ -71,7 +50,7 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
 
     :param public_key: The public key, or a string hex representation of it.
     :param master_key: The master key, or a string hex representation of it.
-    :raises TypeError: if the key is not the right type
+    :raises TypeError: If the key is not the right type
     :raises ValueError: If the key is not hex string
     :raises BadKeyError: If the master key is not correct
     """
@@ -84,7 +63,7 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
             try:
                 return bytes.fromhex(key)
             except ValueError:
-                raise ValueError("Public key is not a hex string!")
+                raise ValueError(f"{name} key is not a hex string!")
 
         return key
 
@@ -104,22 +83,6 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
     return await Bike.create(public_key_hex=public_key.hex())
 
 
-async def lock_bike(public_key, value) -> None:
-    """
-    Locks or unlocks the bike with a public key.
-
-    :param public_key: The key for the bike.
-    :param value: The locked or unlocked value.
-    :return: True if successful.
-    :raises ConnectionError: If the bike is not connected.
-    """
-    bike: Bike = await Bike.get(public_key_hex=public_key.hex()).first()
-    try:
-        await bike.set_locked(value)
-    except ConnectionError as error:
-        raise error
-
-
 async def delete_bike(bike, master_key) -> None:
     """
     Deletes a bike.
@@ -132,7 +95,3 @@ async def delete_bike(bike, master_key) -> None:
         raise BadKeyError("Incorrect master key")
 
     await bike.delete()
-
-
-class BadKeyError(Exception):
-    pass
