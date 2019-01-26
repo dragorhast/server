@@ -4,11 +4,17 @@ from server.models import User, Bike
 from server.models.issue import Issue
 
 
-async def get_issues():
-    return await Issue.all()
+async def get_issues(*, user: Union[User, int] = None):
+    options = {}
+    if isinstance(user, User):
+        options["user"] = user
+    elif isinstance(user, int):
+        options["user_id"] = user
+
+    return await Issue.filter(**options)
 
 
-async def create_issue(user: Union[User, int], description: str, bike: Union[User, int] = None):
+async def open_issue(user: Union[User, int], description: str, bike: Union[User, int] = None):
     options = {
         "description": description
     }
@@ -24,3 +30,13 @@ async def create_issue(user: Union[User, int], description: str, bike: Union[Use
         options["bike_id"] = bike
 
     return await Issue.create(**options)
+
+
+async def close_issue(issue: Union[Issue, int]):
+    if isinstance(issue, int):
+        issue = await Issue.filter(id=issue).first()
+
+    issue.is_active = False
+    await issue.save()
+
+

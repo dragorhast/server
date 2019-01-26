@@ -190,7 +190,9 @@ class UserIssuesView(BaseView):
     with_issues = match_getter(get_issues, "issues", user_id='id')
     with_user = match_getter(get_user, 'user', user_id='id')
 
+    @with_user
     @with_issues
+    @requires(UserMatchesFirebase() | UserIsAdmin())
     @returns(JSendSchema.of(IssueSchema(), many=True))
     async def get(self, issues):
         return {
@@ -199,8 +201,9 @@ class UserIssuesView(BaseView):
         }
 
     @with_user
+    @requires(UserMatchesFirebase() | UserIsAdmin())
     @expects(IssueSchema(only=('bike_id', 'description')))
-    @returns(JSendSchema.of(IssueSchema()))
+    @returns(JSendSchema.of(IssueSchema(only=('id', 'user_id', 'bike_id', 'description', 'time'))))
     async def post(self):
         kwargs = {
             "description": self.request["data"]["description"]
@@ -210,7 +213,7 @@ class UserIssuesView(BaseView):
 
         return {
             "status": JSendStatus.SUCCESS,
-            "data": (await create_issue(**kwargs)).serialize(self.request.app.router)
+            "data": (await open_issue(**kwargs)).serialize(self.request.app.router)
         }
 
     async def patch(self):

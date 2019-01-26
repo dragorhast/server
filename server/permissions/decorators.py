@@ -45,6 +45,8 @@ def requires(permission: Permission):
                 await permission(self, **kwargs)
             except PermissionError as error:
                 errors += flatten(error)
+            except Exception as error:
+                raise type(error)(original_function, *error.args) from error
 
             if errors:
                 response_schema = JSendSchema()
