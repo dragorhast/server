@@ -12,6 +12,12 @@ env:
     - PIPENV_CACHE_DIR=$HOME/.cache/pipenv
     - PIPENV_VENV_IN_PROJECT=1
     - PIPENV_IGNORE_VIRTUALENVS=1
+  matrix:
+    - DATABASE_URL="sqlite:///tmp/test.sqlite"
+    - DATABASE_URL="postgres://postgres:@127.0.0.1:5432/test"
+
+before_script:
+  - ./db-setup.sh
 
 install:
   - pip install git+https://github.com/pypa/pipenv.git
