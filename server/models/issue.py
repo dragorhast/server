@@ -12,6 +12,7 @@ class Issue(Model):
     bike = fields.ForeignKeyField("models.Bike", null=True)
     time = fields.DatetimeField(auto_now_add=True)
     description = fields.TextField()
+    is_active = fields.BooleanField(default=True)
 
     def serialize(self, router):
         return {

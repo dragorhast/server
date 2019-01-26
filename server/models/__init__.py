@@ -9,3 +9,4 @@ from .rental import RentalUpdate, Rental
 from .user import User
 from .pickup_point import PickupPoint
 from .location_update import LocationUpdate
+from .issue import Issue
