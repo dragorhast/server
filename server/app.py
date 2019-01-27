@@ -16,6 +16,7 @@ from server.config import api_root
 from server.middleware import validate_token_middleware
 from server.service.bikes import BikeLocationManager
 from server.service.rental_manager import RentalManager
+from server.service.verify_token import FirebaseVerifier, DummyVerifier
 from server.signals import register_signals
 from server.version import __version__
 from server.views import register_views, send_to_developer_portal
@@ -31,6 +32,7 @@ def build_app(db_uri=None):
     app['rental_manager'] = RentalManager()
     app['bike_location_manager'] = BikeLocationManager()
     app['database_uri'] = db_uri if db_uri is not None else 'sqlite://:memory:'
+    app['token_verifier'] = FirebaseVerifier("dragorhast-420") if not server_mode == "development" else DummyVerifier()
 
     # set up the background tasks
     register_signals(app)

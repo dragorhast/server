@@ -11,6 +11,7 @@ from aiohttp.web_urldispatcher import View
 
 from server.models import User
 from server.permissions.permission import Permission
+from server.service.users import get_user
 from server.service.verify_token import verify_token, TokenVerificationError
 
 
@@ -44,7 +45,7 @@ class UserMatchesFirebase(Permission):
             )
 
         if not user.firebase_id == token:
-            raise PermissionError("You don't have permission to fetch this resource.")
+            raise PermissionError("Supplied user doesn't exist, or doesn't have access to this resource.")
 
 
 class UserIsAdmin(Permission):
@@ -55,15 +56,19 @@ class UserIsAdmin(Permission):
             raise PermissionError("You must supply your firebase token.")
 
         if "user" in kwargs:
-            user = kwargs["user"]
+            user: User = kwargs["user"]
         else:
             raise ValueError(
                 "User required for this permission! "
                 "It is recommended you cache it on the request using a match_getter"
             )
 
-        if not user.is_admin:
-            raise PermissionError("You don't have permission to fetch this resource.")
+        if not view.request["token"] == user.firebase_id:
+            # an admin is fetching a user's details; we need to get the admin's details
+            user = await get_user(firebase_id=view.request["token"])
+
+        if user is None or not user.is_admin:
+            raise PermissionError("You must be an admin to access this resource.")
 
 
 class BikeNotInUse(Permission):

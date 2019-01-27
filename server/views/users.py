@@ -11,15 +11,15 @@ from aiohttp import web
 from server.models import User
 from server.permissions import UserMatchesFirebase
 from server.permissions.decorators import requires
-from server.permissions.permissions import ValidToken
+from server.permissions.permissions import ValidToken, UserIsAdmin
 from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
 from server.serializer.decorators import expects, returns
 from server.serializer.models import CurrentRentalSchema, IssueSchema
-from server.service.issues import get_issues, create_issue
+from server.service.issues import get_issues, open_issue
 from server.service.rentals import get_rentals
 from server.service.users import get_users, get_user, delete_user, create_user, UserExistsError, update_user
 from server.views.base import BaseView
-from server.views.utils import match_getter
+from server.views.utils import match_getter, GetFrom
 
 
 class UsersView(BaseView):
@@ -28,10 +28,13 @@ class UsersView(BaseView):
     """
     url = "/users"
     name = "users"
+    with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
 
+    @with_user
+    @requires(UserIsAdmin())
     @expects(None)
     @returns(JSendSchema.of(UserSchema(), many=True))
-    async def get(self):
+    async def get(self, user):
         return {
             "status": JSendStatus.SUCCESS,
             "data": await get_users()
@@ -62,7 +65,7 @@ class UserView(BaseView):
     user_getter = match_getter(get_user, 'user', user_id='id')
 
     @user_getter
-    @requires(UserMatchesFirebase())
+    @requires(UserMatchesFirebase() | UserIsAdmin())
     @expects(None)
     @returns(JSendSchema.of(UserSchema()))
     async def get(self, user: User):
@@ -72,7 +75,7 @@ class UserView(BaseView):
         }
 
     @user_getter
-    @requires(UserMatchesFirebase())
+    @requires(UserMatchesFirebase() | UserIsAdmin())
     @expects(UserSchema(only=('first', 'email')))
     @returns(JSendSchema.of(UserSchema()))
     async def put(self, user: User):
@@ -83,7 +86,7 @@ class UserView(BaseView):
         }
 
     @user_getter
-    @requires(UserMatchesFirebase())
+    @requires(UserMatchesFirebase() | UserIsAdmin())
     async def delete(self, user: User):
         await delete_user(user)
         raise web.HTTPNoContent

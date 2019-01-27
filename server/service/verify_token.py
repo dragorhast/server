@@ -1,12 +1,15 @@
 """
 Verify Token
 ------------
+
+A number of API token verification strategies.
 """
 
 from abc import ABC, abstractmethod
 from typing import Dict
 
 from aiohttp import ClientSession
+from aiohttp.web_request import Request
 from jose import jwt, ExpiredSignatureError, JWTError
 
 
@@ -18,14 +21,16 @@ class TokenVerifier(ABC):
 
     @abstractmethod
     def verify_token(self, token):
-        pass
+        """
+        Given a token, verifies it, returning the valid token or a token verification error.
+
+        :raises TokenVerificationError: When the provided token is invalid.
+        """
 
 
 class FirebaseVerifier(TokenVerifier):
     """
     Verifies a firebase token.
-
-    .. todo:: implement
     """
 
     _public_key_url = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
@@ -58,9 +63,9 @@ class FirebaseVerifier(TokenVerifier):
         except ExpiredSignatureError as e:
             raise TokenVerificationError("Token is expired.") from e
         except JWTError as e:
-            raise TokenVerificationError("Token could not be parsed.") from e
+            raise TokenVerificationError("Token is invalid.") from e
 
-        return claims.get("sub")
+        return claims.get("user_id")
 
 
 class DummyVerifier(TokenVerifier):
@@ -77,7 +82,7 @@ class DummyVerifier(TokenVerifier):
         return token
 
 
-def verify_token(request):
+def verify_token(request: Request):
     """
     Checks a view for the existence of a valid Authorization header.
 
@@ -92,10 +97,6 @@ def verify_token(request):
         raise TokenVerificationError("The Authorization header must be of the format \"Bearer $TOKEN\".")
 
     try:
-        return verifier.verify_token(request.headers["Authorization"][7:])
+        return request.app["token_verifier"].verify_token(request.headers["Authorization"][7:])
     except TokenVerificationError as error:
         raise error
-
-
-# verifier = FirebaseVerifier("dragorhast-420")
-verifier = DummyVerifier()

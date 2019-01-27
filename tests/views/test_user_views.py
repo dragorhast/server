@@ -6,13 +6,13 @@ from server.serializer import UserSchema, JSendSchema, JSendStatus, RentalSchema
 
 class TestUsersView:
 
-    async def test_get_users(self, client: TestClient, random_user: User):
+    async def test_get_users(self, client: TestClient, random_admin: User):
         """Assert that you can get a list of users."""
         response_schema = JSendSchema.of(UserSchema(many=True))
-        response = await client.get('/api/v1/users')
+        response = await client.get('/api/v1/users', headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert any(user["id"] == random_user.id for user in response_data["data"])
+        assert any(user["id"] == random_admin.id for user in response_data["data"])
 
     async def test_create_user(self, client: TestClient):
         """Assert that you can create a user."""
@@ -77,7 +77,6 @@ class TestUserView:
         response = await client.get(f'/api/v1/users/{random_user.id}',
                                     headers={"Authorization": f"Bearer {random_user.firebase_id}"})
 
-        text = await response.text()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["first"] == random_user.first
@@ -89,7 +88,17 @@ class TestUserView:
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("don't have permission" in error for error in response_data["data"]["authorization"])
+        assert any("doesn't exist" in error for error in response_data["data"]["authorization"])
+
+    async def test_get_user_as_admin(self, client, random_user, random_admin):
+        """Assert that getting any user's credentials as an admin works."""
+        response_schema = JSendSchema()
+        response = await client.get(f'/api/v1/users/{random_user.id}',
+                                    headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
+
+        response_data = response_schema.load(await response.json())
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert response_data["data"]["first"] == random_user.first
 
     async def test_put_user(self, client: TestClient, random_user):
         """Assert that an authenticated user can replace their entire profile."""
@@ -123,6 +132,17 @@ class TestUserView:
 
     async def test_delete_user(self, client: TestClient, random_user):
         """Assert that an authenticated user can delete their profile."""
+        response = await client.delete(f'/api/v1/users/{random_user.id}',
+                                       headers={"Authorization": f"Bearer {random_user.firebase_id}"})
+        assert response.status == 204
+        assert await User.all().count() == 0
+
+    async def test_delete_user_as_admin(self, client, random_user, random_admin):
+        """Assert that an admin can delete any user's account."""
+        response = await client.delete(f'/api/v1/users/{random_user.id}',
+                                       headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
+        assert response.status == 204
+        assert await User.all().count() == 1
 
 
 class TestUserRentalsView:
@@ -151,7 +171,6 @@ class TestUserCurrentRentalView:
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
 
-        text = await response.text()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["id"] == rental.id

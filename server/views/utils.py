@@ -24,8 +24,10 @@ def resolve_match_map(request: Request, match_map) -> Dict[str, Any]:
         if isinstance(value, str):
             resolved_matches[key] = int(request.match_info.get(value))
         elif value == GetFrom.AUTH_HEADER:
-            if "Authorization" not in request.headers or not request.headers["Authorization"].startswith("Bearer "):
-                raise ValueError("Malformed authorization")
+            if "Authorization" not in request.headers:
+                raise ValueError("Missing Authorization header.")
+            elif not request.headers["Authorization"].startswith("Bearer "):
+                raise ValueError("Malformed Authorization header (expected Bearer $TOKEN).")
             resolved_matches[key] = request.headers["Authorization"][7:]
         else:
             raise TypeError(f"match_getter only supports Union[str, GetFrom] not {type(value)}")
@@ -63,23 +65,28 @@ def match_getter(getter_function, *injection_parameters: str, **match_map: Union
         async def new_func(self: View, **kwargs):
             try:
                 params = resolve_match_map(self.request, match_map)
-            except (ValueError, TypeError):
-                # todo handle gracefully
-                pass
+            except (ValueError, TypeError) as e:
+                response = {
+                    "status": JSendStatus.FAIL,
+                    "data": {
+                        "message": "Errors with your request.",
+                        "errors": e.args
+                    }
+                }
+                raise web.HTTPBadRequest(text=JSendSchema().dumps(response), content_type='application/json')
             item = getter_function(**params)
             if isawaitable(item):
                 item = await item
 
             if item is None:
-                schema = JSendSchema()
                 response = {
                     "status": JSendStatus.FAIL,
                     "data": {
-                        "message": "Requested item does not exist."
+                        "message": f'Could not find needed {", ".join(injection_parameters)} with the given params.',
+                        "params": params
                     }
                 }
-
-                raise web.HTTPNotFound(text=schema.dumps(response), content_type='application/json')
+                raise web.HTTPNotFound(text=JSendSchema().dumps(response), content_type='application/json')
 
             # if the getter function returns multiple items,
             # and there are multiple parameter names,

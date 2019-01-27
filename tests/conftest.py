@@ -1,5 +1,5 @@
 import asyncio
-import weakref
+import os
 
 import pytest
 from aiohttp import web
@@ -14,8 +14,9 @@ from server.middleware import validate_token_middleware
 from server.models import Bike, User, Rental
 from server.models.pickup_point import PickupPoint
 from server.service import TicketStore
-from server.service.bikes import BikeLocationManager
+from server.service.bike_connection_manager import BikeConnectionManager
 from server.service.rental_manager import RentalManager
+from server.service.verify_token import DummyVerifier
 from server.signals import register_signals
 from server.views import register_views
 
@@ -27,10 +28,16 @@ fake.add_provider(internet)
 fake.add_provider(misc)
 
 
+async def create_user(is_admin=False):
+    return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), is_admin=is_admin)
+
+
 @pytest.yield_fixture
 async def database(loop):
+    database_url = os.getenv("DATABASE_URL", "sqlite://:memory:")
+
     await Tortoise.init(
-        db_url="sqlite://:memory:",
+        db_url=database_url,
         modules={'models': ['server.models']})
     await Tortoise.generate_schemas()
     transaction = await start_transaction()
@@ -46,10 +53,11 @@ async def client(aiohttp_client, loop) -> TestClient:
     asyncio.get_event_loop().set_debug(True)
     app = web.Application(middlewares=[validate_token_middleware])
 
-    app['bike_connections'] = weakref.WeakSet()
     app['rental_manager'] = RentalManager()
-    app['bike_location_manager'] = BikeLocationManager()
+    app['bike_location_manager'] = BikeConnectionManager()
+    app['token_verifier'] = DummyVerifier()
     app['database_uri'] = 'sqlite://:memory:'
+
     register_signals(app)
     register_views(app, "/api/v1")
 
@@ -75,7 +83,12 @@ async def random_bike(database) -> Bike:
 @pytest.fixture
 async def random_user(database) -> User:
     """Creates a random user in the database."""
-    return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email())
+    return await create_user()
+
+
+@pytest.fixture()
+async def random_admin(random_user) -> User:
+    return await create_user(True)
 
 
 @pytest.fixture

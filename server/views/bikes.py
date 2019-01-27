@@ -16,7 +16,7 @@ from server import logger
 from server.models.bike import Bike
 from server.models.util import BikeType
 from server.permissions.decorators import requires
-from server.permissions.permissions import ValidToken, BikeNotInUse
+from server.permissions.permissions import BikeNotInUse, UserIsAdmin
 from server.serializer import BikeSchema, RentalSchema, BytesField, EnumField, JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
 from server.service import TicketStore
@@ -24,7 +24,7 @@ from server.service.bikes import get_bikes, get_bike, register_bike, BadKeyError
 from server.service.rentals import get_rentals_for_bike
 from server.service.users import get_user
 from server.views.base import BaseView
-from server.views.utils import match_getter
+from server.views.utils import match_getter, GetFrom
 
 
 class MasterKeySchema(Schema):
@@ -55,7 +55,7 @@ class BikesView(BaseView):
         """Gets all the bikes from the system."""
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [bike.serialize() for bike in await get_bikes()]
+            "data": [bike.serialize(self.bike_connection_manager) for bike in await get_bikes()]
         }
 
     @expects(BikeRegisterSchema())
@@ -81,7 +81,7 @@ class BikesView(BaseView):
         else:
             return "registered", {
                 "status": JSendStatus.SUCCESS,
-                "data": bike.serialize()
+                "data": bike.serialize(self.bike_connection_manager)
             }
 
 
@@ -95,17 +95,17 @@ class BikeView(BaseView):
 
     @bike_getter
     @returns(JSendSchema.of(BikeSchema(only=("public_key",))))
-    async def get(self, bike):
+    async def get(self, bike: Bike):
         """Gets a single bike by its id."""
         return {
             "status": JSendStatus.SUCCESS,
-            "data": bike.serialize()
+            "data": bike.serialize(self.bike_connection_manager)
         }
 
     @bike_getter
     @expects(MasterKeySchema())
     @returns(JSendSchema(), HTTPStatus.BAD_REQUEST)
-    async def delete(self, bike):
+    async def delete(self, bike: Bike):
         """Deletes a bike by its id."""
         try:
             await delete_bike(bike, self.request["data"]["master_key"])
@@ -134,24 +134,28 @@ class BikeRentalsView(BaseView):
     Gets the rentals for a single bike.
     """
     url = "/bikes/{id:[0-9]+}/rentals"
-    bike_getter = match_getter(get_bike, 'bike', bike_id='id')
+    with_bike = match_getter(get_bike, 'bike', bike_id='id')
+    with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
 
-    @bike_getter
+    @with_bike
+    @with_user
+    @requires(UserIsAdmin())
     @returns(JSendSchema.of(RentalSchema(), many=True))
-    async def get(self, bike: Bike):
+    async def get(self, bike: Bike, user):
         return {
             "status": JSendStatus.SUCCESS,
             "data": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in
                      (await get_rentals_for_bike(bike=bike))]
         }
 
-    @bike_getter
-    @requires(ValidToken() & BikeNotInUse())
+    @with_bike
+    @with_user
+    @requires(BikeNotInUse())
     @returns(
         missing_user=JSendSchema(),
         rental_created=JSendSchema.of(RentalSchema())
     )
-    async def post(self, bike: Bike):
+    async def post(self, bike: Bike, user):
         """
         Starts a new rental.
 
@@ -242,20 +246,16 @@ class BikeSocketView(BaseView):
         try:
             # handle messages
             logger.info("Bike %s connected", ticket.bike.id)
-            self.request.app['bike_connections'].add(socket)
+            await self.bike_connection_manager.add_connection(ticket.bike, socket)
             ticket.bike.socket = socket
 
             async for msg in socket:
                 if msg.type == WSMsgType.TEXT:
-                    if msg.data == 'close':
-                        await socket.close()
-                    else:
-                        await socket.send_str(msg.data + '/answer')
+                    logger.info(msg)
                 elif msg.type == WSMsgType.ERROR:
                     print('ws connection closed with exception %s', socket.exception())
         finally:
             logger.info("Bike %s disconnected", ticket.bike.id)
-            self.request.app['bike_connections'].discard(socket)
 
         return socket
 

@@ -97,7 +97,6 @@ class TestBikeView:
         resp = await client.get(f'/api/v1/bikes/{random_bike.id}')
 
         schema = JSendSchema.of(BikeSchema())
-        text = await resp.text()
         data = schema.load(await resp.json())
 
         assert data["data"]["public_key"] == random_bike.public_key
@@ -110,7 +109,7 @@ class TestBikeView:
         data = response_schema.load(await response.json())
 
         assert data["status"] == JSendStatus.FAIL
-        assert "does not exist" in data["data"]["message"]
+        assert "Could not find" in data["data"]["message"]
 
     async def test_delete_bike(self, client: TestClient, random_bike):
         """Assert that you can delete bikes with a valid master key."""
@@ -144,10 +143,10 @@ class TestBikeView:
 
 class TestBikeRentalsView:
 
-    async def test_get_bike_rentals(self, client: TestClient, random_bike):
+    async def test_get_bike_rentals(self, client: TestClient, random_bike, random_admin):
         """Assert that you can get the rentals for a given bike."""
 
-        response = await client.get(f'/api/v1/bikes/1/rentals')
+        response = await client.get(f'/api/v1/bikes/1/rentals', headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
         response_schema = JSendSchema.of(RentalSchema(many=True))
         response_data = response_schema.load(await response.json())
 
@@ -160,6 +159,7 @@ class TestBikeRentalsView:
             f'/api/v1/bikes/{random_bike.id}/rentals',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
+
         response_data = JSendSchema.of(RentalSchema()).load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert "price" not in response_data["data"]
@@ -174,7 +174,7 @@ class TestBikeRentalsView:
         response_data = response_schema.load(await response.json())
 
         assert response_data["status"] == JSendStatus.FAIL
-        assert "No such user exists" in response_data["data"]["message"]
+        assert "Could not find needed" in response_data["data"]["message"]
 
     async def test_create_bike_rental_invalid_key(self, client: TestClient, random_bike):
         """Assert that creating a rental with an invalid firebase key fails."""
