@@ -47,6 +47,7 @@ python-jose = "*"
 shapely = {extras = ["vectorized"],version = "*"}
 dateparser = "*"
 wheel = "*"
+cryptography = "*"
 
 [requires]
 python_version = "3.6"
