@@ -2,12 +2,11 @@
 Users
 -----
 """
-from typing import Union
+from typing import Union, Optional, List
 
 from tortoise.exceptions import IntegrityError
 
 from server.models import User
-from server.service.verify_token import TokenVerificationError, verifier
 
 
 class UserExistsError(Exception):
@@ -16,11 +15,11 @@ class UserExistsError(Exception):
         self.errors = errors
 
 
-async def get_users():
+async def get_users() -> List[User]:
     return await User.all()
 
 
-async def get_user(*, firebase_id=None, user_id=None) -> User:
+async def get_user(*, firebase_id=None, user_id=None) -> Optional[User]:
     """
     :param firebase_id: The firebase id of the user to get.
     :param user_id: The user id of the user to get.
@@ -45,16 +44,10 @@ async def create_user(first: str, email: str, firebase_id: str) -> User:
     :param first:
     :param email:
     :param firebase_id:
-    :raises TokenVerificationError: When the firebase ID is invalid.
     :raises UserExistsError: When the user with the given credentials already exists.
     """
     try:
-        token = verifier.verify_token(firebase_id)
-    except TokenVerificationError as error:
-        raise error
-
-    try:
-        return await User.create(first=first, email=email, firebase_id=token)
+        return await User.create(first=first, email=email, firebase_id=firebase_id)
     except IntegrityError as error:
         errors = {}
         for error in error.args:

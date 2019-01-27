@@ -11,7 +11,6 @@ on the bike itself.
 For an example of this, see :class:`~server.views.bikes.BikeSocketView`.
 """
 
-import weakref
 from typing import Optional, Callable, Dict, Any
 
 from aiohttp.web_ws import WebSocketResponse
@@ -33,7 +32,7 @@ class Bike(Model):
     """
 
     id = fields.IntField(pk=True)
-    public_key_hex = fields.CharField(max_length=64, unique=True)
+    public_key_hex: str = fields.CharField(max_length=64, unique=True)
     type = EnumField(enum_type=BikeType, default=BikeType.ROAD)
 
     locked: bool = True
@@ -45,7 +44,7 @@ class Bike(Model):
     has been deleted. We set it to lambda None to emulate this behaviour.
     """
 
-    def serialize(self) -> Dict[str, Any]:
+    def serialize(self, bike_connection_manager) -> Dict[str, Any]:
         """
         Serializes the bike into a format that can be turned into JSON.
 
@@ -54,7 +53,7 @@ class Bike(Model):
         return {
             "id": self.id,
             "public_key": self.public_key,
-            "connected": self._is_connected,
+            "connected": bike_connection_manager.is_connected(self),
             "locked": self.locked
         }
 
@@ -65,32 +64,3 @@ class Bike(Model):
 
         self._public_key = bytes.fromhex(self.public_key_hex)
         return self._public_key
-
-    @property
-    def _is_connected(self):
-        """
-        Checks if the bike has been assigned a weak reference
-        to a socket and if the socket is still alive.
-        """
-        return self._socket() is not None
-
-    def _set_socket(self, socket):
-        self._socket = weakref.ref(socket)
-
-    socket = property(None, _set_socket)
-    """Assigns the server bike a socket over which it can communicate with the actual bike."""
-
-    async def set_locked(self, locked: bool):
-        """
-        Locks or unlocks the bike.
-
-        :param locked: The status to set the bike to.
-        :raises ConnectionError: If the socket is not open.
-        """
-        socket = self._socket()
-
-        if not self._is_connected or socket is None:
-            raise ConnectionError("No open socket.")
-
-        await socket.send_str("lock" if locked else "unlock")
-        self.locked = locked

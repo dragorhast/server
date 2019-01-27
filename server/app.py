@@ -14,7 +14,7 @@ from aiohttp_sentry import SentryMiddleware
 from server import server_mode
 from server.config import api_root
 from server.middleware import validate_token_middleware
-from server.service.bikes import BikeLocationManager
+from server.service.bike_connection_manager import BikeConnectionManager
 from server.service.rental_manager import RentalManager
 from server.service.verify_token import FirebaseVerifier, DummyVerifier
 from server.signals import register_signals
@@ -28,9 +28,8 @@ def build_app(db_uri=None):
     uvloop.install()
 
     # keep a track of all open bike connections
-    app['bike_connections'] = weakref.WeakSet()
     app['rental_manager'] = RentalManager()
-    app['bike_location_manager'] = BikeLocationManager()
+    app['bike_location_manager'] = BikeConnectionManager()
     app['database_uri'] = db_uri if db_uri is not None else 'sqlite://:memory:'
     app['token_verifier'] = FirebaseVerifier("dragorhast-420") if not server_mode == "development" else DummyVerifier()
 

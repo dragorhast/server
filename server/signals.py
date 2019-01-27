@@ -25,11 +25,7 @@ from server.views import BikeSocketView
 
 async def close_bike_connections(app: Application):
     """Closes all outstanding connections between bikes and the server."""
-    connections: Set[WebSocketResponse] = set(app['bike_connections'])
-    if connections:
-        logger.info("Closing all open bike connections")
-    for connection in connections:
-        await connection.close(code=WSCloseCode.GOING_AWAY)
+    await app['bike_location_manager'].close_connections()
 
 
 async def close_database_connections(app: Application):

@@ -102,9 +102,9 @@ class IssueSchema(Schema):
     user_id = Integer()
     user_url = Url(relative=True)
 
-    bike = Nested(BikeSchema())
-    bike_id = Integer()
-    bike_url = Url(relative=True)
+    bike = Nested(BikeSchema(), allow_none=True)
+    bike_id = Integer(allow_none=True)
+    bike_url = Url(relative=True, allow_none=True)
 
     time = DateTime()
     description = String(required=True)

@@ -70,7 +70,7 @@ class PickupBikesView(BaseView):
     async def get(self, pickup: PickupPoint):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [bike.serialize() for bike in await pickup.bikes()]
+            "data": [bike.serialize(self.bike_connection_manager) for bike in await pickup.bikes()]
         }
 
 

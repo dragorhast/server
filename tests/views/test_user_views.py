@@ -221,6 +221,15 @@ class TestUserCurrentRentalView:
         assert response_data["data"]["message"] == "You have no current rental."
 
 
+class TestUserIssuesView:
+
+    async def test_get_user_issues(self):
+        """Assert todo"""
+
+    async def test_add_user_issue(self):
+        """Assert todo"""
+
+
 class TestMeView:
 
     async def test_get_me(self, client: TestClient, random_user):

@@ -12,6 +12,7 @@ pylint = "*"
 mypy = "*"
 safety = "*"
 bandit = "*"
+pytest-mock = "*"
 
 [packages]
 # aiohttp
@@ -44,6 +45,7 @@ pynacl = "*"
 aiobreaker = "*"
 python-jose = "*"
 shapely = {extras = ["vectorized"],version = "*"}
+dateparser = "*"
 
 [requires]
 python_version = "3.6"

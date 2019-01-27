@@ -6,9 +6,8 @@ Creates and registers multiple fake bikes with the server. Connections are autom
 from asyncio import get_event_loop, sleep, gather
 from datetime import timedelta
 
-import aiohttp
 from aiobreaker import CircuitBreaker, CircuitBreakerError
-from aiohttp import ClientSession, ClientConnectorError
+from aiohttp import ClientSession, ClientConnectorError, WSMsgType
 from nacl.encoding import RawEncoder
 
 from fakebike import logger
@@ -59,27 +58,22 @@ async def bike_handler(session, bike: Bike, signed_challenge: bytes):
 
     :return: None
     """
-    async with session.ws_connect(URL + "/connect") as ws:
+    async with session.ws_connect(URL + "/connect") as socket:
         # send signature
-        await ws.send_bytes(bike.public_key.encode(RawEncoder))
-        await ws.send_bytes(signed_challenge)
-        confirmation = await ws.receive_str()
+        await socket.send_bytes(bike.public_key.encode(RawEncoder))
+        await socket.send_bytes(signed_challenge)
+        confirmation = await socket.receive_str()
         if "fail" in confirmation:
             raise AuthError(confirmation.split(":")[1])
         else:
             logger.info(f"Bike {bike.bid} established connection")
-            await ws.send_json({"locked": bike.locked})
+            await socket.send_json({"locked": bike.locked})
 
         # handle messages
-        async for msg in ws:
-            logger.info("Message %s", msg)
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                if msg.data == 'close cmd':
-                    await ws.close()
-                    logger.info("closing connection")
-                    break
-                elif msg.data in bike.commands:
-                    await bike.commands[msg.data](msg, ws)
+        async for msg in socket:
+            if msg.type == WSMsgType.TEXT:
+                if msg.data in bike.commands:
+                    await bike.commands[msg.data](msg, socket)
 
 
 @ServerBreaker

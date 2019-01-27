@@ -4,6 +4,9 @@ Issue Related Views
 
 Handles all the issue CRUD
 """
+from typing import List
+
+from server.models import Issue
 from server.permissions.decorators import requires
 from server.permissions.permissions import UserIsAdmin
 from server.serializer import JSendSchema, JSendStatus
@@ -28,9 +31,9 @@ class IssuesView(BaseView):
     @requires(UserIsAdmin())
     @returns(JSendSchema.of(IssueSchema(only=(
         'id', 'user_id', 'user_url', 'bike_id', 'bike_url', 'time', 'description'
-    ))))
-    async def get(self, user, issues):
+    )), many=True))
+    async def get(self, user, issues: List[Issue]):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [issue.serialize() for issue in issues]
+            "data": [issue.serialize(self.request.app.router) for issue in issues]
         }
