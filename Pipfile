@@ -46,6 +46,7 @@ aiobreaker = "*"
 python-jose = "*"
 shapely = {extras = ["vectorized"],version = "*"}
 dateparser = "*"
+wheel = "*"
 
 [requires]
 python_version = "3.6"
