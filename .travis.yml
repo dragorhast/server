@@ -10,6 +10,7 @@ addons:
   apt:
     packages:
     - postgresql-9.6-postgis-2.3
+    - libspatialite5
 
 cache:
   directories:
@@ -29,6 +30,7 @@ env:
 install:
   - pip install git+https://github.com/pypa/pipenv.git
   - pipenv install --dev --three
+
 before_script: ./db-setup.sh
 script: pipenv run test
 after_success: pipenv run codecov
