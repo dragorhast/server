@@ -17,13 +17,13 @@ async def test_get_bike(random_bike: Bike):
     """Assert that getting a bike returns it."""
     bike = await get_bike(public_key=random_bike.public_key)
     assert bike.id == random_bike.id
-    bike = await get_bike(bike_id=random_bike.id)
+    bike = await get_bike(identifier=random_bike.identifier)
     assert bike.id == random_bike.id
 
 
 async def test_get_bad_bike(database):
     """Assert that getting a bad bike returns None"""
-    bike = await get_bike(bike_id=-1)
+    bike = await get_bike(identifier=-1)
     assert bike is None
 
 

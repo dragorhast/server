@@ -11,6 +11,7 @@ from server.permissions.decorators import requires
 from server.permissions.permissions import UserIsAdmin
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import returns
+from server.serializer.fields import Many
 from server.serializer.models import IssueSchema
 from server.service.issues import get_issues
 from server.service.users import get_user
@@ -29,11 +30,11 @@ class IssuesView(BaseView):
     @with_admin
     @with_issues
     @requires(UserIsAdmin())
-    @returns(JSendSchema.of(IssueSchema(only=(
-        'id', 'user_id', 'user_url', 'bike_id', 'bike_url', 'time', 'description'
-    )), many=True))
+    @returns(JSendSchema.of(issues=Many(IssueSchema(only=(
+        'id', 'user_id', 'user_url', 'bike_identifier', 'bike_url', 'time', 'description'
+    )))))
     async def get(self, user, issues: List[Issue]):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [issue.serialize(self.request.app.router) for issue in issues]
+            "data": {"issues": [issue.serialize(self.request.app.router) for issue in issues]}
         }

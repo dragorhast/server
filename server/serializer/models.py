@@ -16,14 +16,14 @@ from .fields import BytesField, EnumField
 class BikeSchema(Schema):
     public_key = BytesField(required=True)
     connected = Boolean()
-    locked = Boolean()
+    current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
 
 
 class UserSchema(Schema):
     """The schema corresponding to the :class:`~server.models.user.User` model."""
 
     id = Integer()
-    firebase_id = BytesField(required=True)
+    firebase_id = String(required=True)
     first = String(required=True)
     email = Email(required=True)
 
@@ -41,7 +41,7 @@ class RentalSchema(Schema):
     user_url = Url(relative=True)
 
     bike = Nested(BikeSchema())
-    bike_id = Integer()
+    bike_identifier = BytesField(as_string=True)
     bike_url = Url(relative=True)
 
     events = Nested(RentalUpdateSchema(), many=True)
@@ -77,8 +77,8 @@ class RentalSchema(Schema):
 
 
 class CurrentRentalSchema(RentalSchema):
-    start_location = Nested(GeoJSON(GeoJSONType.FEATURE))
-    current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
+    start_location = Nested(GeoJSON(GeoJSONType.FEATURE), allow_none=True)
+    current_location = Nested(GeoJSON(GeoJSONType.FEATURE), allow_none=True)
 
 
 class PickupPointData(Schema):
@@ -103,7 +103,7 @@ class IssueSchema(Schema):
     user_url = Url(relative=True)
 
     bike = Nested(BikeSchema(), allow_none=True)
-    bike_id = Integer(allow_none=True)
+    bike_identifier = BytesField(as_string=True, allow_none=True)
     bike_url = Url(relative=True, allow_none=True)
 
     time = DateTime()

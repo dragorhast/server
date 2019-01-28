@@ -22,17 +22,17 @@ async def get_rentals_for_bike(bike: Union[int, Bike]):
     else:
         raise TypeError("Must be bike id or bike.")
 
-    return await Rental.filter(bike__id=bid).prefetch_related('updates')
+    return await Rental.filter(bike__id=bid).prefetch_related('updates', 'bike')
 
 
 async def get_rentals(*, user: User = None):
     if user:
-        return await Rental.filter(user=user).prefetch_related('updates')
-    return await Rental.all().prefetch_related('updates')
+        return await Rental.filter(user=user).prefetch_related('updates', 'bike')
+    return await Rental.all().prefetch_related('updates', 'bike')
 
 
 async def get_rental(rental_id: int) -> Rental:
-    return await Rental.filter(id=rental_id).first().prefetch_related('updates')
+    return await Rental.filter(id=rental_id).first().prefetch_related('updates', 'bike')
 
 
 async def get_rental_with_distance(target: Union[Rental, int] = None) -> Union[
@@ -50,6 +50,7 @@ async def get_rental_with_distance(target: Union[Rental, int] = None) -> Union[
     ..note:: Currently only works with SQLite
 
     ..todo:: If any bike has no location updates, it will not be included
+    ..todo:: Does not include bike
     """
 
     if isinstance(target, Rental):
@@ -87,6 +88,6 @@ async def get_rental_with_distance(target: Union[Rental, int] = None) -> Union[
             return next(iter(return_values.values()))
         except StopIteration:
             # if there is no location update, return rental
-            return await Rental.filter(id=rental_id).prefetch_related('updates').first(), None
+            return await Rental.filter(id=rental_id).prefetch_related('updates', 'bike').first(), None
     else:
         return list(return_values.values())

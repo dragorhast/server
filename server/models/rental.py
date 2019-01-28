@@ -9,10 +9,12 @@ from datetime import datetime
 from typing import Dict, Any
 
 from geopy import Point
+from shapely.geometry import mapping
 from tortoise import Model, fields
 
 from server.models.fields import EnumField
 from server.models.util import RentalUpdateType
+from server.serializer.geojson import GeoJSONType
 
 
 class RentalUpdate(Model):
@@ -46,8 +48,8 @@ class Rental(Model):
             "id": self.id,
             "user_id": self.user_id,
             "user_url": router["user"].url_for(id=str(self.user_id)).path,
-            "bike_id": self.bike_id,
-            "bike_url": router["bike"].url_for(id=str(self.bike_id)).path,
+            "bike_identifier": self.bike.identifier,
+            "bike_url": router["bike"].url_for(identifier=str(self.bike_id)).path,
             "start_time": self.start_time,
             "is_active": rental_manager.has_active_rental(self)
         }
@@ -61,8 +63,14 @@ class Rental(Model):
         if distance:
             data["distance"] = distance
         if start_location:
-            data["start_location"] = start_location
+            data["start_location"] = {
+                "type": GeoJSONType.FEATURE,
+                "geometry": mapping(start_location)
+            }
         if current_location:
-            data["current_location"] = current_location
+            data["current_location"] = {
+                "type": GeoJSONType.FEATURE,
+                "geometry": mapping(current_location)
+            }
 
         return data

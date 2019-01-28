@@ -7,19 +7,17 @@ to facilitate some of the advanced functionality.
 
 Each signal must accept an the ``app`` argument.
 """
-
+import asyncio
 from asyncio import CancelledError
 from contextlib import suppress
 from datetime import timedelta
-from typing import Set
 
-from aiohttp import WSCloseCode
 from aiohttp.abc import Application
-from aiohttp.web_ws import WebSocketResponse
 from tortoise import Tortoise
 from tortoise.exceptions import OperationalError
 
 from server import logger
+from server.service.verify_token import FirebaseVerifier
 from server.views import BikeSocketView
 
 
@@ -53,8 +51,14 @@ async def rebuild_event_states(app: Application):
 
 async def start_background_tasks(app):
     """Starts the background tasks."""
-    logger.info("Starting background tasks")
-    app['ticket_cleaner'] = app.loop.create_task(BikeSocketView.open_tickets.remove_all_expired(timedelta(hours=1)))
+    logger.info("Starting Background Tasks")
+
+    app['ticket_cleaner'] = asyncio.get_event_loop().create_task(
+        BikeSocketView.open_tickets.remove_all_expired(timedelta(hours=1))
+    )
+
+    if isinstance(app['token_verifier'], FirebaseVerifier):
+        asyncio.get_event_loop().create_task(app['token_verifier'].get_keys(timedelta(days=1)))
 
 
 async def stop_background_tasks(app):
@@ -68,10 +72,11 @@ async def stop_background_tasks(app):
         await app['ticket_cleaner']
 
 
-def register_signals(app):
+def register_signals(app, init_database=True):
     """Registers all the signals at the appropriate hooks."""
     app.on_startup.append(start_background_tasks)
-    app.on_startup.append(initialize_database)
+    if init_database:
+        app.on_startup.append(initialize_database)
     app.on_startup.append(rebuild_event_states)
 
     app.on_shutdown.append(close_bike_connections)

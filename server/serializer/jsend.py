@@ -8,6 +8,7 @@ Programmatically defines the JSend specification.
 from enum import Enum
 
 from marshmallow import Schema, fields, validates_schema, ValidationError
+from marshmallow.fields import Field
 
 from .fields import EnumField
 
@@ -55,7 +56,7 @@ class JSendSchema(Schema):
                 raise ValidationError(f"When the status is {data['status']}, the message fields must be populated.")
 
     @staticmethod
-    def of(data_schema: Schema, *args, **kwargs):
+    def of(**kwargs):
         """
         Creates a subclass of JSendSchema of a specific data type.
 
@@ -66,7 +67,12 @@ class JSendSchema(Schema):
         >>> validated_data = bike_schema.load(await response.json())
         """
 
+        DataSchema = type('DataSchema', (Schema,), {
+            field_name: fields.Nested(schema) if not isinstance(schema, Field) else schema
+            for field_name, schema in kwargs.items()
+        })
+
         class TypedJSendSchema(JSendSchema):
-            data = fields.Nested(data_schema, *args, **kwargs)
+            data = fields.Nested(DataSchema)
 
         return TypedJSendSchema()

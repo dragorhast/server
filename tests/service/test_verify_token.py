@@ -10,7 +10,7 @@ async def firebase_verifier(loop):
     global keys
     verifier = FirebaseVerifier("dragorhast-420")
     if keys is None:
-        await verifier.get_key()
+        await verifier.get_keys()
         keys = verifier._certificates
     else:
         verifier._certificates = keys

@@ -24,7 +24,7 @@ class Issue(Model):
         }
 
         if self.bike_id is not None:
-            data["bike_id"] = self.bike_id
-            data["bike_url"] = router["bike"].url_for(id=str(self.bike_id)).path
+            data["bike_identifier"] = self.bike.identifier
+            data["bike_url"] = router["bike"].url_for(identifier=str(self.bike_id)).path
 
         return data

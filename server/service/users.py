@@ -24,7 +24,6 @@ async def get_user(*, firebase_id=None, user_id=None) -> Optional[User]:
     :param firebase_id: The firebase id of the user to get.
     :param user_id: The user id of the user to get.
     :return: The user with the given firebase id.
-    :raises InvalidFirebaseKeyError: When the supplied firebase key is invalid.
     """
 
     kwargs = {}

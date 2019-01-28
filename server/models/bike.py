@@ -64,3 +64,7 @@ class Bike(Model):
 
         self._public_key = bytes.fromhex(self.public_key_hex)
         return self._public_key
+
+    @property
+    def identifier(self):
+        return self.public_key_hex[:6]

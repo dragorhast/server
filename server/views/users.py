@@ -14,6 +14,7 @@ from server.permissions.decorators import requires
 from server.permissions.permissions import ValidToken, UserIsAdmin
 from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
 from server.serializer.decorators import expects, returns
+from server.serializer.fields import Many
 from server.serializer.models import CurrentRentalSchema, IssueSchema
 from server.service.issues import get_issues, open_issue
 from server.service.rentals import get_rentals
@@ -33,16 +34,16 @@ class UsersView(BaseView):
     @with_user
     @requires(UserIsAdmin())
     @expects(None)
-    @returns(JSendSchema.of(UserSchema(), many=True))
+    @returns(JSendSchema.of(users=Many(UserSchema())))
     async def get(self, user):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": await get_users()
+            "data": {"users": await get_users()}
         }
 
     @requires(ValidToken())
     @expects(UserSchema(only=('first', 'email')))
-    @returns(JSendSchema.of(UserSchema()), HTTPStatus.CREATED)
+    @returns(JSendSchema.of(user=UserSchema()), HTTPStatus.CREATED)
     async def post(self):
         try:
             user = await create_user(**self.request["data"], firebase_id=self.request["token"])
@@ -52,7 +53,7 @@ class UsersView(BaseView):
 
         return {
             "status": JSendStatus.SUCCESS,
-            "data": user
+            "data": {"user": user}
         }
 
 
@@ -67,22 +68,22 @@ class UserView(BaseView):
     @user_getter
     @requires(UserMatchesFirebase() | UserIsAdmin())
     @expects(None)
-    @returns(JSendSchema.of(UserSchema()))
+    @returns(JSendSchema.of(user=UserSchema()))
     async def get(self, user: User):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": user.serialize()
+            "data": {"user": user.serialize()}
         }
 
     @user_getter
     @requires(UserMatchesFirebase() | UserIsAdmin())
     @expects(UserSchema(only=('first', 'email')))
-    @returns(JSendSchema.of(UserSchema()))
+    @returns(JSendSchema.of(user=UserSchema()))
     async def put(self, user: User):
         user = await update_user(user, **self.request["data"])
         return {
             "status": JSendStatus.SUCCESS,
-            "data": user
+            "data": {"user": user}
         }
 
     @user_getter
@@ -104,11 +105,11 @@ class UserRentalsView(BaseView):
     @with_user
     @with_rentals
     @requires(UserMatchesFirebase())
-    @returns(JSendSchema.of(RentalSchema(), many=True))
+    @returns(JSendSchema.of(rentals=Many(RentalSchema())))
     async def get(self, user, rentals):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in rentals]
+            "data": {"rentals": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in rentals]}
         }
 
 
@@ -124,8 +125,8 @@ class UserCurrentRentalView(BaseView):
     @requires(UserMatchesFirebase())
     @returns(
         no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        rental_exists=JSendSchema.of(CurrentRentalSchema(only=(
-            'id', 'bike_id', 'bike_url', 'user_id', 'user_url', 'start_time',
+        rental_exists=JSendSchema.of(rental=CurrentRentalSchema(only=(
+            'id', 'bike_identifier', 'bike_url', 'user_id', 'user_url', 'start_time',
             'is_active', 'estimated_price', 'start_location', 'current_location'
         )))
     )
@@ -140,19 +141,19 @@ class UserCurrentRentalView(BaseView):
                                                                                                    with_locations=True)
         return "rental_exists", {
             "status": JSendStatus.SUCCESS,
-            "data": await current_rental.serialize(
+            "data": {"rental": await current_rental.serialize(
                 self.rental_manager,
                 self.request.app.router,
                 start_location=start_location,
                 current_location=current_location
-            )
+            )}
         }
 
     @with_user
     @requires(UserMatchesFirebase())
     @returns(
         no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        rental_deleted=(JSendSchema.of(RentalSchema())),
+        rental_deleted=(JSendSchema.of(rental=RentalSchema())),
     )
     async def delete(self, user: User):
         """Ends a rental."""
@@ -166,7 +167,7 @@ class UserCurrentRentalView(BaseView):
         await self.rental_manager.finish(current_rental)
         return "rental_deleted", {
             "status": JSendStatus.SUCCESS,
-            "data": await current_rental.serialize(self.rental_manager, self.request.app.router)
+            "data": {"rental": await current_rental.serialize(self.rental_manager, self.request.app.router)}
         }
 
 
@@ -196,7 +197,7 @@ class UserIssuesView(BaseView):
     @with_user
     @with_issues
     @requires(UserMatchesFirebase() | UserIsAdmin())
-    @returns(JSendSchema.of(IssueSchema(), many=True))
+    @returns(JSendSchema.of(issues=IssueSchema(many=True)))
     async def get(self, issues):
         return {
             "status": JSendStatus.SUCCESS,
@@ -205,8 +206,8 @@ class UserIssuesView(BaseView):
 
     @with_user
     @requires(UserMatchesFirebase() | UserIsAdmin())
-    @expects(IssueSchema(only=('bike_id', 'description')))
-    @returns(JSendSchema.of(IssueSchema(only=('id', 'user_id', 'bike_id', 'description', 'time'))))
+    @expects(IssueSchema(only=('bike_identifier', 'description')))
+    @returns(JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'bike_identifier', 'description', 'time'))))
     async def post(self):
         kwargs = {
             "description": self.request["data"]["description"]

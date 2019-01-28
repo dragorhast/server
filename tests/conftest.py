@@ -32,7 +32,7 @@ async def create_user(is_admin=False):
     return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), is_admin=is_admin)
 
 
-@pytest.yield_fixture
+@pytest.yield_fixture(scope='function')
 async def database(loop):
     database_url = os.getenv("DATABASE_URL", "sqlite://:memory:")
 
@@ -49,16 +49,15 @@ async def database(loop):
 
 
 @pytest.fixture
-async def client(aiohttp_client, loop) -> TestClient:
+async def client(aiohttp_client, loop, database) -> TestClient:
     asyncio.get_event_loop().set_debug(True)
     app = web.Application(middlewares=[validate_token_middleware])
 
     app['rental_manager'] = RentalManager()
     app['bike_location_manager'] = BikeConnectionManager()
     app['token_verifier'] = DummyVerifier()
-    app['database_uri'] = 'sqlite://:memory:'
 
-    register_signals(app)
+    register_signals(app, init_database=False)  # we get the database from a fixture
     register_views(app, "/api/v1")
 
     return await aiohttp_client(app)
@@ -94,7 +93,8 @@ async def random_admin(random_user) -> User:
 @pytest.fixture
 async def random_rental(rental_manager, random_bike, random_user) -> Rental:
     """Creates a random rental in the database."""
-    return await rental_manager.create(random_user, random_bike)
+    rental, location = await rental_manager.create(random_user, random_bike)
+    return rental
 
 
 @pytest.fixture

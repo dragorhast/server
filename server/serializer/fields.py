@@ -18,14 +18,16 @@ class BytesField(fields.Field):
     to a hex-encoded :class:`str` and de-serializes it back to :class:`bytes`.
     """
 
-    def __init__(self, *args, max_length: Optional[int] = None, **kwargs):
+    def __init__(self, *args, max_length: Optional[int] = None, as_string=False, **kwargs):
         """
         :param max_length: The maximum length of the hex-encoded string.
+        :param as_string: Whether to serialize to and from hex-string instead of bytes.
         """
         super().__init__(*args, **kwargs)
         self.max_length = max_length
+        self.as_string = as_string
 
-    def _serialize(self, value: Union[str, bytes], attr, obj, **kwargs):
+    def _serialize(self, value: Union[str, bytes], attr, obj, **kwargs) -> str:
         """Converts a bytes-like-string or byte array to a hex-encoded string."""
         if isinstance(value, bytes):
             value = value.hex()
@@ -42,12 +44,17 @@ class BytesField(fields.Field):
 
         return value
 
-    def _deserialize(self, value: str, attr, data, **kwargs):
-        """Converts a hex-encoded string to a bytes-like object."""
+    def _deserialize(self, value: str, attr, data, **kwargs) -> Union[str, bytes]:
+        """Converts a hex-encoded string to bytes or a bytes-like-string."""
         try:
-            return bytes.fromhex(value)
+            int(value, 16)
         except ValueError:
             raise ValidationError(f"String {value} is not a valid hex-encoded string.")
+
+        if self.as_string:
+            return value if self.as_string else bytes.fromhex(value)
+        else:
+            return bytes.fromhex(value)
 
     @staticmethod
     def _jsonschema_type_mapping():
@@ -107,3 +114,7 @@ class EnumField(fields.Field):
             'type': 'string',
             'enum': [enum.value for enum in self._enum_type]
         }
+
+
+def Many(schema):
+    return fields.List(fields.Nested(schema))

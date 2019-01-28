@@ -4,8 +4,9 @@ Verify Token
 
 A number of API token verification strategies.
 """
-
+import asyncio
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import Dict
 
 from aiohttp import ClientSession
@@ -40,14 +41,22 @@ class FirebaseVerifier(TokenVerifier):
         self._certificates = {}
         self.audience = audience
 
-    async def get_key(self):
+    async def _get_keys(self):
         async with ClientSession() as session:
             request = await session.get(self._public_key_url)
             self._certificates = await request.json()
 
+    async def get_keys(self, update_period: timedelta = None):
+        if update_period is None:
+            await self._get_keys()
+            return
+        while True:
+            await self._get_keys()
+            await asyncio.sleep(update_period.total_seconds())
+
     def verify_token(self, token, verify_exp=True):
         if not self._certificates:
-            raise TokenVerificationError("You must fetch the certs.")
+            raise TokenVerificationError("Server does not possess the verification certificates.")
 
         if not isinstance(token, str):
             raise TypeError(f"Token must be of type string, not {type(token)}")

@@ -5,7 +5,7 @@ Utilities
 from enum import Enum
 from functools import wraps
 from inspect import isawaitable
-from typing import Union, Any, Dict
+from typing import Union, Any, Dict, Tuple
 
 from aiohttp import web
 from aiohttp.web_request import Request
@@ -23,18 +23,21 @@ def resolve_match_map(request: Request, match_map) -> Dict[str, Any]:
     for key, value in match_map.items():
         if isinstance(value, str):
             resolved_matches[key] = int(request.match_info.get(value))
+        elif isinstance(value, tuple):
+            resolved_matches[key] = value[1](request.match_info.get(value[0]))
         elif value == GetFrom.AUTH_HEADER:
             if "Authorization" not in request.headers:
                 raise ValueError("Missing Authorization header.")
             elif not request.headers["Authorization"].startswith("Bearer "):
                 raise ValueError("Malformed Authorization header (expected Bearer $TOKEN).")
-            resolved_matches[key] = request.headers["Authorization"][7:]
+            user_id = request.app["token_verifier"].verify_token(request.headers["Authorization"][7:])
+            resolved_matches[key] = user_id
         else:
             raise TypeError(f"match_getter only supports Union[str, GetFrom] not {type(value)}")
     return resolved_matches
 
 
-def match_getter(getter_function, *injection_parameters: str, **match_map: Union[str, GetFrom]):
+def match_getter(getter_function, *injection_parameters: str, **match_map: Union[str, GetFrom, Tuple[str, type]]):
     """
     Automatically fetches and includes an item, or 404's if it doesn't exist.
 

@@ -5,6 +5,7 @@ Bike Related Views
 Handles all the bike CRUD
 """
 from http import HTTPStatus
+from typing import List
 
 from aiohttp import web, WSMsgType
 from marshmallow import Schema
@@ -13,14 +14,18 @@ from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
 from server import logger
+from server.models import Issue
 from server.models.bike import Bike
 from server.models.util import BikeType
 from server.permissions.decorators import requires
 from server.permissions.permissions import BikeNotInUse, UserIsAdmin
 from server.serializer import BikeSchema, RentalSchema, BytesField, EnumField, JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
-from server.service import TicketStore
+from server.serializer.fields import Many
+from server.serializer.models import CurrentRentalSchema, IssueSchema
+from server.service import TicketStore, ActiveRentalError
 from server.service.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike
+from server.service.issues import get_issues
 from server.service.rentals import get_rentals_for_bike
 from server.service.users import get_user
 from server.views.base import BaseView
@@ -50,18 +55,18 @@ class BikesView(BaseView):
     """
     url = "/bikes"
 
-    @returns(JSendSchema.of(BikeSchema(only=("public_key",)), many=True))
+    @returns(JSendSchema.of(bikes=Many(BikeSchema(only=("public_key", "current_location")))))
     async def get(self):
         """Gets all the bikes from the system."""
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [bike.serialize(self.bike_connection_manager) for bike in await get_bikes()]
+            "data": {"bikes": [bike.serialize(self.bike_connection_manager) for bike in await get_bikes()]}
         }
 
     @expects(BikeRegisterSchema())
     @returns(
         bad_key=(JSendSchema(), HTTPStatus.BAD_REQUEST),
-        registered=JSendSchema.of(BikeSchema(only=('public_key',)))
+        registered=JSendSchema.of(bike=BikeSchema(only=('public_key',)))
     )
     async def post(self):
         """ Registers a bike with the system."""
@@ -89,20 +94,20 @@ class BikeView(BaseView):
     """
     Gets or updates a single bike.
     """
-    url = "/bikes/{id:[0-9]+}"
-    bike_getter = match_getter(get_bike, 'bike', bike_id='id')
+    url = "/bikes/{identifier}"
     name = "bike"
+    with_bike = match_getter(get_bike, 'bike', identifier=('identifier', str))
 
-    @bike_getter
-    @returns(JSendSchema.of(BikeSchema(only=("public_key",))))
+    @with_bike
+    @returns(JSendSchema.of(bike=BikeSchema(only=("public_key",))))
     async def get(self, bike: Bike):
         """Gets a single bike by its id."""
         return {
             "status": JSendStatus.SUCCESS,
-            "data": bike.serialize(self.bike_connection_manager)
+            "data": {"bike": bike.serialize(self.bike_connection_manager)}
         }
 
-    @bike_getter
+    @with_bike
     @expects(MasterKeySchema())
     @returns(JSendSchema(), HTTPStatus.BAD_REQUEST)
     async def delete(self, bike: Bike):
@@ -120,11 +125,11 @@ class BikeView(BaseView):
         else:
             raise web.HTTPNoContent
 
-    @bike_getter
+    @with_bike
     async def patch(self, bike):
         raise NotImplementedError()
 
-    @bike_getter
+    @with_bike
     async def put(self, bike):
         raise NotImplementedError()
 
@@ -133,19 +138,19 @@ class BikeRentalsView(BaseView):
     """
     Gets the rentals for a single bike.
     """
-    url = "/bikes/{id:[0-9]+}/rentals"
-    with_bike = match_getter(get_bike, 'bike', bike_id='id')
+    url = "/bikes/{identifier}/rentals"
+    with_bike = match_getter(get_bike, 'bike', identifier=('identifier', str))
     with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
 
     @with_bike
     @with_user
     @requires(UserIsAdmin())
-    @returns(JSendSchema.of(RentalSchema(), many=True))
+    @returns(JSendSchema.of(rentals=Many(RentalSchema())))
     async def get(self, bike: Bike, user):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in
-                     (await get_rentals_for_bike(bike=bike))]
+            "data": {"rentals": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in
+                                 (await get_rentals_for_bike(bike=bike))]}
         }
 
     @with_bike
@@ -153,7 +158,11 @@ class BikeRentalsView(BaseView):
     @requires(BikeNotInUse())
     @returns(
         missing_user=JSendSchema(),
-        rental_created=JSendSchema.of(RentalSchema())
+        rental_created=JSendSchema.of(rental=CurrentRentalSchema(only=(
+            'id', 'user_id', 'user_url', 'bike_identifier', 'bike_url', 'start_location',
+            'current_location', 'start_time', 'estimated_price', 'is_active'
+        ))),
+        active_rental=JSendSchema()
     )
     async def post(self, bike: Bike, user):
         """
@@ -174,11 +183,39 @@ class BikeRentalsView(BaseView):
                 }
             }
         else:
-            rental = await self.rental_manager.create(user, bike)
-            return "rental_created", {
-                "status": JSendStatus.SUCCESS,
-                "data": await rental.serialize(self.rental_manager, self.request.app.router)
-            }
+            try:
+                rental, start_location = await self.rental_manager.create(user, bike)
+            except ActiveRentalError as e:
+                return "active_rental", {
+                    "status": JSendStatus.FAIL,
+                    "data": {
+                        "message": "You already have an active rental!",
+                        "rental_id": e.rental_id,
+                        "url": str(self.request.app.router["me"].url_for(tail="/rentals/current"))
+                    }
+                }
+            else:
+                return "rental_created", {
+                    "status": JSendStatus.SUCCESS,
+                    "data": {"rental": await rental.serialize(
+                        self.rental_manager, self.request.app.router,
+                        start_location=start_location,
+                        current_location=start_location
+                    )}
+                }
+
+
+class BikeIssuesView(BaseView):
+    url = "/bikes/{identifier}/issues"
+    with_issues = match_getter(get_issues, 'issues', bike=('identifier', str))
+
+    @with_issues
+    @returns(JSendSchema.of(issues=Many(IssueSchema())))
+    async def get(self, issues: List[Issue]):
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"issues": [issue.serialize(self.request.app.router) for issue in issues]}
+        }
 
 
 class BikeSocketView(BaseView):

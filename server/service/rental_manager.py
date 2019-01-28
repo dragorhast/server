@@ -9,6 +9,8 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Dict, Set, Callable, Union, Tuple
 
+from shapely.geometry import Point
+
 from server.models import Bike, Rental, User, RentalUpdate, LocationUpdate
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
@@ -19,7 +21,9 @@ class InactiveRentalError(Exception):
 
 
 class ActiveRentalError(Exception):
-    pass
+    """Raised when an user tries to do an operation that requires no active rental."""
+    def __init__(self, rental_id):
+        self.rental_id = rental_id
 
 
 class RentalManager:
@@ -35,7 +39,7 @@ class RentalManager:
         """Maps a rental to a set of event subscribers."""
 
     async def active_rentals(self):
-        return await Rental.filter(id__in=self.active_rental_ids.keys()).prefetch_related('updates')
+        return await Rental.filter(id__in=self.active_rental_ids.keys()).prefetch_related('updates', 'bike')
 
     async def active_rental(self, user: Union[int, User], *, with_locations=False):
         if isinstance(user, int):
@@ -44,7 +48,7 @@ class RentalManager:
             user_id = user.id
 
         rental_id = self.active_rental_ids[user_id]
-        rental = await Rental.filter(id=rental_id).first().prefetch_related('updates')
+        rental = await Rental.filter(id=rental_id).first().prefetch_related('updates', 'bike')
         if with_locations:
             locations = await LocationUpdate.filter(bike_id=rental.bike_id, time__gte=rental.updates[0].time.strftime("%Y-%m-%d %H:%M:%S"))
             if locations:
@@ -60,9 +64,8 @@ class RentalManager:
         elif isinstance(target, Rental):
             return target.id in self.active_rental_ids.values()
 
-    async def get_price_estimate(self, target: Union[Rental, int]):
+    async def get_price_estimate(self, target: Union[Rental, int]) -> float:
         """Gets the price of the rental so far."""
-
         if isinstance(target, int):
             rental = await Rental.filter(id=target).first()
         elif isinstance(target, Rental):
@@ -88,17 +91,20 @@ class RentalManager:
         for rental in unfinished_rentals:
             self.active_rental_ids[rental.user_id] = rental.id
 
-    async def create(self, user: User, bike: Bike) -> Rental:
+    async def create(self, user: User, bike: Bike) -> Tuple[Rental, Point]:
         """Creates a new rental for a user."""
         if user.id in self.active_rental_ids:
-            raise ActiveRentalError
+            raise ActiveRentalError(self.active_rental_ids[user.id])
 
         rental = await Rental.create(user=user, bike=bike)
+        rental.bike = bike
+        rental.user = user
 
         await self._publish_event(rental, RentalUpdateType.RENT)
         self.active_rental_ids[user.id] = rental.id
+        current_location = await LocationUpdate.filter(bike=bike).first()
 
-        return rental
+        return rental, current_location.location if current_location is not None else None
 
     async def _resolve_target(self, target: Union[Rental, User]) -> Tuple[Rental, User]:
         """Given a rental or user, "resolves" the rental, user pair."""

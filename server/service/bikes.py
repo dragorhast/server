@@ -25,18 +25,15 @@ async def get_bikes() -> List[Bike]:
     return await Bike.all()
 
 
-async def get_bike(*, bike_id: Optional[int] = None,
-                   public_key: Optional[bytes] = None,
-                   public_key_short: Optional[bytes] = None) -> Optional[Bike]:
+async def get_bike(*, identifier: Union[str, bytes] = None,
+                   public_key: bytes = None) -> Optional[Bike]:
     """Gets a bike from the system."""
     kwargs: Dict = {}
 
-    if bike_id:
-        kwargs["id"] = bike_id
     if public_key:
         kwargs["public_key_hex"] = public_key.hex()
-    if public_key_short:
-        kwargs["public_key_hex__startswith"] = public_key_short.hex()
+    if identifier:
+        kwargs["public_key_hex__startswith"] = identifier.hex() if isinstance(identifier, bytes) else identifier
 
     try:
         return await Bike.get(**kwargs).first()
@@ -73,7 +70,7 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
     if not master_key == MASTER_KEY:
         raise BadKeyError("Incorrect master key")
 
-    existing = await get_bike(public_key_short=public_key[:3])
+    existing = await get_bike(identifier=public_key[:3])
 
     if existing is not None:
         if existing.public_key != public_key:

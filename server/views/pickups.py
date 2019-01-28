@@ -12,6 +12,7 @@ from aiohttp import web
 from server.models import PickupPoint
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import returns
+from server.serializer.fields import Many
 from server.serializer.models import PickupPointSchema, BikeSchema
 from server.service.pickup_point import get_pickup_points, get_pickup_point
 from server.views.base import BaseView
@@ -24,7 +25,7 @@ class PickupsView(BaseView):
     """
     url = "/pickups"
 
-    @returns(JSendSchema.of(PickupPointSchema(), many=True))
+    @returns(JSendSchema.of(pickups=Many(PickupPointSchema())))
     async def get(self):
         return {
             "status": JSendStatus.SUCCESS,
@@ -66,11 +67,11 @@ class PickupBikesView(BaseView):
     pickup_getter = match_getter(get_pickup_point, 'pickup', pickup_id='id')
 
     @pickup_getter
-    @returns(JSendSchema.of(BikeSchema(), many=True))
+    @returns(JSendSchema.of(bikes=Many(BikeSchema())))
     async def get(self, pickup: PickupPoint):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [bike.serialize(self.bike_connection_manager) for bike in await pickup.bikes()]
+            "data": {"bikes": [bike.serialize(self.bike_connection_manager) for bike in await pickup.bikes()]}
         }
 
 

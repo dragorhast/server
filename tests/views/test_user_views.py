@@ -2,22 +2,23 @@ from aiohttp.test_utils import TestClient
 
 from server.models import User
 from server.serializer import UserSchema, JSendSchema, JSendStatus, RentalSchema
+from server.serializer.fields import Many
 
 
 class TestUsersView:
 
     async def test_get_users(self, client: TestClient, random_admin: User):
         """Assert that you can get a list of users."""
-        response_schema = JSendSchema.of(UserSchema(many=True))
+        response_schema = JSendSchema.of(users=Many(UserSchema()))
         response = await client.get('/api/v1/users', headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert any(user["id"] == random_admin.id for user in response_data["data"])
+        assert any(user["id"] == random_admin.id for user in response_data["data"]["users"])
 
     async def test_create_user(self, client: TestClient):
         """Assert that you can create a user."""
         request_schema = UserSchema(only=('first', 'email'))
-        response_schema = JSendSchema.of(UserSchema())
+        response_schema = JSendSchema.of(user=UserSchema())
         request_data = request_schema.dump({
             "first": "Alex",
             "email": "test@test.com"
@@ -25,10 +26,10 @@ class TestUsersView:
         response = await client.post('/api/v1/users', json=request_data, headers={"Authorization": "Bearer deadbeef"})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert all(key in response_data["data"].keys() for key in ("first", "email"))
-        assert request_data["first"] == response_data["data"]["first"]
-        assert request_data["email"] == response_data["data"]["email"]
-        assert response_data["data"]["firebase_id"] == bytes.fromhex("deadbeef")
+        assert all(key in response_data["data"]["user"].keys() for key in ("first", "email"))
+        assert request_data["first"] == response_data["data"]["user"]["first"]
+        assert request_data["email"] == response_data["data"]["user"]["email"]
+        assert response_data["data"]["user"]["firebase_id"] == "deadbeef"
 
     async def test_create_user_invalid_firebase(self, client: TestClient):
         """Assert that supplying an invalid firebase key gives a descriptive error."""
@@ -65,21 +66,21 @@ class TestUsersView:
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert "firebase_id" in response_data["data"]
-        assert "first" in response_data["data"]
+        assert "firebase_id" in response_data["data"]["user"]
+        assert "first" in response_data["data"]["user"]
 
 
 class TestUserView:
 
     async def test_get_user(self, client: TestClient, random_user):
         """Assert that an authenticated user can get their profile."""
-        response_schema = JSendSchema.of(UserSchema())
+        response_schema = JSendSchema.of(user=UserSchema())
         response = await client.get(f'/api/v1/users/{random_user.id}',
                                     headers={"Authorization": f"Bearer {random_user.firebase_id}"})
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert response_data["data"]["first"] == random_user.first
+        assert response_data["data"]["user"]["first"] == random_user.first
 
     async def test_get_user_bad_credentials(self, client, random_user):
         """Assert that providing invalid credentials fails."""
@@ -88,7 +89,7 @@ class TestUserView:
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("doesn't exist" in error for error in response_data["data"]["authorization"])
+        assert any("doesn't have access" in error for error in response_data["data"]["reasons"])
 
     async def test_get_user_as_admin(self, client, random_user, random_admin):
         """Assert that getting any user's credentials as an admin works."""
@@ -98,12 +99,12 @@ class TestUserView:
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert response_data["data"]["first"] == random_user.first
+        assert response_data["data"]["user"]["first"] == random_user.first
 
     async def test_put_user(self, client: TestClient, random_user):
         """Assert that an authenticated user can replace their entire profile."""
         request_schema = UserSchema(only=("first", "email"))
-        response_schema = JSendSchema.of(UserSchema())
+        response_schema = JSendSchema.of(user=UserSchema())
 
         request_data = request_schema.load({
             "first": random_user.first + " Jones",
@@ -117,7 +118,7 @@ class TestUserView:
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert response_data["data"]["first"] == random_user.first + " Jones"
+        assert response_data["data"]["user"]["first"] == random_user.first + " Jones"
 
     async def test_put_user_malformed_data(self, client: TestClient, random_user):
         """Assert that passing malformed data to the put fails."""
@@ -149,23 +150,23 @@ class TestUserRentalsView:
 
     async def test_get_users_rentals(self, client: TestClient, random_user):
         """Assert that a user can get their rentals."""
-        response_schema = JSendSchema.of(RentalSchema(many=True))
+        response_schema = JSendSchema.of(rentals=Many(RentalSchema()))
         response = await client.get(
             f'/api/v1/users/{random_user.id}/rentals',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert isinstance(response_data["data"], list)
+        assert isinstance(response_data["data"]["rentals"], list)
 
 
 class TestUserCurrentRentalView:
 
     async def test_get_current_rental(self, client: TestClient, random_user, random_bike):
         """Assert that a user can get their current rental."""
-        rental = await client.app["rental_manager"].create(random_user, random_bike)
+        rental, location = await client.app["rental_manager"].create(random_user, random_bike)
 
-        response_schema = JSendSchema.of(RentalSchema())
+        response_schema = JSendSchema.of(rental=RentalSchema())
         response = await client.get(
             '/api/v1/users/me/rentals/current',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
@@ -173,12 +174,12 @@ class TestUserCurrentRentalView:
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert response_data["data"]["id"] == rental.id
-        assert "price" not in response_data["data"]
-        assert "estimated_price" in response_data["data"]
-        assert response_data["data"]["bike_id"] == random_bike.id
-        assert response_data["data"]["user_id"] == random_user.id
-        assert "start_time" in response_data["data"]
+        assert response_data["data"]["rental"]["id"] == rental.id
+        assert "price" not in response_data["data"]["rental"]
+        assert "estimated_price" in response_data["data"]["rental"]
+        assert response_data["data"]["rental"]["bike_identifier"] == random_bike.identifier
+        assert response_data["data"]["rental"]["user_id"] == random_user.id
+        assert "start_time" in response_data["data"]["rental"]
 
     async def test_get_current_rental_none(self, client: TestClient, random_user):
         """Assert that a user is warned when they have no current rental."""
@@ -194,20 +195,20 @@ class TestUserCurrentRentalView:
 
     async def test_end_current_rental(self, client: TestClient, random_user, random_bike, rental_manager):
         """Assert that a user can end their rental by performing a DELETE"""
-        rental = await client.app["rental_manager"].create(random_user, random_bike)
-        response_schema = JSendSchema.of(RentalSchema())
+        rental, location = await client.app["rental_manager"].create(random_user, random_bike)
+        response_schema = JSendSchema.of(rental=RentalSchema())
         response = await client.delete(
             '/api/v1/users/me/rentals/current',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert response_data["data"]["id"] == rental.id
-        assert response_data["data"]["bike_id"] == random_bike.id
-        assert response_data["data"]["user_id"] == random_user.id
-        assert "start_time" in response_data["data"]
-        assert "end_time" in response_data["data"]
-        assert "price" in response_data["data"]
+        assert response_data["data"]["rental"]["id"] == rental.id
+        assert response_data["data"]["rental"]["bike_identifier"] == random_bike.identifier
+        assert response_data["data"]["rental"]["user_id"] == random_user.id
+        assert "start_time" in response_data["data"]["rental"]
+        assert "end_time" in response_data["data"]["rental"]
+        assert "price" in response_data["data"]["rental"]
 
     async def test_end_current_rental_none(self, client: TestClient, random_user):
         """Assert that the user is warned when trying to end a rental when there is none."""
@@ -243,8 +244,8 @@ class TestMeView:
         response_schema = JSendSchema()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert "authorization" in response_data["data"]
-        assert any("supply your firebase token" in error for error in response_data["data"]["authorization"])
+        assert "reasons" in response_data["data"]
+        assert any("supply your firebase token" in error for error in response_data["data"]["reasons"])
 
     async def test_get_me_invalid_auth(self, client: TestClient, random_user):
         """Assert that an invalid token returns an appropriate error."""

@@ -12,6 +12,7 @@ from server.permissions.decorators import requires
 from server.permissions.permissions import UserIsAdmin
 from server.serializer import JSendSchema, RentalSchema, JSendStatus
 from server.serializer.decorators import returns
+from server.serializer.fields import Many
 from server.service.rentals import get_rental_with_distance, get_rentals
 from server.service.users import get_user
 from server.views.base import BaseView
@@ -27,16 +28,18 @@ class RentalsView(BaseView):
 
     @with_user
     @requires(UserIsAdmin())
-    @returns(JSendSchema.of(RentalSchema(only=(
-        "id", "user_id", "user_url", "bike_id",
-        "bike_url", "start_time", "is_active"
-    )), many=True))
+    @returns(JSendSchema.of(
+        rentals=Many(RentalSchema(only=(
+            "id", "user_id", "user_url", "bike_identifier",
+            "bike_url", "start_time", "is_active"
+        )))
+    ))
     async def get(self, user):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [
+            "data": {"rentals": [
                 await rental.serialize(self.rental_manager, self.request.app.router) for rental in await get_rentals()
-            ]
+            ]}
         }
 
 
@@ -51,12 +54,12 @@ class RentalView(BaseView):
     @with_rental
     @with_user
     @requires(UserIsAdmin())
-    @returns(JSendSchema.of(RentalSchema(only=(
-        "id", "user_id", "user_url", "bike_id", "bike_url",
+    @returns(JSendSchema.of(rental=RentalSchema(only=(
+        "id", "user_id", "user_url", "bike_identifier", "bike_url",
         "start_time", "is_active", "distance"
     ))))
     async def get(self, rental: Rental, user, distance: float):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": await rental.serialize(self.rental_manager, self.request.app.router, distance=distance)
+            "data": {"rental": await rental.serialize(self.rental_manager, self.request.app.router, distance=distance)}
         }
