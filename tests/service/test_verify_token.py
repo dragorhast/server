@@ -35,7 +35,7 @@ class TestFirebaseVerifier:
         try:
             firebase_verifier.verify_token(token, verify_exp=False)
             assert passes
-        except TokenVerificationError:
+        except TokenVerificationError as e:
             assert not passes
         except TypeError:
             assert not passes

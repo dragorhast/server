@@ -1,3 +1,8 @@
+"""
+Pickup Point
+---------------------------
+"""
+
 from typing import Iterable
 
 from shapely.geometry import mapping
@@ -10,6 +15,7 @@ from server.serializer.geojson import GeoJSONType
 
 
 class PickupPoint(Model):
+
     id = fields.IntField(pk=True)
     name = fields.CharField(255)
     area = gis_fields.PolygonField(srid=27700)
@@ -24,6 +30,9 @@ class PickupPoint(Model):
         }
 
     async def bikes(self) -> Iterable[Bike]:
+        """
+        .. note:: Only working with SQLite
+        """
         return [Bike(**row) for row in await Bike._meta.db.execute_query(f"""
             select B.* from bike B
                 inner join locationupdate L on B.id = L.bike_id

@@ -9,8 +9,7 @@ from http import HTTPStatus
 from aiohttp import web
 from aiohttp.web_urldispatcher import View
 
-from server.permissions import Permission
-from server.permissions.permission import RoutePermissionError
+from server.permissions.permission import RoutePermissionError, Permission
 from server.serializer import JSendSchema, JSendStatus
 
 

@@ -9,9 +9,7 @@ from http import HTTPStatus
 from aiohttp import web
 
 from server.models import User
-from server.permissions import UserMatchesFirebase
-from server.permissions.decorators import requires
-from server.permissions.permissions import ValidToken, UserIsAdmin
+from server.permissions import UserMatchesFirebase, UserIsAdmin, requires, ValidToken
 from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
 from server.serializer.decorators import expects, returns
 from server.serializer.fields import Many
@@ -109,7 +107,8 @@ class UserRentalsView(BaseView):
     async def get(self, user, rentals):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"rentals": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in rentals]}
+            "data": {
+                "rentals": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in rentals]}
         }
 
 
@@ -261,14 +260,14 @@ class MeView(BaseView):
             return web.json_response(response_schema.dump({
                 "status": JSendStatus.FAIL,
                 "data": {
-                    "message": "User does not exist. Please use your token to create a user and try again.",
+                    "message": "User does not exist. Please use your jwt to create a user and try again.",
                     "url": create_user_url,
                     "method": "POST"
                 }
             }), status=HTTPStatus.BAD_REQUEST)
 
         concrete_url = MeView._get_concrete_user_url(self.request.path, self.request.match_info.get("tail"), user)
-        raise web.HTTPFound(concrete_url)
+        raise web.HTTPTemporaryRedirect(concrete_url)
 
     @staticmethod
     def _get_concrete_user_url(path, tail, user) -> str:

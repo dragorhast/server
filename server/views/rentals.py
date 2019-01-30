@@ -9,7 +9,7 @@ To start a rental, go through the bike.
 
 from server.models import Rental
 from server.permissions.decorators import requires
-from server.permissions.permissions import UserIsAdmin
+from server.permissions.users import UserIsAdmin
 from server.serializer import JSendSchema, RentalSchema, JSendStatus
 from server.serializer.decorators import returns
 from server.serializer.fields import Many

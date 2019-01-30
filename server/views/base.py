@@ -12,7 +12,6 @@ from aiohttp.abc import Application
 from aiohttp.web import View, AbstractRoute
 from aiohttp_cors import CorsConfig, CorsViewMixin, ResourceOptions
 
-from server.permissions import Permission
 from server.service.bike_connection_manager import BikeConnectionManager
 from server.service.rental_manager import RentalManager
 
@@ -31,7 +30,6 @@ class BaseView(View, CorsViewMixin):
 
     url: str
     name: Optional[str]
-    permissions: Optional[Permission]
     route: AbstractRoute
     rental_manager: RentalManager
     bike_connection_manager: BikeConnectionManager

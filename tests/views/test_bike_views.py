@@ -1,6 +1,6 @@
 from aiohttp.test_utils import TestClient
 
-from server.models import Issue, User
+from server.models import Issue
 from server.models.bike import Bike
 from server.models.util import BikeType
 from server.serializer import BikeSchema, RentalSchema
@@ -8,6 +8,7 @@ from server.serializer.fields import Many
 from server.serializer.jsend import JSendStatus, JSendSchema
 from server.serializer.models import CurrentRentalSchema, IssueSchema
 from server.service import MASTER_KEY
+from server.service.rental_manager import RentalManager
 from server.views.bikes import BikeRegisterSchema, MasterKeySchema
 from tests.util import random_key
 
@@ -179,7 +180,7 @@ class TestBikeRentalsView:
         assert response_data["status"] == JSendStatus.FAIL
         assert "Could not find needed" in response_data["data"]["message"]
 
-    async def test_create_bike_rental_active(self, client, random_user, random_bike):
+    async def test_create_bike_rental_bike_in_use(self, client, random_user, random_bike):
         """Assert that trying to create a bike rental with one already active fails."""
         await client.app["rental_manager"].create(random_user, random_bike)
         response = await client.post(
@@ -191,14 +192,22 @@ class TestBikeRentalsView:
         assert response_data["status"] == JSendStatus.FAIL
         assert "bike is in use" in response_data["data"]["message"]
 
+    async def test_create_bike_rental_user_has_rental(self, client, random_user, random_bike_factory):
+        """Assert that creating a bike rental with one active """
+        bike_1 = await random_bike_factory()
+        bike_2 = await random_bike_factory()
+
+        await client.app["rental_manager"].create(random_user, bike_1)
+        response = await client.post(f"/api/v1/bikes/{bike_2.identifier}/rentals",
+                                     headers={"Authorization": f"Bearer {random_user.firebase_id}"})
+        response_data = JSendSchema().load(await response.json())
+        assert response_data["status"] == JSendStatus.FAIL
+        assert "already have an active" in response_data["data"]["message"]
+
     async def test_create_bike_rental_invalid_key(self, client: TestClient, random_bike):
         """Assert that creating a rental with an invalid firebase key fails."""
-
         response_schema = JSendSchema()
-
-        client: TestClient = client
-
-        response = await client.post(f'/api/v1/bikes/{random_bike.id}/rentals',
+        response = await client.post(f'/api/v1/bikes/{random_bike.identifier}/rentals',
                                      headers={"Authorization": "Bearer invalid"})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL

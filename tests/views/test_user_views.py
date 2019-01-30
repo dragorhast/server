@@ -237,6 +237,9 @@ class TestMeView:
         """Assert that me redirects to the appropriate user."""
         response = await client.get('/api/v1/users/me', headers={"Authorization": f"Bearer {random_user.firebase_id}"})
         assert response.url.path == f'/api/v1/users/{random_user.id}'
+        response_data = JSendSchema.of(user=UserSchema()).load(await response.json())
+        assert response_data["data"]["user"]["first"] == random_user.first
+        assert response_data["data"]["user"]["email"] == random_user.email
 
     async def test_get_me_missing_auth(self, client: TestClient, random_user):
         """Assert that not supplying a valid token errors."""
@@ -245,7 +248,7 @@ class TestMeView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
         assert "reasons" in response_data["data"]
-        assert any("supply your firebase token" in error for error in response_data["data"]["reasons"])
+        assert any("Authorization header was not included" in error for error in response_data["data"]["reasons"])
 
     async def test_get_me_invalid_auth(self, client: TestClient, random_user):
         """Assert that an invalid token returns an appropriate error."""

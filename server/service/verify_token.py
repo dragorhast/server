@@ -15,7 +15,9 @@ from jose import jwt, ExpiredSignatureError, JWTError
 
 
 class TokenVerificationError(Exception):
-    pass
+    def __init__(self, message, auth_header=None):
+        self.message = message
+        self.token = auth_header
 
 
 class TokenVerifier(ABC):
@@ -56,7 +58,7 @@ class FirebaseVerifier(TokenVerifier):
 
     def verify_token(self, token, verify_exp=True):
         if not self._certificates:
-            raise TokenVerificationError("Server does not possess the verification certificates.")
+            raise TokenVerificationError("Server does not possess the verification certificates.", token)
 
         if not isinstance(token, str):
             raise TypeError(f"Token must be of type string, not {type(token)}")
@@ -70,9 +72,9 @@ class FirebaseVerifier(TokenVerifier):
                 options={'verify_exp': verify_exp}
             )
         except ExpiredSignatureError as e:
-            raise TokenVerificationError("Token is expired.") from e
+            raise TokenVerificationError("Token is expired.", token) from e
         except JWTError as e:
-            raise TokenVerificationError("Token is invalid.") from e
+            raise TokenVerificationError("Token is invalid.", token) from e
 
         return claims.get("user_id")
 
@@ -86,7 +88,7 @@ class DummyVerifier(TokenVerifier):
         try:
             bytes.fromhex(token)
         except (ValueError, TypeError):
-            raise TokenVerificationError("Not a valid hex string.")
+            raise TokenVerificationError("Not a valid hex string.", token)
 
         return token
 
@@ -100,10 +102,11 @@ def verify_token(request: Request):
     :raises TokenVerificationError: When the Authorize header is invalid.
     """
     if "Authorization" not in request.headers:
-        raise TokenVerificationError("You must supply your firebase token.")
+        raise TokenVerificationError("The Authorization header was not included.")
 
-    if not request.headers["Authorization"].startswith("Bearer "):
-        raise TokenVerificationError("The Authorization header must be of the format \"Bearer $TOKEN\".")
+    auth_header = request.headers["Authorization"]
+    if not auth_header.startswith("Bearer "):
+        raise TokenVerificationError("The Authorization header must be of the format \"Bearer $TOKEN\".", auth_header)
 
     try:
         return request.app["token_verifier"].verify_token(request.headers["Authorization"][7:])

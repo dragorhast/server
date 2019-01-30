@@ -64,6 +64,10 @@ class RentalManager:
         elif isinstance(target, Rental):
             return target.id in self.active_rental_ids.values()
 
+    def is_renting(self, user_id: int, bike_id: int):
+        """Checks if the given user is renting the given bike."""
+        return user_id in self.active_rental_ids and self.active_rental_ids[user_id] == bike_id
+
     async def get_price_estimate(self, target: Union[Rental, int]) -> float:
         """Gets the price of the rental so far."""
         if isinstance(target, int):

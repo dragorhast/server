@@ -9,16 +9,16 @@ from typing import List
 
 from aiohttp import web, WSMsgType
 from marshmallow import Schema
+from marshmallow.fields import Bool
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
 from server import logger
-from server.models import Issue
+from server.models import Issue, User
 from server.models.bike import Bike
 from server.models.util import BikeType
-from server.permissions.decorators import requires
-from server.permissions.permissions import BikeNotInUse, UserIsAdmin
+from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsConnected, BikeNotInUse, BikeNotBroken
 from server.serializer import BikeSchema, RentalSchema, BytesField, EnumField, JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
 from server.serializer.fields import Many
@@ -45,6 +45,11 @@ class BikeRegisterSchema(MasterKeySchema):
 
     type = EnumField(BikeType)
     """The type of bike."""
+
+
+class BikeLockSchema(Schema):
+    """"""
+    locked = Bool()
 
 
 class BikesView(BaseView):
@@ -97,6 +102,8 @@ class BikeView(BaseView):
     url = "/bikes/{identifier}"
     name = "bike"
     with_bike = match_getter(get_bike, 'bike', identifier=('identifier', str))
+    with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
+    with_rental = match_getter(get_rentals_for_bike)
 
     @with_bike
     @returns(JSendSchema.of(bike=BikeSchema(only=("public_key",))))
@@ -125,13 +132,18 @@ class BikeView(BaseView):
         else:
             raise web.HTTPNoContent
 
+    @with_user
     @with_bike
-    async def patch(self, bike):
-        raise NotImplementedError()
-
-    @with_bike
-    async def put(self, bike):
-        raise NotImplementedError()
+    @requires(UserIsAdmin() | UserIsRentingBike() & BikeIsConnected())
+    @expects(BikeLockSchema())
+    @returns(JSendSchema.of(bike=BikeSchema()))
+    async def patch(self, user, bike):
+        """Allows locking and unlocking of the bike."""
+        await self.bike_connection_manager.send_command(bike, "lock")
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"bike": bike.serialize()}
+        }
 
 
 class BikeRentalsView(BaseView):
@@ -155,54 +167,41 @@ class BikeRentalsView(BaseView):
 
     @with_bike
     @with_user
-    @requires(BikeNotInUse())
+    @requires(BikeNotInUse() & BikeNotBroken(max_issues=3))
     @returns(
-        missing_user=JSendSchema(),
         rental_created=JSendSchema.of(rental=CurrentRentalSchema(only=(
             'id', 'user_id', 'user_url', 'bike_identifier', 'bike_url', 'start_location',
             'current_location', 'start_time', 'estimated_price', 'is_active'
         ))),
         active_rental=JSendSchema()
     )
-    async def post(self, bike: Bike, user):
+    async def post(self, bike: Bike, user: User):
         """
         Starts a new rental.
 
         If the rental could not be made, (not authenticated
         or bike in use) it will fail with the appropriate message.
         """
-        user = await get_user(firebase_id=self.request["token"])
-
-        if user is None:
-            return "missing_user", {
+        try:
+            rental, start_location = await self.rental_manager.create(user, bike)
+        except ActiveRentalError as e:
+            return "active_rental", {
                 "status": JSendStatus.FAIL,
                 "data": {
-                    "message":
-                        f"No such user exists, but your key is valid. "
-                        f"Create a new one at '{self.request.app.router['users'].url_for()}'."
+                    "message": "You already have an active rental!",
+                    "rental_id": e.rental_id,
+                    "url": str(self.request.app.router["me"].url_for(tail="/rentals/current"))
                 }
             }
         else:
-            try:
-                rental, start_location = await self.rental_manager.create(user, bike)
-            except ActiveRentalError as e:
-                return "active_rental", {
-                    "status": JSendStatus.FAIL,
-                    "data": {
-                        "message": "You already have an active rental!",
-                        "rental_id": e.rental_id,
-                        "url": str(self.request.app.router["me"].url_for(tail="/rentals/current"))
-                    }
-                }
-            else:
-                return "rental_created", {
-                    "status": JSendStatus.SUCCESS,
-                    "data": {"rental": await rental.serialize(
-                        self.rental_manager, self.request.app.router,
-                        start_location=start_location,
-                        current_location=start_location
-                    )}
-                }
+            return "rental_created", {
+                "status": JSendStatus.SUCCESS,
+                "data": {"rental": await rental.serialize(
+                    self.rental_manager, self.request.app.router,
+                    start_location=start_location,
+                    current_location=start_location
+                )}
+            }
 
 
 class BikeIssuesView(BaseView):

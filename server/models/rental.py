@@ -31,11 +31,11 @@ class Rental(Model):
     price = fields.FloatField(null=True)
 
     @property
-    def start_time(self):
+    def start_time(self) -> datetime:
         return self.updates[0].time
 
     @property
-    def end_date(self):
+    def end_time(self) -> datetime:
         last_update: RentalUpdate = self.updates[-1]
         return last_update.time if last_update.type == RentalUpdateType.RETURN else None
 
@@ -54,8 +54,8 @@ class Rental(Model):
             "is_active": rental_manager.has_active_rental(self)
         }
 
-        if self.end_date is not None:
-            data["end_time"] = self.end_date
+        if self.end_time is not None:
+            data["end_time"] = self.end_time
             data["price"] = self.price
         else:
             data["estimated_price"] = await rental_manager.get_price_estimate(self)

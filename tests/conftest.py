@@ -28,8 +28,18 @@ fake.add_provider(internet)
 fake.add_provider(misc)
 
 
-async def create_user(is_admin=False):
-    return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), is_admin=is_admin)
+@pytest.fixture
+def random_user_factory(database):
+    async def create_user(is_admin=False):
+        return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), is_admin=is_admin)
+    return create_user
+
+
+@pytest.fixture
+def random_bike_factory(database):
+    async def create_bike():
+        return await Bike.create(public_key_hex=fake.sha1())
+    return create_bike
 
 
 @pytest.yield_fixture(scope='function')
@@ -74,20 +84,20 @@ def rental_manager():
 
 
 @pytest.fixture
-async def random_bike(database) -> Bike:
+async def random_bike(random_bike_factory) -> Bike:
     """Creates a random bike in the database."""
-    return await Bike.create(public_key_hex=fake.sha1())
+    return await random_bike_factory()
 
 
 @pytest.fixture
-async def random_user(database) -> User:
+async def random_user(random_user_factory) -> User:
     """Creates a random user in the database."""
-    return await create_user()
+    return await random_user_factory()
 
 
 @pytest.fixture()
-async def random_admin(random_user) -> User:
-    return await create_user(True)
+async def random_admin(random_user_factory) -> User:
+    return await random_user_factory(True)
 
 
 @pytest.fixture
