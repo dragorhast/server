@@ -54,7 +54,7 @@ def build_app(db_uri=None):
             release=f"server@{__version__}"
         )
 
-    if server_mode == "development":
+    if server_mode == "development" or server_mode == "testing":
         asyncio.get_event_loop().set_debug(True)
 
     return app

@@ -6,9 +6,9 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient
 from faker import Faker
 from faker.providers import address, internet, misc
+from shapely.geometry import Polygon
 from tortoise import Tortoise
 from tortoise.transactions import start_transaction
-from shapely.geometry import Polygon
 
 from server.middleware import validate_token_middleware
 from server.models import Bike, User, Rental
@@ -32,6 +32,7 @@ fake.add_provider(misc)
 def random_user_factory(database):
     async def create_user(is_admin=False):
         return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), is_admin=is_admin)
+
     return create_user
 
 
@@ -39,6 +40,7 @@ def random_user_factory(database):
 def random_bike_factory(database):
     async def create_bike():
         return await Bike.create(public_key_hex=fake.sha1())
+
     return create_bike
 
 
@@ -78,9 +80,14 @@ def ticket_store():
     return TicketStore()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def rental_manager():
     return RentalManager()
+
+
+@pytest.fixture
+def bike_connection_manager():
+    return BikeConnectionManager()
 
 
 @pytest.fixture

@@ -8,8 +8,8 @@ from http import HTTPStatus
 from typing import List
 
 from aiohttp import web, WSMsgType
-from marshmallow import Schema
-from marshmallow.fields import Bool
+from marshmallow import Schema, fields
+from marshmallow.fields import Bool, Nested
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
@@ -19,28 +19,30 @@ from server.models import Issue, User
 from server.models.bike import Bike
 from server.models.util import BikeType
 from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsConnected, BikeNotInUse, BikeNotBroken
-from server.serializer import BikeSchema, RentalSchema, BytesField, EnumField, JSendStatus, JSendSchema
+from server.serializer import BikeSchema, RentalSchema, Bytes, EnumField, JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
 from server.serializer.fields import Many
 from server.serializer.models import CurrentRentalSchema, IssueSchema
 from server.service import TicketStore, ActiveRentalError
 from server.service.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike
-from server.service.issues import get_issues
+from server.service.issues import get_issues, get_broken_bikes
 from server.service.rentals import get_rentals_for_bike
 from server.service.users import get_user
 from server.views.base import BaseView
-from server.views.utils import match_getter, GetFrom
+from server.views.utils import match_getter, GetFrom, Optional
+
+BIKE_IDENTIFIER_REGEX = "(?!connect|broken)[^{}/]+"
 
 
 class MasterKeySchema(Schema):
-    master_key = BytesField(required=True)
+    master_key = Bytes(required=True)
     """The master key, used to perform operations on the bike."""
 
 
 class BikeRegisterSchema(MasterKeySchema):
     """The schema of the bike register request."""
 
-    public_key = BytesField(required=True)
+    public_key = Bytes(required=True)
     """The public key of the bike."""
 
     type = EnumField(BikeType)
@@ -55,17 +57,21 @@ class BikeLockSchema(Schema):
 class BikesView(BaseView):
     """
     Gets the bikes, or adds a new bike.
-
-    .. versionadded:: 0.1.0
     """
     url = "/bikes"
+    with_user = match_getter(get_user, Optional("user"), firebase_id=Optional(GetFrom.AUTH_HEADER))
 
-    @returns(JSendSchema.of(bikes=Many(BikeSchema(only=("public_key", "current_location")))))
-    async def get(self):
+    @with_user
+    @returns(JSendSchema.of(bikes=Many(BikeSchema(only=("identifier", "current_location", "available", )))))
+    async def get(self, user):
         """Gets all the bikes from the system."""
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"bikes": [bike.serialize(self.bike_connection_manager) for bike in await get_bikes()]}
+            "data": {"bikes": [bike.serialize(
+                self.bike_connection_manager,
+                self.rental_manager,
+                force_location=user is not None and user.is_admin
+            ) for bike in await get_bikes()]}
         }
 
     @expects(BikeRegisterSchema())
@@ -91,27 +97,60 @@ class BikesView(BaseView):
         else:
             return "registered", {
                 "status": JSendStatus.SUCCESS,
-                "data": bike.serialize(self.bike_connection_manager)
+                "data": bike.serialize(self.bike_connection_manager, self.rental_manager)
             }
+
+
+class BrokenBikesView(BaseView):
+    """
+    Gets the list of bikes with active issues, along with the open issues for those bikes.
+    """
+    url = "/bikes/broken"
+    with_bikes = match_getter(get_broken_bikes, "identifiers", "bikes", "issues")
+    with_admin = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
+
+    @with_admin
+    @with_bikes
+    @requires(UserIsAdmin())
+    @returns(JSendSchema.of(
+        identifiers=fields.List(Bytes(as_string=True)),
+        bikes=fields.Dict(keys=Bytes(as_string=True), values=Nested(BikeSchema())),
+        issues=fields.Dict(keys=Bytes(as_string=True), values=Many(IssueSchema()))
+    ))
+    async def get(self, user, identifiers, bikes, issues):
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {
+                "identifiers": identifiers,
+                "bikes": {
+                    bid: bike.serialize(self.bike_connection_manager, self.rental_manager)
+                    for bid, bike in bikes.items()
+                },
+                "issues": {
+                    bid: [issue.serialize(self.request.app.router) for issue in issues]
+                    for bid, issues in issues.items()
+                }
+            }
+        }
 
 
 class BikeView(BaseView):
     """
     Gets or updates a single bike.
     """
-    url = "/bikes/{identifier}"
+    url = f"/bikes/{{identifier:{BIKE_IDENTIFIER_REGEX}}}"
     name = "bike"
     with_bike = match_getter(get_bike, 'bike', identifier=('identifier', str))
     with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
     with_rental = match_getter(get_rentals_for_bike)
 
     @with_bike
-    @returns(JSendSchema.of(bike=BikeSchema(only=("public_key",))))
+    @returns(JSendSchema.of(bike=BikeSchema(only=("identifier", "current_location", "available"))))
     async def get(self, bike: Bike):
         """Gets a single bike by its id."""
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"bike": bike.serialize(self.bike_connection_manager)}
+            "data": {"bike": bike.serialize(self.bike_connection_manager, self.rental_manager)}
         }
 
     @with_bike
@@ -142,7 +181,7 @@ class BikeView(BaseView):
         await self.bike_connection_manager.send_command(bike, "lock")
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"bike": bike.serialize()}
+            "data": {"bike": bike.serialize(self.bike_connection_manager, self.rental_manager)}
         }
 
 
@@ -150,7 +189,7 @@ class BikeRentalsView(BaseView):
     """
     Gets the rentals for a single bike.
     """
-    url = "/bikes/{identifier}/rentals"
+    url = f"/bikes/{{identifier:{BIKE_IDENTIFIER_REGEX}}}/rentals"
     with_bike = match_getter(get_bike, 'bike', identifier=('identifier', str))
     with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
 
@@ -205,7 +244,7 @@ class BikeRentalsView(BaseView):
 
 
 class BikeIssuesView(BaseView):
-    url = "/bikes/{identifier}/issues"
+    url = f"/bikes/{{identifier:{BIKE_IDENTIFIER_REGEX}}}/issues"
     with_issues = match_getter(get_issues, 'issues', bike=('identifier', str))
 
     @with_issues

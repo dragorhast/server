@@ -11,5 +11,5 @@ going in and out of the system.
 """
 
 from server.serializer.models import BikeSchema, UserSchema, RentalSchema
-from .fields import BytesField, EnumField
+from .fields import Bytes, EnumField
 from .jsend import JSendSchema, JSendStatus

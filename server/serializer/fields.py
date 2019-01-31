@@ -12,7 +12,7 @@ from typing import Union, Optional, Type
 from marshmallow import fields, ValidationError
 
 
-class BytesField(fields.Field):
+class Bytes(fields.Field):
     """
     A field that serializes :class:`bytes` or a hex-encoded :class:`str`
     to a hex-encoded :class:`str` and de-serializes it back to :class:`bytes`.

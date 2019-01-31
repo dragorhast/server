@@ -163,8 +163,7 @@ def returns(
                 response_data = response_schema.dump({
                     "status": JSendStatus.ERROR,
                     "data": err.messages if isinstance(err, ValidationError) else err.args,
-                    "message": "We tried to send you data back, but it came out wrong.",
-                    "code": "test"
+                    "message": "We tried to send you data back, but it came out wrong."
                 })
                 return web.json_response(response_data, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 

@@ -2,7 +2,7 @@ tap2go Server
 =============
 
 Welcome to the documentation for the tap2go server. If you are looking for api documentation, you can find that
-:doc:`/server/views`.
+in the :doc:`/server/views`.
 
 .. toctree::
    :maxdepth: 2

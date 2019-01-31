@@ -6,10 +6,10 @@ location dropped of at, crime, economic data, etc.
 
 from datetime import datetime
 
-HOURLY_PRICE = 0.1
-DAILY_PRICE = 2
-WEEKLY_PRICE = 10
-MONTHLY_PRICE = 30
+HOURLY_PRICE = 2
+DAILY_PRICE = 5
+WEEKLY_PRICE = 25
+MONTHLY_PRICE = 50
 
 
 async def get_price(start_date: datetime, end_date: datetime, extra_cost=0.0) -> float:
@@ -22,19 +22,18 @@ async def get_price(start_date: datetime, end_date: datetime, extra_cost=0.0) ->
     price = 0.0
     delta = end_date - start_date
     days = delta.days
-    hours = delta.seconds // 60 // 60
+    hours = delta.seconds / 60 / 60
 
     while days > 30:
         days -= 30
-        price += 30
+        price += MONTHLY_PRICE
 
     while days > 7:
         days -= 7
-        price += 10
+        price += WEEKLY_PRICE
 
-    price += 2 * days
-    price += 0.1 * hours
-
+    price += DAILY_PRICE * days
+    price += HOURLY_PRICE * hours
     price += extra_cost
 
     return round(price, 2)

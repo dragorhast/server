@@ -12,7 +12,8 @@ class TestPickups:
 
     async def test_get_pickups_at_location(self, random_pickup_point):
         location = random_pickup_point.area.centroid
-        await get_pickup_at(location)
+        pickup = await get_pickup_at(location)
+        assert random_pickup_point == pickup
 
     async def test_get_pickups_near(self):
         """Assert that you can get pickup points near a location from the server."""

@@ -15,6 +15,9 @@ class TestRentalsView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert len(response_data["data"]["rentals"]) == 1
+        rental = response_data["data"]["rentals"][0]
+        assert rental["bike_identifier"] == random_bike.identifier
+        assert (await client.get(rental["bike_url"])).status != 404
 
 
 class TestRentalView:
@@ -29,3 +32,5 @@ class TestRentalView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["rental"]["id"] == rental.id
+        assert response_data["data"]["rental"]["bike_identifier"] == random_bike.identifier
+        assert (await client.get(response_data["data"]["rental"]["bike_url"])).status != 404

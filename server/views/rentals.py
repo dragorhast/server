@@ -16,7 +16,7 @@ from server.serializer.fields import Many
 from server.service.rentals import get_rental_with_distance, get_rentals
 from server.service.users import get_user
 from server.views.base import BaseView
-from server.views.utils import match_getter, GetFrom
+from server.views.utils import match_getter, GetFrom, Optional
 
 
 class RentalsView(BaseView):
@@ -47,8 +47,8 @@ class RentalView(BaseView):
     """
     Gets or updates a single rental.
     """
-    url = "/rentals/{id:[0-9]+}"
-    with_rental = match_getter(get_rental_with_distance, 'rental', 'distance', target='id')
+    url = "/rentals/{id}"
+    with_rental = match_getter(get_rental_with_distance, 'rental', Optional('distance'), target='id')
     with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
 
     @with_rental

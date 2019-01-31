@@ -28,8 +28,8 @@ import aiohttp_cors
 from aiohttp.abc import Application
 
 from server import logger
-from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView, BikeIssuesView
-from .issues import IssuesView
+from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView, BikeIssuesView, BrokenBikesView
+from .issues import IssuesView, IssueView
 from .misc import send_to_developer_portal
 from .pickups import PickupView, PickupsView, PickupBikesView, PickupReservationsView
 from .rentals import RentalView, RentalsView
@@ -38,12 +38,12 @@ from .users import UserView, UsersView, UserIssuesView, UserRentalsView, UserRes
     UserCurrentRentalView
 
 views = [
-    BikeView, BikesView, BikeRentalsView, BikeIssuesView, BikeSocketView,
-    IssuesView,
+    BikeView, BikesView, BrokenBikesView, BikeRentalsView, BikeIssuesView, BikeSocketView,
+    IssuesView, IssueView,
     PickupView, PickupsView, PickupBikesView, PickupReservationsView,
     RentalView, RentalsView,
     ReservationView, ReservationsView,
-    UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView, MeView
+    MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView
 ]
 
 

@@ -10,13 +10,23 @@ from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime
 
 from server.models.util import RentalUpdateType
 from server.serializer.geojson import GeoJSON, GeoJSONType
-from .fields import BytesField, EnumField
+from .fields import Bytes, EnumField
 
 
 class BikeSchema(Schema):
-    public_key = BytesField(required=True)
-    connected = Boolean()
+    public_key = Bytes()
+    identifier = Bytes(required=True, as_string=True, max_length=6)
+    available = Boolean(required=True)
     current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
+    connected = Boolean()
+    locked = Boolean()
+
+    @validates_schema
+    def assert_current_location_on_available_bikes(self, data):
+        """Assert that anything marked available has a current location."""
+        if "available" in data and data["available"]:
+            if "current_location" not in data:
+                raise ValidationError("If the bike is available, the current location must also be included.")
 
 
 class UserSchema(Schema):
@@ -41,7 +51,7 @@ class RentalSchema(Schema):
     user_url = Url(relative=True)
 
     bike = Nested(BikeSchema())
-    bike_identifier = BytesField(as_string=True)
+    bike_identifier = Bytes(as_string=True)
     bike_url = Url(relative=True)
 
     events = Nested(RentalUpdateSchema(), many=True)
@@ -84,7 +94,7 @@ class CurrentRentalSchema(RentalSchema):
 class PickupPointData(Schema):
     id = Integer()
     name = String(required=True)
-    bikes = BikeSchema(many=True)
+    bikes = Nested(BikeSchema(), many=True)
 
 
 class PickupPointSchema(GeoJSON):
@@ -103,7 +113,7 @@ class IssueSchema(Schema):
     user_url = Url(relative=True)
 
     bike = Nested(BikeSchema(), allow_none=True)
-    bike_identifier = BytesField(as_string=True, allow_none=True)
+    bike_identifier = Bytes(as_string=True, allow_none=True)
     bike_url = Url(relative=True, allow_none=True)
 
     time = DateTime()

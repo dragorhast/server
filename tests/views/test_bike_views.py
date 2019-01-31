@@ -1,21 +1,22 @@
 from aiohttp.test_utils import TestClient
+from marshmallow.fields import Dict, Nested, List
 
 from server.models import Issue
 from server.models.bike import Bike
 from server.models.util import BikeType
 from server.serializer import BikeSchema, RentalSchema
-from server.serializer.fields import Many
+from server.serializer.fields import Many, Bytes
 from server.serializer.jsend import JSendStatus, JSendSchema
 from server.serializer.models import CurrentRentalSchema, IssueSchema
 from server.service import MASTER_KEY
-from server.service.rental_manager import RentalManager
+from server.service.issues import open_issue
 from server.views.bikes import BikeRegisterSchema, MasterKeySchema
 from tests.util import random_key
 
 
 class TestBikesView:
 
-    async def test_get_bikes(self, client: TestClient):
+    async def test_get_bikes(self, client: TestClient, random_bike):
         """Assert that anyone can get the entire list of bikes."""
         resp = await client.get('/api/v1/bikes')
 
@@ -24,6 +25,8 @@ class TestBikesView:
 
         assert data["status"] == JSendStatus.SUCCESS
         assert isinstance(data["data"]["bikes"], list)
+        assert len(data["data"]["bikes"]) == 1
+        assert data["data"]["bikes"][0]["identifier"] == random_bike.identifier
 
     async def test_register_bike(self, client: TestClient):
         """Assert that a bike can register itself with the system."""
@@ -91,6 +94,24 @@ class TestBikesView:
         assert resp.status == 400
 
 
+class TestBrokenBikesView:
+
+    async def test_get_broken_bikes(self, client: TestClient, random_admin, random_bike):
+        """Assert that an admin can get broken bikes from the system."""
+        await open_issue(random_admin, "This is broken", random_bike)
+
+        response = await client.get(f"/api/v1/bikes/broken", headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
+        text = await response.text()
+        response_data = JSendSchema.of(
+            identifiers=List(Bytes(as_string=True)),
+            bikes=Dict(keys=Bytes(as_string=True), values=Nested(BikeSchema())),
+            issues=Dict(keys=Bytes(as_string=True), values=Many(IssueSchema()))
+        ).load(await response.json())
+
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert set(response_data["data"]["identifiers"]) == set(response_data["data"]["bikes"].keys())
+
+
 class TestBikeView:
 
     async def test_get_bike(self, client: TestClient, random_bike):
@@ -101,7 +122,7 @@ class TestBikeView:
         schema = JSendSchema.of(bike=BikeSchema())
         data = schema.load(await resp.json())
 
-        assert data["data"]["bike"]["public_key"] == random_bike.public_key
+        assert data["data"]["bike"]["identifier"] == random_bike.identifier
 
     async def test_get_bike_missing(self, client: TestClient):
         """Assert that getting a non-existent bike causes a failure."""
@@ -178,7 +199,7 @@ class TestBikeRentalsView:
         response_data = response_schema.load(await response.json())
 
         assert response_data["status"] == JSendStatus.FAIL
-        assert "Could not find needed" in response_data["data"]["message"]
+        assert "Could not find" in response_data["data"]["message"]
 
     async def test_create_bike_rental_bike_in_use(self, client, random_user, random_bike):
         """Assert that trying to create a bike rental with one already active fails."""

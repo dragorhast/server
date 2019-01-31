@@ -44,12 +44,16 @@ class Rental(Model):
                         start_location: Point = None,
                         current_location: Point = None
                         ) -> Dict[str, Any]:
+        """
+        .. todo:: make synchronous (we should be able to safely serialize without worrying about network or db)
+            or, alternatively, only include price estimate on single requests
+        """
         data = {
             "id": self.id,
             "user_id": self.user_id,
             "user_url": router["user"].url_for(id=str(self.user_id)).path,
             "bike_identifier": self.bike.identifier,
-            "bike_url": router["bike"].url_for(identifier=str(self.bike_id)).path,
+            "bike_url": router["bike"].url_for(identifier=str(self.bike.identifier)).path,
             "start_time": self.start_time,
             "is_active": rental_manager.has_active_rental(self)
         }

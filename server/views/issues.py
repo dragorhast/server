@@ -45,7 +45,7 @@ class IssueView(BaseView):
     Gets an issue by its id
     """
 
-    url = "/issues/{id:[0-9]+}"
+    url = "/issues/{id}"
     with_issue = match_getter(get_issue, "issue", iid="id")
 
     @with_issue
@@ -54,23 +54,4 @@ class IssueView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"issue": issue.serialize(self.request.app.router)}
-        }
-
-
-class IssueBikesView(BaseView):
-    """
-    Gets the list of bikes with active issues.
-    """
-    url = "/issues/bikes"
-    with_bikes = match_getter(get_broken_bikes, "bikes")
-    with_admin = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
-
-    @with_admin
-    @with_bikes
-    @requires(UserIsAdmin())
-    @returns(JSendSchema.of(bikes=Many(BikeSchema())))
-    async def get(self, user, bikes):
-        return {
-            "status": JSendStatus.SUCCESS,
-            "data": {"bikes": [bike.serialize() for bike in bikes]}
         }

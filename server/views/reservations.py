@@ -23,7 +23,7 @@ class ReservationView(BaseView):
     """
     Gets or updates a single reservation.
     """
-    url = "/reservations/{id:[0-9]+}"
+    url = "/reservations/{id}"
 
     async def get(self):
         pass

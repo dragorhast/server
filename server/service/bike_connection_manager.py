@@ -20,8 +20,9 @@ from shapely.geometry import Point
 from shapely.wkt import loads
 
 from server import logger
-from server.models import Bike, LocationUpdate
+from server.models import Bike, LocationUpdate, PickupPoint
 from server.models.util import resolve_id
+from server.service.pickup_point import get_pickup_at
 
 
 class RPC:
@@ -67,20 +68,31 @@ class BikeConnectionManager:
     """
 
     def __init__(self):
-        self._bike_locations: Dict[int, Tuple[Point, datetime]] = {}
+        self._bike_locations: Dict[int, Tuple[Point, datetime, Optional[PickupPoint]]] = {}
         self._bike_connections: WeakValueDictionary[int, WebSocketResponse] = WeakValueDictionary()
         self._pending_commands: Dict[int, WeakValueDictionary[int, RPC]] = defaultdict(WeakValueDictionary)
         self._rpc_counter = count()
 
-    def most_recent_location(self, target: Union[Bike, int]) -> Tuple[Point, datetime]:
+    def most_recent_location(self, target: Union[Bike, int]) -> Tuple[Point, datetime, Optional[PickupPoint]]:
+        """
+        Get the most recent location of a Bike.
+
+        :param target: The bike or its id.
+        :return: The most recent location, the time it was logged, and the
+        """
         bid = target.id if isinstance(target, Bike) else target
         return self._bike_locations[bid]
 
-    async def update_location(self, target: Union[Bike, int], location: Point, time: Optional[datetime] = None):
+    async def update_location(self, target: Union[Bike, int], location: Point, time: Optional[datetime] = None) -> Optional[PickupPoint]:
+        """
+        Updates the location of the target bike, returning the pickup point (if any) it is in.
+        """
         bid = target.id if isinstance(target, Bike) else target
         time = time if time is not None else datetime.now()
+        pickup = await get_pickup_at(location)
         await LocationUpdate.create(bike_id=bid, location=location, time=time)
-        self._bike_locations[bid] = (location, time)
+        self._bike_locations[bid] = (location, time, pickup)
+        return pickup
 
     def is_connected(self, target: Union[Bike, int]):
         bike_id = resolve_id(target)
@@ -115,7 +127,8 @@ class BikeConnectionManager:
         for update in recent_updates:
             self._bike_locations[update["bike_id"]] = (
                 loads(update["location"]),
-                dateparser.parse(update["time"])
+                dateparser.parse(update["time"]),
+                None  # todo implement rebuild
             )
 
     @property

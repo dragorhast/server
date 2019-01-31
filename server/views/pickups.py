@@ -40,7 +40,7 @@ class PickupView(BaseView):
     """
     Gets, updates or deletes a single pick-up point.
     """
-    url = "/pickups/{id:[0-9]+}"
+    url = "/pickups/{id}"
     pickup_getter = match_getter(get_pickup_point, 'pickup', pickup_id='id')
 
     @pickup_getter
@@ -63,7 +63,7 @@ class PickupBikesView(BaseView):
     """
     Gets list of bikes currently at a pickup point.
     """
-    url = "/pickups/{id:[0-9]+}/bikes"
+    url = "/pickups/{id}/bikes"
     pickup_getter = match_getter(get_pickup_point, 'pickup', pickup_id='id')
 
     @pickup_getter
@@ -71,7 +71,7 @@ class PickupBikesView(BaseView):
     async def get(self, pickup: PickupPoint):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"bikes": [bike.serialize(self.bike_connection_manager) for bike in await pickup.bikes()]}
+            "data": {"bikes": [bike.serialize(self.bike_connection_manager, self.rental_manager) for bike in await pickup.bikes()]}
         }
 
 
@@ -79,7 +79,7 @@ class PickupReservationsView(BaseView):
     """
     Gets or adds to a pickup point's list of reservations.
     """
-    url = "/pickups/{id:[0-9]+}/reservations"
+    url = "/pickups/{id}/reservations"
 
     async def get(self):
         raise NotImplementedError()

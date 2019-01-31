@@ -59,7 +59,7 @@ class UserView(BaseView):
     """
     Gets, replaces or deletes a single user.
     """
-    url = "/users/{id:[0-9]+}"
+    url = "/users/{id:[^/]*(?<!me)}"
     name = "user"
     user_getter = match_getter(get_user, 'user', user_id='id')
 
@@ -95,7 +95,7 @@ class UserRentalsView(BaseView):
     """
     Gets or adds to the users list of rentals.
     """
-    url = "/users/{id:[0-9]+}/rentals"
+    url = "/users/{id:[^/]*(?<!me)}/rentals"
     name = "user_rentals"
     with_user = match_getter(get_user, 'user', user_id='id')
     with_rentals = match_getter(get_rentals, 'rentals', user='id')
@@ -116,7 +116,7 @@ class UserCurrentRentalView(BaseView):
     """
     Gets or ends the user's current rental.
     """
-    url = "/users/{id:[0-9]+}/rentals/current"
+    url = "/users/{id:[^/]*(?<!me)}/rentals/current"
     name = "user_current_rental"
     with_user = match_getter(get_user, 'user', user_id='id')
 
@@ -152,7 +152,7 @@ class UserCurrentRentalView(BaseView):
     @requires(UserMatchesFirebase())
     @returns(
         no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        rental_deleted=(JSendSchema.of(rental=RentalSchema())),
+        rental_deleted=JSendSchema.of(rental=RentalSchema()),
     )
     async def delete(self, user: User):
         """Ends a rental."""
@@ -174,7 +174,7 @@ class UserReservationsView(BaseView):
     """
     Gets or adds to the users' list of reservations.
     """
-    url = "/users/{id:[0-9]+}/reservations"
+    url = "/users/{id:[^/]*(?<!me)}/reservations"
     name = "user_reservations"
 
     async def get(self):
@@ -188,35 +188,36 @@ class UserIssuesView(BaseView):
     """
     Gets or adds to the users' list of issues.
     """
-    url = "/users/{id:[0-9]+}/issues"
+    url = "/users/{id:[^/]*(?<!me)}/issues"
     name = "user_issues"
-    with_issues = match_getter(get_issues, "issues", user_id='id')
+    with_issues = match_getter(get_issues, "issues", user='id')
     with_user = match_getter(get_user, 'user', user_id='id')
 
     @with_user
     @with_issues
     @requires(UserMatchesFirebase() | UserIsAdmin())
-    @returns(JSendSchema.of(issues=IssueSchema(many=True)))
-    async def get(self, issues):
+    @returns(JSendSchema.of(issues=Many(IssueSchema())))
+    async def get(self, user, issues):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [issue.serialize() for issue in issues]
+            "data": {"issues": [issue.serialize(self.request.app.router) for issue in issues]}
         }
 
     @with_user
     @requires(UserMatchesFirebase() | UserIsAdmin())
     @expects(IssueSchema(only=('bike_identifier', 'description')))
-    @returns(JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'bike_identifier', 'description', 'time'))))
-    async def post(self):
+    @returns(JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time'))))
+    async def post(self, user):
         kwargs = {
-            "description": self.request["data"]["description"]
+            "description": self.request["data"]["description"],
+            "user": user
         }
         if "bike_id" in self.request["data"]:
             kwargs["bike"] = self.request["data"]["bike_id"]
 
         return {
             "status": JSendStatus.SUCCESS,
-            "data": (await open_issue(**kwargs)).serialize(self.request.app.router)
+            "data": {"issue": (await open_issue(**kwargs)).serialize(self.request.app.router)}
         }
 
     async def patch(self):

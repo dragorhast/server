@@ -10,7 +10,7 @@ class UserIsAdmin(Permission):
 
     async def __call__(self, view: View, user: User, **kwargs):
         if "token" not in view.request:
-            raise RoutePermissionError("Please include your firebase jwt in the Authorization header. (1001)")
+            raise RoutePermissionError("No firebase jwt was included in the Authorization header. (1001)")
 
         if not view.request["token"] == user.firebase_id:
             # an admin is fetching a user's details; we need to get the admin's details
@@ -33,7 +33,7 @@ class UserMatchesFirebase(Permission):
 
     async def __call__(self, view: View, user: User, **kwargs):
         if "token" not in view.request:
-            raise RoutePermissionError("Please include your firebase jwt in the Authorization header. (1000)")
+            raise RoutePermissionError("No firebase jwt was included in the Authorization header. (1000)")
         else:
             token = view.request["token"]
 

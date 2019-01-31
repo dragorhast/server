@@ -17,8 +17,8 @@ Data Design
     Bike : bytes public_key
     Bike : type
     Bike : bool locked
-    Bike : is_connected()
-    Bike : set_locked()
+    Bike : str identifier()
+    Bike : dict serialize()
 
     LocationUpdate : int id
     LocationUpdate : Point location
@@ -29,22 +29,33 @@ Data Design
     User : bytes firebase_id
     User : str first
     User : str email
+    User : dict serialize()
 
     Issue : int id
     Issue : User user
     Issue : Bike bike
     Issue : datetime time
     Issue : str description
+    Issue : dict serialize()
 
     Rental : int id
     Rental : User user
     Rental : Bike bike
     Rental : float price
+    Rental : datetime start_time()
+    Rental : datetime end_time()
+    Rental : dict serialize()
 
     RentalUpdate : int id
     RentalUpdate : Rental rental
     RentalUpdate : type
     RentalUpdate : datetime time
+
+    PickupPoint : int id
+    PickupPoint : str name
+    PickupPoint : Polygon area
+    PickupPoint : List[Bike] bikes()
+    PickupPoint : dict serialize()
 
 To support our design decisions we need to make accommodations in the way we store our data. We have opted to built an
 event-sourced database for the bike state and location updates so that we minimize the chances of database inconsistency.

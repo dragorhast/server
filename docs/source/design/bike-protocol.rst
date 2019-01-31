@@ -45,8 +45,17 @@ sent.
 The last message in the pair process updates the server with the status of the bike, via a simple json update. Currently
 this is only the locked status of the bike.
 
-Protocol
+Communication
 ------------------
 
-After the connection is made, we need to establish a protocol to work on top of. There are two types of communication
-that I propose we use. The first: call response, the second: pubsub.
+To handle the actual communication after the connection is made, we need to implement an application level protocol
+on top of web sockets. A light-weight option is JSON RPC which supports both remote procedure calls and what they
+call "notifications" or, simply, updates. Version 2 is explicitly designed for client-server communication, and has
+increased resilience due to decoupling of the protocol and the transport.
+
+The entire spec is available at `jsonrcp.org`_.
+
+The bikes will implement a number of procedures such as ``lock`` and ``unlock`` as well as transmit ``location`` notifications
+to the server whenever possible.
+
+.. _`jsonrcp.org`: https://www.jsonrpc.org/specification

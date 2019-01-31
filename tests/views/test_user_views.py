@@ -3,6 +3,8 @@ from aiohttp.test_utils import TestClient
 from server.models import User
 from server.serializer import UserSchema, JSendSchema, JSendStatus, RentalSchema
 from server.serializer.fields import Many
+from server.serializer.models import IssueSchema
+from server.service.issues import open_issue
 
 
 class TestUsersView:
@@ -201,6 +203,7 @@ class TestUserCurrentRentalView:
             '/api/v1/users/me/rentals/current',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
+
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["rental"]["id"] == rental.id
@@ -224,45 +227,61 @@ class TestUserCurrentRentalView:
 
 class TestUserIssuesView:
 
-    async def test_get_user_issues(self):
-        """Assert todo"""
+    async def test_get_user_issues(self, client, random_user):
+        """Assert that the system can retrieve the issues for a user."""
+        created_issue = await open_issue(random_user, "Uh oh!")
+        response = await client.get("/api/v1/users/me/issues",
+                                    headers={"Authorization": f"Bearer {random_user.firebase_id}"})
+        response_data = JSendSchema.of(issues=Many(IssueSchema())).load(await response.json())
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert isinstance(response_data["data"]["issues"], list)
+        assert any(created_issue.id == issue["id"] for issue in response_data["data"]["issues"])
 
-    async def test_add_user_issue(self):
-        """Assert todo"""
+    async def test_add_user_issue(self, client, random_user):
+        """Assert that a user can create an issue."""
+        response = await client.post(
+            "/api/v1/users/me/issues",
+            headers={"Authorization": f"Bearer {random_user.firebase_id}"},
+            json={"description": "I'm not happy!"}
+        )
 
+        response_data = JSendSchema.of(issue=IssueSchema()).load(await response.json())
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert response_data["data"]["issue"]["description"] == "I'm not happy!"
 
-class TestMeView:
+    class TestMeView:
 
-    async def test_get_me(self, client: TestClient, random_user):
-        """Assert that me redirects to the appropriate user."""
-        response = await client.get('/api/v1/users/me', headers={"Authorization": f"Bearer {random_user.firebase_id}"})
-        assert response.url.path == f'/api/v1/users/{random_user.id}'
-        response_data = JSendSchema.of(user=UserSchema()).load(await response.json())
-        assert response_data["data"]["user"]["first"] == random_user.first
-        assert response_data["data"]["user"]["email"] == random_user.email
+        async def test_get_me(self, client: TestClient, random_user):
+            """Assert that me redirects to the appropriate user."""
+            response = await client.get('/api/v1/users/me',
+                                        headers={"Authorization": f"Bearer {random_user.firebase_id}"})
+            assert response.url.path == f'/api/v1/users/{random_user.id}'
+            response_data = JSendSchema.of(user=UserSchema()).load(await response.json())
+            assert response_data["data"]["user"]["first"] == random_user.first
+            assert response_data["data"]["user"]["email"] == random_user.email
 
-    async def test_get_me_missing_auth(self, client: TestClient, random_user):
-        """Assert that not supplying a valid token errors."""
-        response = await client.get('/api/v1/users/me')
-        response_schema = JSendSchema()
-        response_data = response_schema.load(await response.json())
-        assert response_data["status"] == JSendStatus.FAIL
-        assert "reasons" in response_data["data"]
-        assert any("Authorization header was not included" in error for error in response_data["data"]["reasons"])
+        async def test_get_me_missing_auth(self, client: TestClient, random_user):
+            """Assert that not supplying a valid token errors."""
+            response = await client.get('/api/v1/users/me')
+            response_schema = JSendSchema()
+            response_data = response_schema.load(await response.json())
+            assert response_data["status"] == JSendStatus.FAIL
+            assert "reasons" in response_data["data"]
+            assert any("Authorization header was not included" in error for error in response_data["data"]["reasons"])
 
-    async def test_get_me_invalid_auth(self, client: TestClient, random_user):
-        """Assert that an invalid token returns an appropriate error."""
-        response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer bad_token"})
-        response_schema = JSendSchema()
-        response_data = response_schema.load(await response.json())
-        assert response_data["status"] == JSendStatus.FAIL
-        assert any("valid hex string" in error for error in response_data["data"]["errors"])
+        async def test_get_me_invalid_auth(self, client: TestClient, random_user):
+            """Assert that an invalid token returns an appropriate error."""
+            response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer bad_token"})
+            response_schema = JSendSchema()
+            response_data = response_schema.load(await response.json())
+            assert response_data["status"] == JSendStatus.FAIL
+            assert any("valid hex string" in error for error in response_data["data"]["errors"])
 
-    async def test_get_me_missing_user(self, client: TestClient):
-        """Assert that calling me gives a descriptive error."""
-        response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer abcd"})
-        response_schema = JSendSchema()
-        response_data = response_schema.load(await response.json())
-        assert response_data["status"] == JSendStatus.FAIL
-        print(response_data)
-        assert "User does not exist" in response_data["data"]["message"]
+        async def test_get_me_missing_user(self, client: TestClient):
+            """Assert that calling me gives a descriptive error."""
+            response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer abcd"})
+            response_schema = JSendSchema()
+            response_data = response_schema.load(await response.json())
+            assert response_data["status"] == JSendStatus.FAIL
+            print(response_data)
+            assert "User does not exist" in response_data["data"]["message"]

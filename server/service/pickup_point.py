@@ -1,3 +1,5 @@
+from typing import Optional
+
 from shapely.geometry import Point
 from tortoise.contrib.gis.functions.comparison import Within
 
@@ -20,5 +22,5 @@ async def get_pickup_point(pickup_id: int):
     return await PickupPoint.get(id=pickup_id).first()
 
 
-async def get_pickup_at(point: Point) -> PickupPoint:
-    return await PickupPoint.filter(Within(point, PickupPoint.area))
+async def get_pickup_at(point: Point) -> Optional[PickupPoint]:
+    return await PickupPoint.filter(Within(point, PickupPoint.area)).first()

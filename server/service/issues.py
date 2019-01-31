@@ -1,4 +1,5 @@
-from typing import Union
+from collections import defaultdict
+from typing import Union, Tuple, List, Dict, Set
 
 from server.models import User, Bike
 from server.models.issue import Issue
@@ -29,15 +30,27 @@ async def get_issue(iid: int):
     return await Issue.filter(id=iid).prefetch_related('bike').first()
 
 
-async def get_broken_bikes():
-    """Gets the list of all broken bikes ie. those with active issues."""
-    active_issues = await Issue.filter(is_active=True).prefetch_related('bike')
+async def get_broken_bikes() -> Tuple[Set[str], Dict[str, Bike], Dict[str, List[Issue]]]:
+    """
+    Gets the list of all broken bikes ie. those with active issues.
+
+    :returns: A tuple of the list of identifiers,
+     a dictionary mapping the identifier to its bike,
+     and a dictionary mapping the identifier to its list of issues
+    """
+    active_issues = await Issue.filter(is_active=True, bike_id__not_isnull=True).prefetch_related('bike')
+
+    identifiers = set()
     bikes = {}
+    issues = defaultdict(list)
 
     for issue in active_issues:
-        bikes[issue.bike.id] = issue.bike
+        identifier = issue.bike.identifier
+        identifiers.add(identifier)
+        bikes[identifier] = issue.bike
+        issues[identifier].append(issue)
 
-    return bikes.values()
+    return identifiers, bikes, issues
 
 
 async def open_issue(user: Union[User, int], description: str, bike: Union[User, int] = None):
