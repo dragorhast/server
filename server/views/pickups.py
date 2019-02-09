@@ -17,9 +17,9 @@ from server.serializer.decorators import returns, expects
 from server.serializer.fields import Many
 from server.serializer.models import PickupPointSchema, BikeSchema, ReservationSchema, CreateReservationSchema
 from server.service.access.pickup_points import get_pickup_points, get_pickup_point
-from server.service.manager.reservation_manager import ReservationError
 from server.service.access.reservations import get_reservations
 from server.service.access.users import get_user
+from server.service.manager.reservation_manager import ReservationError
 from server.views.base import BaseView
 from server.views.decorators import match_getter, Optional, GetFrom
 

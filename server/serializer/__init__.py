@@ -12,8 +12,8 @@ going in and out of the system.
     For that reason, it is recommended that you look at the code directly.
 """
 
-from .fields import Bytes, EnumField
+from .decorators import expects, returns
+from .fields import BytesField, EnumField
 from .geojson import GeoJSONType, GeoJSON, GeometryType, Geometry
 from .jsend import JSendSchema, JSendStatus
 from .json_rpc import JsonRPCRequest, JsonRPCResponse, ErrorObject
-from .decorators import expects, returns

@@ -22,11 +22,9 @@ from itertools import count
 from typing import Dict, Tuple, Union, Optional, List
 from weakref import WeakValueDictionary
 
-import dateparser
 from aiohttp import WSCloseCode
 from aiohttp.web_ws import WebSocketResponse
 from shapely.geometry import Point, Polygon
-from shapely.wkt import loads
 from tortoise.query_utils import Prefetch
 
 from server import logger

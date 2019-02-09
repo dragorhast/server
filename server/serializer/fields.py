@@ -13,7 +13,7 @@ from marshmallow import fields, ValidationError
 from marshmallow.validate import OneOf
 
 
-class Bytes(fields.Field):
+class BytesField(fields.Field):
     """
     A field that serializes :class:`bytes` or a hex-encoded :class:`str`
     to a hex-encoded :class:`str` and de-serializes it back to :class:`bytes`.

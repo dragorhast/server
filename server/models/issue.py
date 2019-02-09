@@ -8,7 +8,6 @@ from tortoise import Model, fields
 
 
 class Issue(Model):
-
     id = fields.IntField(pk=True)
     user = fields.ForeignKeyField("models.User", related_name="issues")
     bike = fields.ForeignKeyField("models.Bike", null=True, related_name="issues")

@@ -36,9 +36,9 @@ from shapely.geometry import Point
 
 from server.models import Reservation, PickupPoint, User, Bike, Rental
 from server.models.reservation import ReservationOutcome
+from server.service.access.reservations import create_reservation, current_reservation
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager, CurrentlyRentedError
-from server.service.access.reservations import create_reservation, current_reservation
 
 MINIMUM_RESERVATION_TIME = timedelta(hours=3)
 """The minimum amount of time in the future a reservation must be made if there are no bikes there."""

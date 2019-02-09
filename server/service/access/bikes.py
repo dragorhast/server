@@ -38,7 +38,8 @@ async def get_bike(*, identifier: Union[str, bytes] = None,
         kwargs["public_key_hex__startswith"] = identifier.hex() if isinstance(identifier, bytes) else identifier
 
     try:
-        return await Bike.get(**kwargs).first().prefetch_related(Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
+        return await Bike.get(**kwargs).first().prefetch_related(
+            Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
     except DoesNotExist:
         return None
 

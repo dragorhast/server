@@ -22,9 +22,9 @@ from server.models import Issue, User
 from server.models.bike import Bike
 from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsConnected, BikeNotInUse, BikeNotBroken, \
     UserMatchesToken
-from server.serializer import Bytes, JSendStatus, JSendSchema
+from server.serializer import JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
-from server.serializer.fields import Many
+from server.serializer.fields import Many, BytesField
 from server.serializer.json_rpc import JsonRPCRequest, JsonRPCResponse
 from server.serializer.misc import MasterKeySchema, BikeRegisterSchema, BikeLockSchema
 from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
@@ -32,9 +32,9 @@ from server.service import TicketStore, ActiveRentalError
 from server.service.access.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike
 from server.service.access.issues import get_issues, get_broken_bikes
 from server.service.access.rentals import get_rentals_for_bike
-from server.service.manager.reservation_manager import ReservationError, CollectionError
 from server.service.access.reservations import current_reservation
 from server.service.access.users import get_user
+from server.service.manager.reservation_manager import ReservationError, CollectionError
 from server.views.base import BaseView
 from server.views.decorators import match_getter, GetFrom, Optional
 
@@ -107,9 +107,9 @@ class BrokenBikesView(BaseView):
     @docs(summary="Get All Broken Bikes")
     @requires(UserIsAdmin())
     @returns(JSendSchema.of(
-        identifiers=fields.List(Bytes(as_string=True)),
-        bikes=fields.Dict(keys=Bytes(as_string=True), values=Nested(BikeSchema())),
-        issues=fields.Dict(keys=Bytes(as_string=True), values=Many(IssueSchema()))
+        identifiers=fields.List(BytesField(as_string=True)),
+        bikes=fields.Dict(keys=BytesField(as_string=True), values=Nested(BikeSchema())),
+        issues=fields.Dict(keys=BytesField(as_string=True), values=Many(IssueSchema()))
     ))
     async def get(self, user, identifiers, bikes, issues):
         """

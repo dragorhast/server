@@ -7,5 +7,5 @@ and raises a RoutePermissionError in the case of a failed permission.
 """
 
 from server.permissions.bikes import BikeIsConnected, BikeNotBroken, BikeNotInUse
-from server.permissions.users import UserMatchesToken, UserIsRentingBike, UserIsAdmin, ValidToken
 from server.permissions.decorators import requires
+from server.permissions.users import UserMatchesToken, UserIsRentingBike, UserIsAdmin, ValidToken

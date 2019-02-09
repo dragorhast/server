@@ -11,12 +11,12 @@ from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime
 from server.models.reservation import ReservationOutcome
 from server.models.util import RentalUpdateType
 from server.serializer.geojson import GeoJSON, GeoJSONType
-from .fields import Bytes, EnumField
+from .fields import BytesField, EnumField
 
 
 class BikeSchema(Schema):
-    public_key = Bytes()
-    identifier = Bytes(required=True, as_string=True, max_length=6)
+    public_key = BytesField()
+    identifier = BytesField(required=True, as_string=True, max_length=6)
     available = Boolean(required=True)
     current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
     connected = Boolean()
@@ -54,7 +54,7 @@ class RentalSchema(Schema):
     user_url = Url(relative=True)
 
     bike = Nested(BikeSchema())
-    bike_identifier = Bytes(as_string=True)
+    bike_identifier = BytesField(as_string=True)
     bike_url = Url(relative=True)
 
     events = Nested(RentalUpdateSchema(), many=True)
@@ -123,7 +123,7 @@ class IssueSchema(Schema):
     user_url = Url(relative=True)
 
     bike = Nested(BikeSchema(), allow_none=True)
-    bike_identifier = Bytes(as_string=True, allow_none=True)
+    bike_identifier = BytesField(as_string=True, allow_none=True)
     bike_url = Url(relative=True, allow_none=True)
 
     time = DateTime()

@@ -23,7 +23,7 @@ from aiohttp_apispec.decorators import default_apispec
 from apispec.ext.marshmallow import OpenAPIConverter, resolver
 from marshmallow import Schema, ValidationError
 
-from server.serializer import JSendSchema, JSendStatus
+from server.serializer.jsend import JSendSchema, JSendStatus
 
 converter = OpenAPIConverter("3.0.2", resolver, None)
 

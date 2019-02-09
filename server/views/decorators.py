@@ -78,7 +78,8 @@ def resolve_match_map(request: Request, match_map) -> Dict[str, Any]:
     return resolved_matches
 
 
-def match_getter(getter_function, *injection_parameters: Union[str, Optional], **match_map: Union[str, GetFrom, Optional, Tuple[str, type]]):
+def match_getter(getter_function, *injection_parameters: Union[str, Optional],
+                 **match_map: Union[str, GetFrom, Optional, Tuple[str, type]]):
     """
     Automatically fetches and includes an item, or 404's if it doesn't exist.
 

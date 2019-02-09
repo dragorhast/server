@@ -6,7 +6,7 @@ from marshmallow.fields import Dict, Nested, List
 from server.models import Issue
 from server.models.bike import Bike
 from server.models.util import BikeType
-from server.serializer.fields import Many, Bytes
+from server.serializer.fields import Many, BytesField
 from server.serializer.jsend import JSendStatus, JSendSchema
 from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
 from server.service import MASTER_KEY
@@ -105,9 +105,9 @@ class TestBrokenBikesView:
                                     headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
         text = await response.text()
         response_data = JSendSchema.of(
-            identifiers=List(Bytes(as_string=True)),
-            bikes=Dict(keys=Bytes(as_string=True), values=Nested(BikeSchema())),
-            issues=Dict(keys=Bytes(as_string=True), values=Many(IssueSchema()))
+            identifiers=List(BytesField(as_string=True)),
+            bikes=Dict(keys=BytesField(as_string=True), values=Nested(BikeSchema())),
+            issues=Dict(keys=BytesField(as_string=True), values=Many(IssueSchema()))
         ).load(await response.json())
 
         assert response_data["status"] == JSendStatus.SUCCESS
