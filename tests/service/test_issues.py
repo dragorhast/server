@@ -1,5 +1,5 @@
 from server.models.issue import Issue
-from server.service.issues import get_issues, open_issue, close_issue
+from server.service.access.issues import get_issues, open_issue, close_issue, get_broken_bikes
 
 
 class TestIssues:
@@ -35,3 +35,13 @@ class TestIssues:
         issue = await Issue.create(user=random_user, description="Uh oh!")
         await close_issue(issue.id)
         assert await Issue.filter(is_active=False).count() == 1
+
+    async def test_get_broken_bikes(self, random_bike_factory, random_user):
+        bike1 = await random_bike_factory()
+        bike2 = await random_bike_factory()
+        bike3 = await random_bike_factory()
+
+        issue = await open_issue(random_user, "My bike sucks!", bike1)
+        identifiers, bikes, issues = await get_broken_bikes()
+
+        assert bike1 in bikes.values()

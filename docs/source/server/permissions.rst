@@ -6,4 +6,3 @@ Permissions
 .. automodule:: server.permissions.decorators
 .. automodule:: server.permissions.permission
 .. automodule:: server.permissions.users
-.. automodule:: server.permissions.util

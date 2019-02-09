@@ -6,7 +6,7 @@ Contains the various
 """
 
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from geopy import Point
 from shapely.geometry import mapping
@@ -39,7 +39,22 @@ class Rental(Model):
         last_update: RentalUpdate = self.updates[-1]
         return last_update.time if last_update.type == RentalUpdateType.RETURN else None
 
-    async def serialize(self, rental_manager, router, *,
+    @property
+    def cancel_time(self) -> datetime:
+        last_update: RentalUpdate = self.updates[-1]
+        return last_update.time if last_update.type == RentalUpdateType.CANCEL else None
+
+    @property
+    def outcome(self) -> Optional[str]:
+        last_update: RentalUpdate = self.updates[-1]
+        if last_update.type == RentalUpdateType.CANCEL:
+            return "canceled"
+        elif last_update.type == RentalUpdateType.RETURN:
+            return "returned"
+        else:
+            return None
+
+    async def serialize(self, rental_manager, router=None, *,
                         distance: float = None,
                         start_location: Point = None,
                         current_location: Point = None
@@ -51,16 +66,21 @@ class Rental(Model):
         data = {
             "id": self.id,
             "user_id": self.user_id,
-            "user_url": router["user"].url_for(id=str(self.user_id)).path,
             "bike_identifier": self.bike.identifier,
-            "bike_url": router["bike"].url_for(identifier=str(self.bike.identifier)).path,
             "start_time": self.start_time,
-            "is_active": rental_manager.has_active_rental(self)
+            "is_active": rental_manager.is_active(self.id)
         }
 
-        if self.end_time is not None:
-            data["end_time"] = self.end_time
-            data["price"] = self.price
+        if router is not None:
+            data["bike_url"] = router["bike"].url_for(identifier=str(self.bike.identifier)).path
+            data["user_url"] = router["user"].url_for(id=str(self.user_id)).path
+
+        if self.outcome is not None:
+            if self.end_time is not None:
+                data["end_time"] = self.end_time
+                data["price"] = self.price
+            elif self.cancel_time is not None:
+                data["cancel_time"] = self.cancel_time
         else:
             data["estimated_price"] = await rental_manager.get_price_estimate(self)
 

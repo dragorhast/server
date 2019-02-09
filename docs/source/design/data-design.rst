@@ -57,6 +57,14 @@ Data Design
     PickupPoint : List[Bike] bikes()
     PickupPoint : dict serialize()
 
+    Reservation : int id
+    Reservation : PickupPoint pickup_point
+    Reservation : User user
+    Reservation : datetime made_at
+    Reservation : datetime reserved_for
+    Reservation : Rental claimed
+    Reservation : dict serialize()
+
 To support our design decisions we need to make accommodations in the way we store our data. We have opted to built an
 event-sourced database for the bike state and location updates so that we minimize the chances of database inconsistency.
 Having an immutable append-only database state at all times ensures that we can rely on the database as the sole source
@@ -70,9 +78,9 @@ current state of each bike is derived from a list of locations or state changes.
 the result of applying each delta to some start state :math:`S_0`.
 
 With this system, state can be mathematically expressed in the following way, where :math:`S_n` is the state after a given
-number of updates “n”, and :math:`Δ_n` is the nth update:
+number of updates :math:`n`, and :math:`\Delta_n` is the nth update:
 
-:math:`S_n = Δ_n(Δ_{n-1}(Δ_{n-2}(...(Δ_1(S_0)))))`
+:math:`S_n = \Delta_n(\Delta_{n-1}(\Delta_{n-2}(...(\Delta_1(S_0)))))`
 
 Optimizations
 -------------

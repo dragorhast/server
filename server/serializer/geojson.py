@@ -1,3 +1,10 @@
+"""
+GeoJSON Schema
+--------------
+
+Implements serializers for GEOJson objects, which is the format
+through which the api communicates spacial data.
+"""
 from enum import Enum
 from typing import Optional
 
@@ -7,12 +14,12 @@ from marshmallow.fields import Dict, Raw, Nested
 from server.serializer.fields import EnumField
 
 
-class GeoJSONType(Enum):
+class GeoJSONType(str, Enum):
     FEATURE = "Feature"
     FEATURE_COLLECTION = "FeatureCollection"
 
 
-class GeometryType(Enum):
+class GeometryType(str, Enum):
     POINT = "Point"
     MULTIPOINT = "MultiPoint"
     LINESTRING = "LineString"

@@ -8,6 +8,7 @@ Defines serializers for the various models in the system.
 from marshmallow import Schema, validates_schema, ValidationError
 from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float, Url
 
+from server.models.reservation import ReservationOutcome
 from server.models.util import RentalUpdateType
 from server.serializer.geojson import GeoJSON, GeoJSONType
 from .fields import Bytes, EnumField
@@ -19,6 +20,7 @@ class BikeSchema(Schema):
     available = Boolean(required=True)
     current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
     connected = Boolean()
+    battery = Float()
     locked = Boolean()
 
     @validates_schema
@@ -34,6 +36,7 @@ class UserSchema(Schema):
 
     id = Integer()
     firebase_id = String(required=True)
+    stripe_id = String()
     first = String(required=True)
     email = Email(required=True)
 
@@ -57,9 +60,9 @@ class RentalSchema(Schema):
     events = Nested(RentalUpdateSchema(), many=True)
     start_time = DateTime(required=True)
     end_time = DateTime()
+    cancel_time = DateTime()
 
     is_active = Boolean(required=True)
-    estimated_price = Float()
     price = Float()
     distance = Float()
 
@@ -89,12 +92,19 @@ class RentalSchema(Schema):
 class CurrentRentalSchema(RentalSchema):
     start_location = Nested(GeoJSON(GeoJSONType.FEATURE), allow_none=True)
     current_location = Nested(GeoJSON(GeoJSONType.FEATURE), allow_none=True)
+    estimated_price = Float()
+
+
+class LatLong(Schema):
+    latitude = Float()
+    longitude = Float()
 
 
 class PickupPointData(Schema):
     id = Integer()
     name = String(required=True)
     bikes = Nested(BikeSchema(), many=True)
+    center = Nested(LatLong())
 
 
 class PickupPointSchema(GeoJSON):
@@ -128,3 +138,27 @@ class IssueSchema(Schema):
             raise ValidationError("User ID was included, but User URL was not.")
         if "bike_id" in data and "bike_url" not in data:
             raise ValidationError("Bike ID was included, but Bike URL was not.")
+
+
+class CreateReservationSchema(Schema):
+    reserved_for = DateTime(required=True)
+
+
+class ReservationSchema(CreateReservationSchema):
+    id = Integer()
+
+    made_at = DateTime()
+    ended_at = DateTime()
+    outcome = EnumField(ReservationOutcome)
+
+    user = Nested(UserSchema())
+    user_id = Integer()
+    user_url = Url(relative=True)
+
+    pickup = Nested(PickupPointSchema())
+    pickup_id = Integer()
+    pickup_url = Url(relative=True)
+
+    rental = Nested(RentalSchema())
+    rental_io = Integer()
+    rental_url = Url(relative=True)

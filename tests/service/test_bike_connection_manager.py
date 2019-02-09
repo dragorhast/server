@@ -13,7 +13,7 @@ from aiohttp.web_ws import WebSocketResponse
 from shapely.geometry import Point
 
 from server.models import LocationUpdate
-from server.service.bike_connection_manager import BikeConnectionManager, RPC
+from server.service.manager.bike_connection_manager import BikeConnectionManager, RPC
 
 
 @pytest.fixture
@@ -86,6 +86,9 @@ class TestBikeConnectionManager:
         """Assert that when the socket disappears, so does the bike connection."""
         r0 = WebSocketResponse()
         await location_manager.add_connection(random_bike, r0)
+        location_manager._bike_locations[random_bike.id] = None
+        location_manager._bike_battery[random_bike.id] = None
+        location_manager._bike_locked[random_bike.id] = None
         assert location_manager.is_connected(random_bike)
         del r0
         assert not location_manager.is_connected(random_bike)
@@ -114,8 +117,7 @@ class TestBikeConnectionManager:
         patched_send = mocker.patch('aiohttp.web_ws.WebSocketResponse.send_json')
         patched_send.side_effect = assert_data
         patched_counter = mocker.patch(
-            'server.service.bike_connection_manager.BikeConnectionManager._next_rpc_id',
-            new_callable=PropertyMock
+            'server.service.manager.bike_connection_manager.BikeConnectionManager._next_rpc_id',
         )
         patched_counter.return_value = 1
 
@@ -123,7 +125,7 @@ class TestBikeConnectionManager:
         await location_manager.add_connection(random_bike, r0)
 
         with pytest.raises(TimeoutError):
-            await location_manager.send_command(random_bike, "test_command", timeout=timedelta(seconds=0.01))
+            await location_manager._send_command(random_bike, "test_command", timeout=timedelta(seconds=0.01))
 
         assert patched_counter.call_count == 1
 

@@ -1,4 +1,4 @@
-from server.service.rentals import get_rentals_for_bike, get_rental_with_distance
+from server.service.access.rentals import get_rentals_for_bike, get_rental_with_distance
 
 
 async def test_get_rentals_for_bike(random_bike, random_rental):

@@ -1,4 +1,4 @@
-from server.service.pickup_point import get_pickup_points, get_pickup_at
+from server.service.access.pickup_points import get_pickup_points, get_pickup_at
 
 
 class TestPickups:

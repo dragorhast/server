@@ -8,5 +8,6 @@ Views
 .. automodule:: server.views.rentals
 .. automodule:: server.views.reservations
 .. automodule:: server.views.users
-.. automodule:: server.views.utils
+.. automodule:: server.views.decorators
+.. automodule:: server.views.misc
 .. automodule:: server.views.base

@@ -1,3 +1,8 @@
+"""
+Pickup Points
+=============
+"""
+
 from typing import Optional
 
 from shapely.geometry import Point
@@ -19,7 +24,7 @@ async def get_pickup_points(
 
 
 async def get_pickup_point(pickup_id: int):
-    return await PickupPoint.get(id=pickup_id).first()
+    return await PickupPoint.filter(id=pickup_id).first()
 
 
 async def get_pickup_at(point: Point) -> Optional[PickupPoint]:

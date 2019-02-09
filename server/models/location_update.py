@@ -14,6 +14,6 @@ class LocationUpdate(Model):
     at a specific point in time.
     """
     id = fields.IntField(pk=True)
-    bike = fields.ForeignKeyField("models.Bike")
+    bike = fields.ForeignKeyField("models.Bike", related_name="updates")
     location = gis_fields.PointField(srid=27700)
     time = fields.DatetimeField(auto_now_add=True)

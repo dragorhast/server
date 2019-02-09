@@ -1,7 +1,8 @@
 from aiohttp.test_utils import TestClient
 
-from server.serializer import RentalSchema, JSendSchema, JSendStatus
+from server.serializer import JSendSchema, JSendStatus
 from server.serializer.fields import Many
+from server.serializer.models import RentalSchema
 
 
 class TestRentalsView:

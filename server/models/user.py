@@ -18,6 +18,7 @@ class User(Model):
     email = fields.CharField(max_length=255, unique=True)
 
     is_admin: bool = fields.BooleanField(default=False)
+    stripe_id = fields
 
     def serialize(self):
         return {

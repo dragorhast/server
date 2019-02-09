@@ -25,28 +25,36 @@ class Bike(Model):
     public_key_hex: str = fields.CharField(max_length=64, unique=True)
     type = EnumField(enum_type=BikeType, default=BikeType.ROAD)
 
-    def serialize(self, bike_connection_manager, rental_manager, force_location=False) -> Dict[str, Any]:
+    def serialize(
+        self, bike_connection_manager, rental_manager, reservation_manager, include_location=False
+    ) -> Dict[str, Any]:
         """
         Serializes the bike into a format that can be turned into JSON.
 
-        :param force_location: Whether to force include the location, ignoring whether it is available (PRIVACY WARNING)
+        :param include_location: Whether to force include the location, ignoring whether it is available (PRIVACY WARNING)
         :return: A dictionary.
         """
         data = {
             "identifier": self.identifier,
             "public_key": self.public_key,
             "connected": bike_connection_manager.is_connected(self),
-            "locked": False,
         }
 
-        data["available"] = data["connected"] and (rental_manager.is_available(self) or force_location)
+        data["available"] = data["connected"] and rental_manager.is_available(self, reservation_manager)
 
-        if data["available"]:
-            location, time, pickup_point = bike_connection_manager.most_recent_location(self)
+        if data["connected"]:
+            data["battery"] = bike_connection_manager.battery_level(self.id)
+            data["locked"] = bike_connection_manager.is_locked(self.id)
+
+        recent_location = bike_connection_manager.most_recent_location(self)
+        if recent_location is not None and (data["available"] or include_location):
+            location, time, pickup_point = recent_location
+
             data["current_location"] = {
                 "type": GeoJSONType.FEATURE,
                 "geometry": mapping(location)
             }
+
             if pickup_point is not None:
                 data["current_location"]["properties"] = {"pickup_point": pickup_point.name}
 

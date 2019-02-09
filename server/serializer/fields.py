@@ -10,6 +10,7 @@ from enum import Enum, IntEnum
 from typing import Union, Optional, Type
 
 from marshmallow import fields, ValidationError
+from marshmallow.validate import OneOf
 
 
 class Bytes(fields.Field):
@@ -56,13 +57,6 @@ class Bytes(fields.Field):
         else:
             return bytes.fromhex(value)
 
-    @staticmethod
-    def _jsonschema_type_mapping():
-        """Defines the jsonschema type for the object."""
-        return {
-            'type': 'string',
-        }
-
 
 class EnumField(fields.Field):
     """
@@ -75,7 +69,7 @@ class EnumField(fields.Field):
         :param use_name: use enum's property name instead of value when serialize
         :param as_string: serialize value as string
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, validate=OneOf(enum_type))
         if not issubclass(enum_type, Enum):
             raise ValidationError(f"Expected enum type, got {type(enum_type)} instead")
         self._enum_type = enum_type
@@ -107,13 +101,6 @@ class EnumField(fields.Field):
             raise ValidationError(f"Field does not exist on {self._enum_type}.")
         else:
             return None
-
-    def _jsonschema_type_mapping(self):
-        """Defines the jsonschema type for the object."""
-        return {
-            'type': 'string',
-            'enum': [enum.value for enum in self._enum_type]
-        }
 
 
 def Many(schema):

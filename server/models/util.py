@@ -4,11 +4,12 @@ from typing import Union
 from tortoise import Model
 
 
-class BikeType(Enum):
+class BikeType(str, Enum):
+    """We subclass string to make json serialization work."""
     ROAD = "road"
 
 
-class RentalUpdateType(Enum):
+class RentalUpdateType(str, Enum):
     RENT = "rent"
     RETURN = "return"
     LOCK = "lock"

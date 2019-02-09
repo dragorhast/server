@@ -4,13 +4,18 @@ Permission
 """
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from itertools import chain
-from typing import List
+from typing import List, Dict
 
 from aiohttp.web_urldispatcher import View
 
 
 class RoutePermissionError(Exception):
+    """
+    Encapsulates a problem with permissions, and defines some
+    useful functions to print them nicely.
+    """
 
     def __init__(self, *messages, qualifier=None, sub_errors: List['RoutePermissionError'] = None):
         """
@@ -81,8 +86,14 @@ class Permission(ABC):
         :raises RoutePermissionError: If the permission failed.
         """
 
+    @property
+    def openapi_security(self) -> List[Dict]:
+        """Returns the required OpenAPI security for the given path."""
+        return [{}]
+
 
 class AndPermission(Permission):
+    """Allows composing permissions together with the user of the ``&`` operator."""
 
     def __init__(self, *permissions):
         self._permissions = permissions
@@ -108,8 +119,23 @@ class AndPermission(Permission):
     def _sub_permissions(self):
         return self._permissions
 
+    @property
+    def openapi_security(self):
+        """.. note:: Not sure how this interacts with nested or..."""
+        security = defaultdict(list)
+
+        # convert the list of permissions into a list of securities
+        security_entries = chain.from_iterable(permission.openapi_security for permission in self._permissions)
+
+        # merge the list of security dictionaries into one
+        for schema, securities in chain.from_iterable(entry.items() for entry in security_entries):
+            security[schema] += securities
+
+        return [security]
+
 
 class OrPermission(Permission):
+    """Allows composing permissions together with the use of the ``|`` operator."""
 
     def __init__(self, *permissions):
         self._permissions = permissions
@@ -135,8 +161,17 @@ class OrPermission(Permission):
     def _sub_permissions(self):
         return self._permissions
 
+    @property
+    def openapi_security(self):
+        return list(chain.from_iterable(permission.openapi_security for permission in self._permissions))
+
 
 class NotPermission(Permission):
+    """
+    Inverts a permission.
+
+    .. todo:: Handle openapi "not" clauses
+    """
 
     def __init__(self, permission):
         self._permission = permission

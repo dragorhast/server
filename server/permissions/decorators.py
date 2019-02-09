@@ -8,9 +8,23 @@ from http import HTTPStatus
 
 from aiohttp import web
 from aiohttp.web_urldispatcher import View
+from aiohttp_apispec.decorators import default_apispec
 
 from server.permissions.permission import RoutePermissionError, Permission
 from server.serializer import JSendSchema, JSendStatus
+
+
+def add_apispec_permission(original_function, new_func, permission):
+    """Set up the apispec documentation on the new function"""
+    if hasattr(original_function, "__apispec__"):
+        new_func.__apispec__ = original_function.__apispec__
+    else:
+        new_func.__apispec__ = default_apispec()
+
+    if "security" not in new_func.__apispec__:
+        new_func.__apispec__["security"] = []
+
+    new_func.__apispec__["security"].extend(permission.openapi_security)
 
 
 def requires(permission: Permission):
@@ -23,6 +37,7 @@ def requires(permission: Permission):
 
         @wraps(original_function)
         async def new_func(self: View, **kwargs):
+            """Checks the given request against the supplied permission and gracefully fails."""
             try:
                 await permission(self, **kwargs)
             except RoutePermissionError as error:
@@ -38,6 +53,8 @@ def requires(permission: Permission):
                 raise type(error)(original_function, *error.args) from error
 
             return await original_function(self, **kwargs)
+
+        add_apispec_permission(original_function, new_func, permission)
 
         return new_func
 

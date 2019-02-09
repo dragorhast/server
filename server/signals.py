@@ -46,7 +46,7 @@ async def initialize_database(app: Application):
 async def rebuild_event_states(app: Application):
     """Rebuilds the event-based state from the database."""
     await app['rental_manager'].rebuild()
-    await app['bike_location_manager'].rebuild()
+    await app['reservation_manager'].rebuild()
 
 
 async def start_background_tasks(app):

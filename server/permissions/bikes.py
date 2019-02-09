@@ -2,14 +2,14 @@ from aiohttp.web_urldispatcher import View
 
 from server.models import Bike
 from server.permissions.permission import RoutePermissionError, Permission
-from server.service.issues import get_issues
+from server.service.access.issues import get_issues
 
 
 class BikeNotInUse(Permission):
     """Asserts that the given bike is not being used."""
 
     async def __call__(self, view: View, bike: Bike, **kwargs):
-        if await view.rental_manager.bike_in_use(bike):
+        if view.rental_manager.is_in_use(bike):
             raise RoutePermissionError("The requested bike is in use.")
 
 

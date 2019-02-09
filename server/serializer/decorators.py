@@ -15,14 +15,17 @@ validate the data coming in and out of the app.
 from functools import wraps
 from http import HTTPStatus
 from json import JSONDecodeError
-from typing import Optional, Tuple, Union, Dict
+from typing import Optional, Tuple, Union
 
 from aiohttp import web
 from aiohttp.web_urldispatcher import View
+from aiohttp_apispec.decorators import default_apispec
+from apispec.ext.marshmallow import OpenAPIConverter, resolver
 from marshmallow import Schema, ValidationError
-from marshmallow_jsonschema import JSONSchema
 
 from server.serializer import JSendSchema, JSendStatus
+
+converter = OpenAPIConverter("3.0.2", resolver, None)
 
 
 def expects(schema: Optional[Schema], into="data"):
@@ -53,7 +56,7 @@ def expects(schema: Optional[Schema], into="data"):
     if not isinstance(schema, Schema):
         raise TypeError
 
-    json_schema = JSONSchema().dump(schema)["definitions"][type(schema).__name__]
+    json_schema = converter.schema2jsonschema(schema)
 
     def decorator(original_function):
 
@@ -101,6 +104,19 @@ def expects(schema: Optional[Schema], into="data"):
             # if everything passes, execute the original function
             return await original_function(self, **kwargs)
 
+        # set up the apispec documentation on the new function
+        if hasattr(original_function, "__apispec__"):
+            new_func.__apispec__ = original_function.__apispec__
+        else:
+            new_func.__apispec__ = default_apispec()
+
+        new_func.__apispec__["requestBody"] = {
+            "required": True,
+            "content": {"application/json": {
+                "schema": schema
+            }}
+        }
+
         return new_func
 
     return decorator
@@ -138,7 +154,12 @@ def returns(
         return lambda x: x
 
     # add the schema passed via the args to the named_schema
-    named_schema[None] = (schema, return_code)
+    if schema is not None:
+        named_schema[None] = schema
+
+    for description, associated_schema in named_schema.items():
+        if not isinstance(associated_schema, tuple):
+            named_schema[description] = (associated_schema, return_code)
 
     def decorator(original_function):
 
@@ -151,12 +172,7 @@ def returns(
                 schema_name, response_data = await original_function(self, **kwargs)
 
             try:
-                matched_schema = named_schema[schema_name]
-                # if the named schema includes a return code as well, unwrap it
-                if isinstance(matched_schema, tuple):
-                    matched_schema, matched_return_code = matched_schema
-                else:
-                    matched_schema, matched_return_code = matched_schema, return_code
+                matched_schema, matched_return_code = named_schema[schema_name]
                 return web.json_response(matched_schema.dump(response_data), status=matched_return_code)
             except (ValidationError, KeyError) as err:
                 response_schema = JSendSchema()
@@ -166,6 +182,19 @@ def returns(
                     "message": "We tried to send you data back, but it came out wrong."
                 })
                 return web.json_response(response_data, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+        # set up the apispec documentation on the new function
+        if hasattr(original_function, "__apispec__"):
+            new_func.__apispec__ = original_function.__apispec__
+        else:
+            new_func.__apispec__ = default_apispec()
+
+        for description, associated_schema in named_schema.items():
+            associated_schema, return_code = associated_schema
+            new_func.__apispec__["responses"][str(int(return_code))] = {
+                "description": description if description is not None else "default",
+                "content": {"application/json": {"schema": associated_schema}}
+            }
 
         return new_func
 

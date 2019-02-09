@@ -1,4 +1,6 @@
 """
+.. autoclasstree:: server.views
+
 This package contains the server API for viewing,
 renting, reserving, and manipulating bikes.
 
@@ -28,22 +30,22 @@ import aiohttp_cors
 from aiohttp.abc import Application
 
 from server import logger
-from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView, BikeIssuesView, BrokenBikesView
+from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView, BikeIssuesView, BrokenBikesView, LowBikesView
 from .issues import IssuesView, IssueView
-from .misc import send_to_developer_portal
+from .misc import redoc, logo
 from .pickups import PickupView, PickupsView, PickupBikesView, PickupReservationsView
 from .rentals import RentalView, RentalsView
 from .reservations import ReservationView, ReservationsView
 from .users import UserView, UsersView, UserIssuesView, UserRentalsView, UserReservationsView, MeView, \
-    UserCurrentRentalView
+    UserCurrentRentalView, UserCurrentReservationView, UserEndCurrentRentalView
 
 views = [
-    BikeView, BikesView, BrokenBikesView, BikeRentalsView, BikeIssuesView, BikeSocketView,
+    BikeView, BikesView, BrokenBikesView, LowBikesView, BikeRentalsView, BikeIssuesView, BikeSocketView,
     IssuesView, IssueView,
     PickupView, PickupsView, PickupBikesView, PickupReservationsView,
     RentalView, RentalsView,
     ReservationView, ReservationsView,
-    MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView
+    MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView, UserCurrentReservationView, UserEndCurrentRentalView
 ]
 
 
@@ -51,7 +53,7 @@ def register_views(app: Application, base: str):
     """
     Registers all the API views onto the given router at a specific root url.
 
-    :param router: The router to register the views to.
+    :param app: The app to register the views to.
     :param base: The base URL.
     """
     cors = aiohttp_cors.setup(app)

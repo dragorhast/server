@@ -1,5 +1,5 @@
 """
-Utilities
+Decorators
 -------------------------
 """
 from enum import Enum
@@ -10,6 +10,7 @@ from typing import Union, Any, Dict, Tuple
 from aiohttp import web
 from aiohttp.web_request import Request
 from aiohttp.web_urldispatcher import View
+from aiohttp_apispec.decorators import default_apispec
 
 from server.serializer import JSendStatus, JSendSchema
 
@@ -94,15 +95,9 @@ def match_getter(getter_function, *injection_parameters: Union[str, Optional], *
     :return: A decorator that wraps the response and passes in the object.
     """
 
-    def attach_instance(decorated):
-        """
-        Attaches an instance of the.
+    def attach_instance(original_function):
 
-        :param decorated:
-        :return:
-        """
-
-        @wraps(decorated)
+        @wraps(original_function)
         async def new_func(self: View, **kwargs):
             try:
                 params = resolve_match_map(self.request, match_map)
@@ -148,8 +143,28 @@ def match_getter(getter_function, *injection_parameters: Union[str, Optional], *
                 }
                 raise web.HTTPNotFound(text=JSendSchema().dumps(response), content_type='application/json')
 
-            return await decorated(self, **kwargs, **injected_kwargs)
+            return await original_function(self, **kwargs, **injected_kwargs)
+
+        setup_apispec(new_func, original_function)
 
         return new_func
+
+    def setup_apispec(new_func, original_function):
+        """Set up the apispec documentation on the new function"""
+        if hasattr(original_function, "__apispec__"):
+            new_func.__apispec__ = original_function.__apispec__
+        else:
+            new_func.__apispec__ = default_apispec()
+
+        new_func.__apispec__["responses"]["404"] = {
+            "description": "resource_missing",
+            "content": {"application/json": {"schema": JSendSchema(only=("status", "data"))}}
+        }
+
+        if "400" not in new_func.__apispec__["responses"]:
+            new_func.__apispec__["responses"]["400"] = {
+                "description": "request_errors",
+                "content": {"application/json": {"schema": JSendSchema(only=("status", "data"))}}
+            }
 
     return attach_instance

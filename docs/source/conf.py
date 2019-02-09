@@ -204,3 +204,5 @@ intersphinx_mapping = {
 todo_include_todos = True
 
 add_module_names = False
+
+mermaid_pdfcrop = "/Library/TeX/texbin/pdfcrop"

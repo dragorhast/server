@@ -13,7 +13,7 @@ from marshmallow.fields import Field
 from .fields import EnumField
 
 
-class JSendStatus(Enum):
+class JSendStatus(str, Enum):
     """Enumerates the JSend status states."""
 
     SUCCESS = "success"

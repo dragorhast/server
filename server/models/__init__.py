@@ -1,7 +1,7 @@
 """
 The models package contains all the models used on the server.
 
-.. todo: Implement Reservation
+.. autoclasstree:: server.models
 """
 
 from .bike import Bike
@@ -10,3 +10,4 @@ from .user import User
 from .pickup_point import PickupPoint
 from .location_update import LocationUpdate
 from .issue import Issue
+from .reservation import Reservation

@@ -11,8 +11,9 @@ upon actual deployment, will be replaced with a more secure method.
 from typing import Optional, Dict, Union, List
 
 from tortoise.exceptions import DoesNotExist
+from tortoise.query_utils import Prefetch
 
-from server.models import Bike
+from server.models import Bike, LocationUpdate
 from server.service import MASTER_KEY
 
 
@@ -22,7 +23,8 @@ class BadKeyError(Exception):
 
 async def get_bikes() -> List[Bike]:
     """Gets all the bikes from the system."""
-    return await Bike.all()
+    bikes = await Bike.all().prefetch_related(Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
+    return bikes
 
 
 async def get_bike(*, identifier: Union[str, bytes] = None,
@@ -36,7 +38,7 @@ async def get_bike(*, identifier: Union[str, bytes] = None,
         kwargs["public_key_hex__startswith"] = identifier.hex() if isinstance(identifier, bytes) else identifier
 
     try:
-        return await Bike.get(**kwargs).first()
+        return await Bike.get(**kwargs).first().prefetch_related(Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
     except DoesNotExist:
         return None
 

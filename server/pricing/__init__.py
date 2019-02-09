@@ -21,6 +21,7 @@ async def get_price(start_date: datetime, end_date: datetime, extra_cost=0.0) ->
 
     price = 0.0
     delta = end_date - start_date
+
     days = delta.days
     hours = delta.seconds / 60 / 60
 

@@ -8,17 +8,19 @@ import asyncio
 import sentry_sdk
 import uvloop
 from aiohttp import web
+from aiohttp_apispec import setup_aiohttp_apispec
 from aiohttp_sentry import SentryMiddleware
 
 from server import server_mode, logger
 from server.config import api_root
 from server.middleware import validate_token_middleware
-from server.service.bike_connection_manager import BikeConnectionManager
-from server.service.rental_manager import RentalManager
+from server.service.manager.bike_connection_manager import BikeConnectionManager
+from server.service.manager.rental_manager import RentalManager
+from server.service.manager.reservation_manager import ReservationManager
 from server.service.verify_token import FirebaseVerifier, DummyVerifier
 from server.signals import register_signals
-from server.version import __version__
-from server.views import register_views, send_to_developer_portal
+from server.version import __version__, name
+from server.views import register_views, redoc, logo
 
 
 def build_app(db_uri=None):
@@ -27,8 +29,9 @@ def build_app(db_uri=None):
     uvloop.install()
 
     # keep a track of all open bike connections
-    app['rental_manager'] = RentalManager()
     app['bike_location_manager'] = BikeConnectionManager()
+    app['rental_manager'] = RentalManager()
+    app['reservation_manager'] = ReservationManager(app['bike_location_manager'], app['rental_manager'])
     app['database_uri'] = db_uri if db_uri is not None else 'sqlite://:memory:'
 
     if server_mode == "development":
@@ -43,7 +46,31 @@ def build_app(db_uri=None):
 
     # register views
     register_views(app, api_root)
-    app.router.add_get("/", send_to_developer_portal)
+    app.router.add_get("/", redoc)
+    app.router.add_get("/logo.svg", logo)
+
+    setup_aiohttp_apispec(
+        app=app, title=name, version=__version__, url=f"{api_root}/docs",
+        servers=[{"url": "http://api.tap2go.co.uk"}],
+        info={"x-logo": {
+            "url": "/logo.svg",
+            "altText": "tap2go logo"
+        }},
+        externalDocs={
+            "description": "Tap2Go Software Docs",
+            "url": "https://tap2go-server.netlify.com/"
+        },
+        components={
+            "securitySchemes": {
+                "FirebaseToken": {
+                    "type": "http",
+                    "description": "A valid firebase token JWT",
+                    "scheme": "bearer",
+                    "bearerFormat": "JWT",
+                }
+            }
+        },
+    )
 
     # set up sentry exception tracking
     if server_mode != "development":

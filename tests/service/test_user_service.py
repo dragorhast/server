@@ -1,7 +1,7 @@
 import pytest
 
 from server.models import User
-from server.service.users import get_users, get_user, create_user, UserExistsError, delete_user, update_user
+from server.service.access.users import get_users, get_user, create_user, UserExistsError, delete_user, update_user
 from tests.conftest import fake
 
 

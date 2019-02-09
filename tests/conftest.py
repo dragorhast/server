@@ -14,8 +14,9 @@ from server.middleware import validate_token_middleware
 from server.models import Bike, User, Rental
 from server.models.pickup_point import PickupPoint
 from server.service import TicketStore
-from server.service.bike_connection_manager import BikeConnectionManager
-from server.service.rental_manager import RentalManager
+from server.service.manager.bike_connection_manager import BikeConnectionManager
+from server.service.manager.rental_manager import RentalManager
+from server.service.manager.reservation_manager import ReservationManager
 from server.service.verify_token import DummyVerifier
 from server.signals import register_signals
 from server.views import register_views
@@ -39,7 +40,9 @@ def random_user_factory(database):
 @pytest.fixture
 def random_bike_factory(database):
     async def create_bike():
-        return await Bike.create(public_key_hex=fake.sha1())
+        bike = await Bike.create(public_key_hex=fake.sha1())
+        bike.updates = []
+        return bike
 
     return create_bike
 
@@ -61,12 +64,16 @@ async def database(loop):
 
 
 @pytest.fixture
-async def client(aiohttp_client, loop, database) -> TestClient:
+async def client(
+    aiohttp_client, loop, database,
+    rental_manager, bike_connection_manager, reservation_manager
+) -> TestClient:
     asyncio.get_event_loop().set_debug(True)
     app = web.Application(middlewares=[validate_token_middleware])
 
-    app['rental_manager'] = RentalManager()
-    app['bike_location_manager'] = BikeConnectionManager()
+    app['rental_manager'] = rental_manager
+    app['bike_location_manager'] = bike_connection_manager
+    app['reservation_manager'] = reservation_manager
     app['token_verifier'] = DummyVerifier()
 
     register_signals(app, init_database=False)  # we get the database from a fixture
@@ -81,13 +88,18 @@ def ticket_store():
 
 
 @pytest.fixture
-def rental_manager():
+def bike_connection_manager(database):
+    return BikeConnectionManager()
+
+
+@pytest.fixture
+def rental_manager(database):
     return RentalManager()
 
 
 @pytest.fixture
-def bike_connection_manager():
-    return BikeConnectionManager()
+def reservation_manager(database, bike_connection_manager, rental_manager) -> ReservationManager:
+    return ReservationManager(bike_connection_manager, rental_manager)
 
 
 @pytest.fixture
@@ -111,6 +123,7 @@ async def random_admin(random_user_factory) -> User:
 async def random_rental(rental_manager, random_bike, random_user) -> Rental:
     """Creates a random rental in the database."""
     rental, location = await rental_manager.create(random_user, random_bike)
+    rental.bike = random_bike
     return rental
 
 

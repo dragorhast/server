@@ -1,7 +1,7 @@
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.fields import Many
 from server.serializer.models import IssueSchema
-from server.service.issues import open_issue
+from server.service.access.issues import open_issue
 
 
 class TestIssuesView:

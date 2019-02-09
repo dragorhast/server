@@ -1,8 +1,10 @@
 from aiohttp import web
 
-from server.config import api_root
 
-
-async def send_to_developer_portal(request):
+async def redoc(request):
     """Sends lost non-api requests to the developer portal."""
-    raise web.HTTPFound(f' http://tap2go-server.netlify.com/lost.html?referrer={request.host}&next={api_root}/bikes')
+    return web.FileResponse("server/static/redoc.html")
+
+
+async def logo(request):
+    return web.FileResponse("server/static/logo.svg")
