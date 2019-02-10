@@ -292,18 +292,18 @@ class BikeRentalsView(BaseView):
                         "url": str(self.request.app.router["me"].url_for(tail="/rentals/current"))
                     }
                 }
-
-        try:
-            rental, start_location = await self.rental_manager.create(user, bike)
-        except ActiveRentalError as e:
-            return "active_rental", {
-                "status": JSendStatus.FAIL,
-                "data": {
-                    "message": "You already have an active rental!",
-                    "rental_id": e.rental_id,
-                    "url": str(self.request.app.router["me"].url_for(tail="/rentals/current"))
+        else:
+            try:
+                rental, start_location = await self.rental_manager.create(user, bike)
+            except ActiveRentalError as e:
+                return "active_rental", {
+                    "status": JSendStatus.FAIL,
+                    "data": {
+                        "message": "You already have an active rental!",
+                        "rental_id": e.rental_id,
+                        "url": str(self.request.app.router["me"].url_for(tail="/rentals/current"))
+                    }
                 }
-            }
 
         return "rental_created", {
             "status": JSendStatus.SUCCESS,

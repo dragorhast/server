@@ -35,8 +35,7 @@ async def current_reservation(user: Union[User, int]) -> Optional[Reservation]:
     is reserved for the future.
     """
     kwargs = {
-        "claimed_rental_id__isnull": True,
-        "reserved_for__gt": datetime.now()
+        "outcome__isnull": True
     }
 
     if isinstance(user, User):
