@@ -26,8 +26,8 @@ env:
     - PIPENV_VENV_IN_PROJECT=1
     - PIPENV_IGNORE_VIRTUALENVS=1
   matrix:
-    - DATABASE_URL="sqlite:///tmp/test.sqlite"
-    - DATABASE_URL="postgres://postgres:@127.0.0.1:5432/test"
+    - DATABASE_URL="spatialite:///tmp/test.sqlite"
+    - DATABASE_URL="postgis://postgres:@127.0.0.1:5432/test"
 
 install:
   - pip install git+https://github.com/pypa/pipenv.git

@@ -49,7 +49,7 @@ def random_bike_factory(database):
 
 @pytest.yield_fixture(scope='function')
 async def database(loop):
-    database_url = os.getenv("DATABASE_URL", "sqlite://:memory:")
+    database_url = os.getenv("DATABASE_URL", "spatialite://:memory:")
 
     await Tortoise.init(
         db_url=database_url,

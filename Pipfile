@@ -29,7 +29,7 @@ aiohttp-sentry = "*"
 # data
 marshmallow = ">=3.0rc1"
 apispec = ">=1.0rc1"
-tortoise-orm = {git = "https://github.com/arlyon/tortoise-orm.git",ref = "gis-experimental"}
+tortoise-orm = {git = "https://github.com/arlyon/tortoise-orm.git",ref = "gis"}
 asyncpg = "*"
 aiosqlite = {git = "https://github.com/jreese/aiosqlite.git",ref = "master"}
 contextvars = "*"

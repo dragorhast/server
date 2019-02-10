@@ -32,7 +32,7 @@ def build_app(db_uri=None):
     app['bike_location_manager'] = BikeConnectionManager()
     app['rental_manager'] = RentalManager()
     app['reservation_manager'] = ReservationManager(app['bike_location_manager'], app['rental_manager'])
-    app['database_uri'] = db_uri if db_uri is not None else 'sqlite://:memory:'
+    app['database_uri'] = db_uri if db_uri is not None else 'spatialite://:memory:'
 
     if server_mode == "development":
         verifier = DummyVerifier()
