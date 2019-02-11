@@ -128,7 +128,7 @@ class ReservationManager:
             raise ReservationError("No bikes at this pickup point.")
 
         if bike is None:
-            bike = random.choice(available_bikes)
+            bike = random.choice(available_bikes)  # nosec - using random.choice here is not a vulnerability
 
         pickup = self._pickup_containing(bike)
         if not pickup or pickup.id != reservation.pickup_point.id:
