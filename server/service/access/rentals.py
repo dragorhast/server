@@ -66,19 +66,16 @@ async def get_rental_with_distance(target: Union[Rental, int] = None) -> Union[
 
     MakeLine_function = "ST_MakeLine" if capabilities.dialect == "postgis" else "MakeLine"
 
-    try:
-        data = await Rental._meta.db.execute_query(f"""
-            select R.*, RU.id AS rentalupdate_id, RU.time, RU.type, ST_Length({MakeLine_function}(LU.location)) AS distance
-            from rental R
-                   inner join locationupdate LU on LU.bike_id = R.bike_id
-                   inner join rentalupdate RU on R.id = RU.rental_id
-            where LU.time <= (select RU.time from rentalupdate RU where RU.type IN ('return', 'cancel') and RU.rental_id = R.id)
-              and LU.time >= (select RU.time from rentalupdate RU where RU.type = 'rent' and RU.rental_id = R.id)
-            group by R.id, RU.id, LU.time
-            order by LU.time;
-        """)
-    except Exception as e:
-        pass
+    data = await Rental._meta.db.execute_query(f"""
+        select R.*, RU.id AS rentalupdate_id, RU.time, RU.type, ST_Length({MakeLine_function}(LU.location)) AS distance
+        from rental R
+               inner join locationupdate LU on LU.bike_id = R.bike_id
+               inner join rentalupdate RU on R.id = RU.rental_id
+        where LU.time <= (select RU.time from rentalupdate RU where RU.type IN ('return', 'cancel') and RU.rental_id = R.id)
+          and LU.time >= (select RU.time from rentalupdate RU where RU.type = 'rent' and RU.rental_id = R.id)
+        group by R.id, RU.id, LU.time
+        order by LU.time;
+    """)
 
     return_values: Dict[int, Tuple[Rental, Optional[float]]] = {}
 

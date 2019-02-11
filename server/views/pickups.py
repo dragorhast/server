@@ -83,11 +83,6 @@ class PickupBikesView(BaseView):
     @docs(summary="Get All Bikes In Pickup Point")
     @returns(JSendSchema.of(bikes=Many(BikeSchema())))
     async def get(self, pickup: PickupPoint):
-        try:
-            bikes = await get_bikes_in_pickup(pickup)
-        except Exception as e:
-            pass
-
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"bikes": [
