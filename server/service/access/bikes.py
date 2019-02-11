@@ -10,10 +10,12 @@ upon actual deployment, will be replaced with a more secure method.
 """
 from typing import Optional, Dict, Union, List
 
+from shapely.wkt import dumps
+from tortoise import BaseTransactionWrapper
 from tortoise.exceptions import DoesNotExist
 from tortoise.query_utils import Prefetch
 
-from server.models import Bike, LocationUpdate
+from server.models import Bike, LocationUpdate, PickupPoint
 from server.service import MASTER_KEY
 
 
@@ -42,6 +44,27 @@ async def get_bike(*, identifier: Union[str, bytes] = None,
             Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
     except DoesNotExist:
         return None
+
+
+async def get_bikes_in_pickup(pickup: PickupPoint):
+    """
+    Retrieves all bikes whose most recent location is inside a given pickup point..
+
+    .. note:: Works with both Postgres and Sqlite"""
+
+    capabilities = PickupPoint._meta.db._old_context_value.capabilities \
+        if isinstance(PickupPoint._meta.db, BaseTransactionWrapper) \
+        else PickupPoint._meta.db.capabilities
+
+    return [
+        Bike(**row) for row in await Bike._meta.db.execute_query(f"""
+            select B.* from bike B
+                inner join locationupdate L on B.id = L.bike_id
+            where ST_Within(L.location, ST_GeomFromText('{dumps(pickup.area)}', {PickupPoint.area.srid}))
+            group by B.id, L.time
+            order by L.time
+        """)
+    ]
 
 
 async def register_bike(public_key: Union[str, bytes], master_key: Union[str, bytes]) -> Bike:

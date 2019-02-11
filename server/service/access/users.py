@@ -51,7 +51,7 @@ async def create_user(first: str, email: str, firebase_id: str) -> User:
         errors = {}
         for error in error.args:
             for message in error.args:
-                if "UNIQUE" in message:
+                if "unique" in message.lower():
                     field = message.split('.')[-1]
                     errors[field] = f"User with that item already exists!"
 

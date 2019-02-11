@@ -16,6 +16,7 @@ from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import returns, expects
 from server.serializer.fields import Many
 from server.serializer.models import PickupPointSchema, BikeSchema, ReservationSchema, CreateReservationSchema
+from server.service.access.bikes import get_bikes_in_pickup
 from server.service.access.pickup_points import get_pickup_points, get_pickup_point
 from server.service.access.reservations import get_reservations
 from server.service.access.users import get_user
@@ -82,11 +83,16 @@ class PickupBikesView(BaseView):
     @docs(summary="Get All Bikes In Pickup Point")
     @returns(JSendSchema.of(bikes=Many(BikeSchema())))
     async def get(self, pickup: PickupPoint):
+        try:
+            bikes = await get_bikes_in_pickup(pickup)
+        except Exception as e:
+            pass
+
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"bikes": [
                 bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager) for bike in
-                await pickup.bikes()
+                await get_bikes_in_pickup(pickup)
             ]}
         }
 

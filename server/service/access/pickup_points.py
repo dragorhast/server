@@ -27,5 +27,9 @@ async def get_pickup_point(pickup_id: int):
     return await PickupPoint.filter(id=pickup_id).first()
 
 
-async def get_pickup_at(point: Point) -> Optional[PickupPoint]:
-    return await PickupPoint.filter(Within(point, PickupPoint.area)).first()
+async def get_pickup_at(point: Point, srid=None) -> Optional[PickupPoint]:
+    point_srid = PickupPoint.area.srid if srid is None else srid
+    return await PickupPoint.filter(Within(
+        point, PickupPoint.area,
+        g1_srid=point_srid, g2_srid=PickupPoint.area.srid
+    )).first()

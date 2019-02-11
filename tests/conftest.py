@@ -1,5 +1,6 @@
 import asyncio
 import os
+from datetime import datetime
 
 import pytest
 from aiohttp import web
@@ -8,6 +9,7 @@ from faker import Faker
 from faker.providers import address, internet, misc
 from shapely.geometry import Polygon
 from tortoise import Tortoise
+from tortoise.exceptions import OperationalError
 from tortoise.transactions import start_transaction
 
 from server.middleware import validate_token_middleware
@@ -47,30 +49,65 @@ def random_bike_factory(database):
     return create_bike
 
 
-@pytest.fixture
-async def database(loop):
-    """todo very slow. can speed up by not re-building db every time"""
-    database_url = os.getenv("DATABASE_URL", "spatialite://:memory:")
+@pytest.fixture(scope="session")
+def database_url():
+    return os.getenv("DATABASE_URL", "spatialite://:memory:")
 
+
+async def init_db(database_url):
+    try:
+        await Tortoise.init(
+            db_url=database_url,
+            modules={'models': ['server.models']},
+            _create_db=True
+        )
+    except OperationalError:
+        # database already exists, drop it and rebuild
+        await Tortoise.init(
+            db_url=database_url,
+            modules={'models': ['server.models']}
+        )
+        await Tortoise._drop_databases()
+        await Tortoise.init(
+            db_url=database_url,
+            modules={'models': ['server.models']},
+            _create_db=True
+        )
+
+    await Tortoise.generate_schemas(safe=True)
+    await Tortoise.close_connections()
+
+
+@pytest.fixture(scope="session")
+def _database(database_url):
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(init_db(database_url))
+
+
+@pytest.fixture
+async def database(_database, loop, database_url):
+    start = datetime.now()
     await Tortoise.init(
         db_url=database_url,
         modules={'models': ['server.models']},
-        _create_db=True
     )
 
-    await Tortoise.generate_schemas()
+    if database_url.endswith(":memory:"):
+        await Tortoise.generate_schemas(safe=True)
+
+    init = datetime.now()
     transaction = await start_transaction()
-
     yield
-
     await transaction.rollback()
-    await Tortoise._drop_databases()
     await Tortoise.close_connections()
+
+    print(f"Start: {start}")
+    print(f"Init: {init} ({init - start})")
 
 
 @pytest.fixture
 async def client(
-    aiohttp_client, loop, database,
+    aiohttp_client, database,
     rental_manager, bike_connection_manager, reservation_manager
 ) -> TestClient:
     asyncio.get_event_loop().set_debug(True)

@@ -5,6 +5,8 @@ Rentals
 
 from typing import Union, Optional, Tuple, List, Dict
 
+from tortoise import BaseTransactionWrapper
+
 from server.models import Bike, Rental, RentalUpdate, User
 
 
@@ -47,7 +49,7 @@ async def get_rental_with_distance(target: Union[Rental, int] = None) -> Union[
     :param target: If supplied, limits the query to one rental.
     :returns: All the rentals with their distance and rental events included.
 
-    ..note:: Currently only works with SQLite
+    .. note:: Works with both PostGIS and Spatialite
 
     ..todo:: If any bike has no location updates, it will not be included
     ..todo:: Does not include bike
@@ -58,17 +60,25 @@ async def get_rental_with_distance(target: Union[Rental, int] = None) -> Union[
     else:
         rental_id = target
 
-    data = await Rental._meta.db.execute_query(f"""
-        select R.*, RU.id 'rentalupdate_id', RU.time, RU.type, ST_Length(MakeLine(LU.location)) as 'distance'
-        from rental R
-            inner join locationupdate LU on LU.bike_id = R.bike_id
-            inner join rentalupdate RU on R.id = RU.rental_id
-        where LU.time <= (select RU.time from rentalupdate RU where RU.type IN ('return', 'cancel') and RU.rental_id = R.id)
-          and LU.time >= (select RU.time from rentalupdate RU where RU.type = 'rent' and RU.rental_id = R.id)
-          {("and R.id = " + str(rental_id)) if rental_id is not None else ""}
-        group by R.id, RU.id
-        order by LU.time;
-    """)
+    capabilities = Rental._meta.db._old_context_value.capabilities \
+        if isinstance(Rental._meta.db, BaseTransactionWrapper) \
+        else Rental._meta.db.capabilities
+
+    MakeLine_function = "ST_MakeLine" if capabilities.dialect == "postgis" else "MakeLine"
+
+    try:
+        data = await Rental._meta.db.execute_query(f"""
+            select R.*, RU.id AS rentalupdate_id, RU.time, RU.type, ST_Length({MakeLine_function}(LU.location)) AS distance
+            from rental R
+                   inner join locationupdate LU on LU.bike_id = R.bike_id
+                   inner join rentalupdate RU on R.id = RU.rental_id
+            where LU.time <= (select RU.time from rentalupdate RU where RU.type IN ('return', 'cancel') and RU.rental_id = R.id)
+              and LU.time >= (select RU.time from rentalupdate RU where RU.type = 'rent' and RU.rental_id = R.id)
+            group by R.id, RU.id, LU.time
+            order by LU.time;
+        """)
+    except Exception as e:
+        pass
 
     return_values: Dict[int, Tuple[Rental, Optional[float]]] = {}
 

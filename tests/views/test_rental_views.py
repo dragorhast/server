@@ -30,6 +30,7 @@ class TestRentalView:
         response = await client.get(f'/api/v1/rentals/{rental.id}',
                                     headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
         response_schema = JSendSchema.of(rental=RentalSchema())
+        print(await response.text())
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["rental"]["id"] == rental.id

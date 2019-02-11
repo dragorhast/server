@@ -769,13 +769,13 @@
         },
         "tornado": {
             "hashes": [
-                "sha256:00ebd485a52bd7eaa3f35bdf8ab43c109aaa2edc722849b6905c1ffd8c958e82"
+                "sha256:d3b719a0cb7094e2b1ca94b31f4b601639fa7ad01a548a1a2ccdd6cbdfd56671"
             ],
-            "version": "==6.0a1"
+            "version": "==6.0b1"
         },
         "tortoise-orm": {
             "git": "https://github.com/arlyon/tortoise-orm.git",
-            "ref": "8a6ce89e9025dbdc543e9c100388975be3232b06"
+            "ref": "193fd4c6db8abb04d14800adff5a503c7d4f609d"
         },
         "tzlocal": {
             "hashes": [

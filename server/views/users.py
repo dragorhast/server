@@ -57,7 +57,7 @@ class UsersView(BaseView):
         try:
             user = await create_user(**self.request["data"], firebase_id=self.request["token"])
         except UserExistsError:
-            user = await User.get(firebase_id=self.request["token"])
+            user = await get_user(firebase_id=self.request["token"])
             user = await update_user(user, **self.request["data"])
 
         return {

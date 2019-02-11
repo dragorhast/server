@@ -1,3 +1,4 @@
+from datetime import timezone
 from enum import Enum
 
 from tortoise import Model, fields
@@ -16,9 +17,9 @@ class Reservation(Model):
     user = fields.ForeignKeyField("models.User", related_name="reservations")
     pickup_point = fields.ForeignKeyField("models.PickupPoint", related_name="reservations")
     claimed_rental = fields.ForeignKeyField("models.Rental", related_name="rentals", null=True)
-    made_at = fields.DatetimeField(auto_now_add=True)
-    reserved_for = fields.DatetimeField()
-    ended_at = fields.DatetimeField(null=True)
+    made_at = fields.DatetimeField(auto_now_add=True, in_timezone=timezone.utc)
+    reserved_for = fields.DatetimeField(in_timezone=timezone.utc)
+    ended_at = fields.DatetimeField(null=True, in_timezone=timezone.utc)
     outcome = EnumField(ReservationOutcome, null=True)
 
     def serialize(self, router):

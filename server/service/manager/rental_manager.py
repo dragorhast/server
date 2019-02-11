@@ -104,7 +104,8 @@ class RentalManager:
 
     async def active_rentals(self) -> List[Rental]:
         """Gets all the active rentals."""
-        return await Rental.filter(id__in=self._active_rentals.keys()).prefetch_related('updates', 'bike')
+        active_rental_ids = [rental_id for rental_id, bike_id in self._active_rentals.values()]
+        return await Rental.filter(id__in=active_rental_ids).prefetch_related('updates', 'bike')
 
     async def active_rental(self, user: Union[User, int], *, with_locations=False) -> Union[Rental, Tuple]:
         """Gets the active rental for a given user."""
@@ -157,9 +158,16 @@ class RentalManager:
 
     async def get_available_bikes(self, bike_ids: List[int]) -> List[Bike]:
         """Given a list of bike ids, checks if they are free or not and returns the ones that are free."""
-        rental_ids = (rental_id for rental_id, bike_id in self._active_rentals.values())
-        return await Bike.filter(rentals__id__not_in=rental_ids, id__in=bike_ids) \
-            .prefetch_related(Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
+        rental_ids = [rental_id for rental_id, bike_id in self._active_rentals.values()]
+        if not bike_ids:
+            return []
+
+        query = Bike.filter(id__in=bike_ids)
+
+        if rental_ids:
+            query = query.filter(rentals__id__not_in=rental_ids)
+
+        return await query.prefetch_related(Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
 
     async def rebuild(self):
         """
