@@ -47,19 +47,24 @@ def random_bike_factory(database):
     return create_bike
 
 
-@pytest.yield_fixture(scope='function')
+@pytest.fixture
 async def database(loop):
+    """todo very slow. can speed up by not re-building db every time"""
     database_url = os.getenv("DATABASE_URL", "spatialite://:memory:")
 
     await Tortoise.init(
         db_url=database_url,
-        modules={'models': ['server.models']})
+        modules={'models': ['server.models']},
+        _create_db=True
+    )
+
     await Tortoise.generate_schemas()
     transaction = await start_transaction()
 
     yield
 
     await transaction.rollback()
+    await Tortoise._drop_databases()
     await Tortoise.close_connections()
 
 
