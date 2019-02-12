@@ -28,7 +28,8 @@ async def validate_token_middleware(request: Request, handler):
                 "status": JSendStatus.FAIL,
                 "data": {
                     "message": "Supplied authorization token is invalid.",
-                    "errors": error.args
+                    "errors": [error.message],
+                    "token": error.token
                 }
             }))
 

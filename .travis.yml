@@ -1,31 +1,47 @@
+dist: xenial
 language: python
 python:
   - 3.6
+
+services:
+  - postgresql
+
+addons:
+  postgresql: 9.6
+  apt:
+    packages:
+    - postgresql-9.6-postgis-2.4
+    - libspatialite-dev
+    - libsqlite3-mod-spatialite
 
 cache:
   directories:
     - $PIP_CACHE_DIR
     - $PIPENV_CACHE_DIR
+
 env:
   global:
     - PIP_CACHE_DIR=$HOME/.cache/pip
     - PIPENV_CACHE_DIR=$HOME/.cache/pipenv
     - PIPENV_VENV_IN_PROJECT=1
     - PIPENV_IGNORE_VIRTUALENVS=1
+  matrix:
+    - DATABASE_URL="spatialite:///tmp/test.sqlite"
+    - DATABASE_URL="postgis://postgres:@127.0.0.1:5432/test"
 
 install:
   - pip install git+https://github.com/pypa/pipenv.git
   - pipenv install --dev --three
+
+before_script: ./db-setup.sh
+script: pipenv run test
+after_success: pipenv run codecov
 
 jobs:
   include:
     - stage: test
       name: PyLint
       script: pipenv run pylint server; true
-    - stage: test
-      name: Test Runner
-      script: pipenv run test
-      after_success: pipenv run codecov
     - stage: test
       name: Type Analysis
       script: pipenv run mypy server; true

@@ -4,45 +4,49 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest = "==4.*"
+pytest = ">=4.0"
 pytest-cov = "*"
-pytest-aiohttp = "*"
+faker = "*"
 codecov = "*"
 pylint = "*"
 mypy = "*"
 safety = "*"
 bandit = "*"
+pytest-mock = "*"
 
 [packages]
 # aiohttp
-aiohttp = "==3.*"
+aiohttp = ">=3.0"
+aiohttp-cors = "*"
 idna-ssl = "*"
 gunicorn = "*"
-aiohttp-cors = "*"
+aiohttp-apispec = {git = "https://github.com/arlyon/aiohttp-apispec.git",ref = "master"}
 #uvloop
-cython = "*"
-uvloop = ">=0.12rc1"
+uvloop = ">=0.12"
 #sentry
 sentry-sdk = "*"
 aiohttp-sentry = "*"
 # data
-marshmallow = ">=3rc1"
-marshmallow-jsonschema = "*"
-tortoise-orm = "*"
+marshmallow = ">=3.0rc1"
+apispec = ">=1.0rc1"
+tortoise-orm = {git = "https://github.com/arlyon/tortoise-orm.git",ref = "gis"}
 asyncpg = "*"
-aiosqlite = "*"
+aiosqlite = {git = "https://github.com/jreese/aiosqlite.git",ref = "master"}
 contextvars = "*"
+shapely = {extras = ["vectorized"],version = "*"}
 # docs
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
-sphinxcontrib-mermaid = "*"
 sphinx-autodoc-typehints = "*"
+sphinxcontrib-mermaid = {git = "https://github.com/mgaitan/sphinxcontrib-mermaid.git",ref = "master"}
 # misc
 hyperion-cli = "*"
-pynacl = "*"
 aiobreaker = "*"
+dateparser = "*"
+pynacl = "*"
 python-jose = "*"
+cryptography = "*"
 
 [requires]
 python_version = "3.6"

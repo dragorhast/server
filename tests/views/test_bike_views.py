@@ -1,27 +1,33 @@
-from datetime import datetime
+from datetime import timedelta, datetime, timezone
 
 from aiohttp.test_utils import TestClient
+from marshmallow.fields import Dict, Nested, List
 
+from server.models import Issue
 from server.models.bike import Bike
 from server.models.util import BikeType
-from server.serializer import BikeSchema, RentalSchema
+from server.serializer.fields import Many, BytesField
 from server.serializer.jsend import JSendStatus, JSendSchema
+from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
 from server.service import MASTER_KEY
-from server.views.bikes import BikeRegisterSchema, MasterKeySchema
+from server.service.access.issues import open_issue
+from server.serializer.misc import MasterKeySchema, BikeRegisterSchema
 from tests.util import random_key
 
 
 class TestBikesView:
 
-    async def test_get_bikes(self, client: TestClient):
+    async def test_get_bikes(self, client: TestClient, random_bike):
         """Assert that anyone can get the entire list of bikes."""
         resp = await client.get('/api/v1/bikes')
 
-        schema = JSendSchema.of(BikeSchema(many=True))
+        schema = JSendSchema.of(bikes=Many(BikeSchema()))
         data = schema.load(await resp.json())
 
         assert data["status"] == JSendStatus.SUCCESS
-        assert isinstance(data["data"], list)
+        assert isinstance(data["data"]["bikes"], list)
+        assert len(data["data"]["bikes"]) == 1
+        assert data["data"]["bikes"][0]["identifier"] == random_bike.identifier
 
     async def test_register_bike(self, client: TestClient):
         """Assert that a bike can register itself with the system."""
@@ -35,7 +41,7 @@ class TestBikesView:
         request_json = request_schema.dump(request_data)
 
         response = await client.post('/api/v1/bikes', json=request_json)
-        response_schema = JSendSchema.of(BikeSchema())
+        response_schema = JSendSchema.of(bike=BikeSchema())
 
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
@@ -89,27 +95,66 @@ class TestBikesView:
         assert resp.status == 400
 
 
+class TestBrokenBikesView:
+
+    async def test_get_broken_bikes(self, client: TestClient, random_admin, random_bike):
+        """Assert that an admin can get broken bikes from the system."""
+        await open_issue(random_admin, "This is broken", random_bike)
+
+        response = await client.get(f"/api/v1/bikes/broken",
+                                    headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
+        text = await response.text()
+        response_data = JSendSchema.of(
+            identifiers=List(BytesField(as_string=True)),
+            bikes=Dict(keys=BytesField(as_string=True), values=Nested(BikeSchema())),
+            issues=Dict(keys=BytesField(as_string=True), values=Many(IssueSchema()))
+        ).load(await response.json())
+
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert set(response_data["data"]["identifiers"]) == set(response_data["data"]["bikes"].keys())
+
+
+class TestLowBikesView:
+
+    async def test_get_low_bikes(self, client, random_bike_factory, random_admin, bike_connection_manager):
+        """Assert that the system can retrieve all bikes with less than 30% battery."""
+        bike_connection_manager.is_connected = lambda x: True
+        bike_connection_manager.is_locked = lambda x: True
+        bike_connection_manager.most_recent_location = lambda x: None
+
+        bike1 = await random_bike_factory()
+        bike2 = await random_bike_factory()
+
+        bike_connection_manager.update_battery(bike1.id, 10)
+        bike_connection_manager.update_battery(bike2.id, 40)
+
+        response = await client.get("/api/v1/bikes/low", headers={"Authoization": f"Bearer {random_admin.firebase_id}"})
+        response_data = JSendSchema().load(await response.json())
+        assert len(response_data["data"]["bikes"]) == 1
+        assert response_data["status"] == JSendStatus.SUCCESS
+
+
 class TestBikeView:
 
     async def test_get_bike(self, client: TestClient, random_bike):
         """Assert that you can get the data of a single bike."""
 
-        resp = await client.get(f'/api/v1/bikes/{random_bike.id}')
+        resp = await client.get(f'/api/v1/bikes/{random_bike.identifier}')
 
-        schema = JSendSchema.of(BikeSchema())
+        schema = JSendSchema.of(bike=BikeSchema())
         data = schema.load(await resp.json())
 
-        assert data["data"]["public_key"] == random_bike.public_key
+        assert data["data"]["bike"]["identifier"] == random_bike.identifier
 
     async def test_get_bike_missing(self, client: TestClient):
         """Assert that getting a non-existent bike causes a failure."""
 
-        response = await client.get(f'/api/v1/bikes/1')
+        response = await client.get(f'/api/v1/bikes/ababab')
         response_schema = JSendSchema()
         data = response_schema.load(await response.json())
 
         assert data["status"] == JSendStatus.FAIL
-        assert "No such resource" in data["data"]["id"]
+        assert "Could not find" in data["data"]["message"]
 
     async def test_delete_bike(self, client: TestClient, random_bike):
         """Assert that you can delete bikes with a valid master key."""
@@ -119,7 +164,7 @@ class TestBikeView:
             "master_key": MASTER_KEY
         })
 
-        response = await client.delete(f'/api/v1/bikes/{random_bike.id}', json=request_data)
+        response = await client.delete(f'/api/v1/bikes/{random_bike.identifier}', json=request_data)
 
         assert response.status == 204
         assert await Bike.filter(id=random_bike.id).first() is None
@@ -134,7 +179,7 @@ class TestBikeView:
             "master_key": "abcd"
         })
 
-        response = await client.delete(f'/api/v1/bikes/{random_bike.id}', json=request_data)
+        response = await client.delete(f'/api/v1/bikes/{random_bike.identifier}', json=request_data)
         response_data = response_schema.load(await response.json())
 
         assert response_data["status"] == JSendStatus.FAIL
@@ -143,48 +188,99 @@ class TestBikeView:
 
 class TestBikeRentalsView:
 
-    async def test_get_bike_rentals(self, client: TestClient, random_bike):
+    async def test_get_bike_rentals(self, client: TestClient, random_bike, random_admin):
         """Assert that you can get the rentals for a given bike."""
 
-        response = await client.get(f'/api/v1/bikes/1/rentals')
-        response_schema = JSendSchema.of(RentalSchema(many=True))
+        response = await client.get(f'/api/v1/bikes/{random_bike.identifier}/rentals',
+                                    headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
+        response_schema = JSendSchema.of(rentals=Many(RentalSchema()))
         response_data = response_schema.load(await response.json())
 
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert isinstance(response_data["data"], list)
+        assert isinstance(response_data["data"]["rentals"], list)
 
     async def test_create_bike_rental(self, client: TestClient, random_user, random_bike):
         """Assert that you can create a rental."""
         response = await client.post(
-            f'/api/v1/bikes/{random_bike.id}/rentals',
+            f'/api/v1/bikes/{random_bike.identifier}/rentals',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
-        response_data = JSendSchema.of(RentalSchema()).load(await response.json())
+
+        response_data = JSendSchema.of(rental=CurrentRentalSchema()).load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert "price" not in response_data["data"]
-        assert response_data["data"]["bike_id"] == random_bike.id
-        assert response_data["data"]["user_id"] == random_user.id
-        assert response_data["data"]["start_time"] < datetime.now()
+        assert "price" not in response_data["data"]["rental"]
+        assert response_data["data"]["rental"]["bike_identifier"] == random_bike.identifier
+        assert response_data["data"]["rental"]["user_id"] == random_user.id
+
+    async def test_create_bike_rental_from_reservation(self, client, random_user, random_bike, reservation_manager,
+                                                       random_pickup_point, bike_connection_manager):
+        """
+        Assert that a user can initiate a rental from the same pickup point as their current reservation.
+        """
+        await bike_connection_manager.update_location(random_bike, random_pickup_point.area.centroid)
+        reservation_manager.pickup_points.add(random_pickup_point)
+        await reservation_manager.reserve(random_user, random_pickup_point, datetime.now(timezone.utc) + timedelta(minutes=10))
+
+        assert len(reservation_manager.reservations[random_pickup_point.id]) == 1
+
+        response = await client.post(f"/api/v1/bikes/{random_bike.identifier}/rentals",
+                                     headers={"Authorization": f"Bearer {random_user.firebase_id}"})
+
+        response_data = await response.text()
+
+        assert len(reservation_manager.reservations[random_pickup_point.id]) == 0
 
     async def test_create_bike_rental_missing_user(self, client: TestClient, random_bike):
         """Assert that creating a rental with a non existing user (but valid firebase key) gives a descriptive error."""
-        response = await client.post(f'/api/v1/bikes/{random_bike.id}/rentals', headers={"Authorization": "Bearer ab"})
+        response = await client.post(f'/api/v1/bikes/{random_bike.identifier}/rentals',
+                                     headers={"Authorization": "Bearer ab"})
 
         response_schema = JSendSchema()
         response_data = response_schema.load(await response.json())
 
         assert response_data["status"] == JSendStatus.FAIL
-        assert "No such user exists" in response_data["data"]["message"]
+        assert "Could not find" in response_data["data"]["message"]
+
+    async def test_create_bike_rental_bike_in_use(self, client, random_user, random_bike):
+        """Assert that trying to create a bike rental with one already active fails."""
+        await client.app["rental_manager"].create(random_user, random_bike)
+        response = await client.post(
+            f'/api/v1/bikes/{random_bike.identifier}/rentals',
+            headers={"Authorization": f"Bearer {random_user.firebase_id}"}
+        )
+
+        response_data = JSendSchema().load(await response.json())
+        assert response_data["status"] == JSendStatus.FAIL
+        assert "bike is in use" in response_data["data"]["message"]
+
+    async def test_create_bike_rental_user_has_rental(self, client, random_user, random_bike_factory):
+        """Assert that creating a bike rental with one active """
+        bike_1 = await random_bike_factory()
+        bike_2 = await random_bike_factory()
+
+        await client.app["rental_manager"].create(random_user, bike_1)
+        response = await client.post(f"/api/v1/bikes/{bike_2.identifier}/rentals",
+                                     headers={"Authorization": f"Bearer {random_user.firebase_id}"})
+        response_data = JSendSchema().load(await response.json())
+        assert response_data["status"] == JSendStatus.FAIL
+        assert "already have an active" in response_data["data"]["message"]
 
     async def test_create_bike_rental_invalid_key(self, client: TestClient, random_bike):
         """Assert that creating a rental with an invalid firebase key fails."""
-
         response_schema = JSendSchema()
-
-        client: TestClient = client
-
-        response = await client.post(f'/api/v1/bikes/{random_bike.id}/rentals',
+        response = await client.post(f'/api/v1/bikes/{random_bike.identifier}/rentals',
                                      headers={"Authorization": "Bearer invalid"})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
         assert any("Not a valid hex string." == error for error in response_data["data"]["errors"])
+
+
+class TestBikeIssuesView:
+
+    async def test_get_issues_for_bike(self, client, random_admin, random_bike):
+        await Issue.create(user=random_admin, bike=random_bike, description="OMG AWFUL")
+        response = await client.get(f"/api/v1/bikes/{random_bike.identifier}/issues", headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
+        response_data = JSendSchema.of(issues=Many(IssueSchema())).load(await response.json())
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert "issues" in response_data["data"]
+        assert all(issue["bike_identifier"] == random_bike.identifier for issue in response_data["data"]["issues"])

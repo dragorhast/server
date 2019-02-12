@@ -17,6 +17,9 @@ class User(Model):
     first = fields.CharField(max_length=255)
     email = fields.CharField(max_length=255, unique=True)
 
+    is_admin: bool = fields.BooleanField(default=False)
+    stripe_id = fields
+
     def serialize(self):
         return {
             "firebase_id": self.firebase_id,

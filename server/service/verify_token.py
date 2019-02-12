@@ -1,31 +1,39 @@
 """
 Verify Token
 ------------
-"""
 
+A number of API token verification strategies.
+"""
+import asyncio
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import Dict
 
 from aiohttp import ClientSession
-from jose.jwt import decode
+from aiohttp.web_request import Request
+from jose import jwt, ExpiredSignatureError, JWTError
 
 
 class TokenVerificationError(Exception):
-    pass
+    def __init__(self, message, auth_header=None):
+        self.message = message
+        self.token = auth_header
 
 
 class TokenVerifier(ABC):
 
     @abstractmethod
     def verify_token(self, token):
-        pass
+        """
+        Given a token, verifies it, returning the valid token or a token verification error.
+
+        :raises TokenVerificationError: When the provided token is invalid.
+        """
 
 
 class FirebaseVerifier(TokenVerifier):
     """
     Verifies a firebase token.
-
-    .. todo:: implement
     """
 
     _public_key_url = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
@@ -35,24 +43,40 @@ class FirebaseVerifier(TokenVerifier):
         self._certificates = {}
         self.audience = audience
 
-    async def get_key(self):
+    async def _get_keys(self):
         async with ClientSession() as session:
             request = await session.get(self._public_key_url)
             self._certificates = await request.json()
 
-    def verify_token(self, token):
+    async def get_keys(self, update_period: timedelta = None):
+        if update_period is None:
+            await self._get_keys()
+            return
+        while True:
+            await self._get_keys()
+            await asyncio.sleep(update_period.total_seconds())
+
+    def verify_token(self, token, verify_exp=True):
         if not self._certificates:
-            raise Exception
+            raise TokenVerificationError("Server does not possess the verification certificates.", token)
 
-        claims = decode(
-            token,
-            next(self._certificates.keys()),
-            algorithms=['RS256'],
-            audience=self.audience,
-            issuer=f"https://securetoken.google.com/{self.audience}"
-        )
+        if not isinstance(token, str):
+            raise TypeError(f"Token must be of type string, not {type(token)}")
 
-        return claims.get("sub")
+        try:
+            claims = jwt.decode(
+                token,
+                self._certificates,
+                algorithms='RS256',
+                audience=self.audience,
+                options={'verify_exp': verify_exp}
+            )
+        except ExpiredSignatureError as e:
+            raise TokenVerificationError("Token is expired.", token) from e
+        except JWTError as e:
+            raise TokenVerificationError("Token is invalid.", token) from e
+
+        return claims.get("user_id")
 
 
 class DummyVerifier(TokenVerifier):
@@ -60,16 +84,16 @@ class DummyVerifier(TokenVerifier):
     Verifies a dummy token.
     """
 
-    def verify_token(self, token) -> str:
+    def verify_token(self, token: str) -> str:
         try:
             bytes.fromhex(token)
-        except ValueError:
-            raise TokenVerificationError("Not a valid hex string.")
+        except (ValueError, TypeError):
+            raise TokenVerificationError("Not a valid hex string.", token)
 
         return token
 
 
-def verify_token(request):
+def verify_token(request: Request):
     """
     Checks a view for the existence of a valid Authorization header.
 
@@ -78,16 +102,13 @@ def verify_token(request):
     :raises TokenVerificationError: When the Authorize header is invalid.
     """
     if "Authorization" not in request.headers:
-        raise TokenVerificationError("You must supply your firebase token.")
+        raise TokenVerificationError("The Authorization header was not included.")
 
-    if not request.headers["Authorization"].startswith("Bearer "):
-        raise TokenVerificationError("The Authorization header must be of the format \"Bearer $TOKEN\".")
+    auth_header = request.headers["Authorization"]
+    if not auth_header.startswith("Bearer "):
+        raise TokenVerificationError("The Authorization header must be of the format \"Bearer $TOKEN\".", auth_header)
 
     try:
-        return verifier.verify_token(request.headers["Authorization"][7:])
+        return request.app["token_verifier"].verify_token(request.headers["Authorization"][7:])
     except TokenVerificationError as error:
         raise error
-
-
-# verifier = FirebaseVerifier("dragorhast-420")
-verifier = DummyVerifier()

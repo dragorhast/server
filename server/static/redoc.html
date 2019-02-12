@@ -1,0 +1,43 @@
+<html>
+<head>
+    <title>tap2go Interactive Documentation</title>
+    <meta charset="utf8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        img {
+            padding: 2em;
+        }
+    </style>
+</head>
+<body>
+    <redoc></redoc>
+    <script src="https://cdn.jsdelivr.net/npm/redoc/bundles/redoc.standalone.js"></script>
+    <script>
+        const font = "-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol";
+        Redoc.init("/api/v1/docs", {
+            theme: {
+                typography: {
+                    fontFamily: font,
+                    headings: {
+                        fontFamily: font,
+                        fontWeight: 600
+                    },
+                    code: {
+                        fontFamily: "Fira Code",
+                    }
+                },
+                colors: {
+                    primary: {
+                        main: "black"
+                    }
+                }
+            }
+        })
+    </script>
+</body>
+</html>

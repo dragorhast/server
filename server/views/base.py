@@ -8,10 +8,13 @@ required in all other views.
 
 from typing import Optional
 
-from aiohttp.web import View, UrlDispatcher, AbstractRoute
+from aiohttp.abc import Application
+from aiohttp.web import View, AbstractRoute
 from aiohttp_cors import CorsConfig, CorsViewMixin, ResourceOptions
 
-from server.permissions import Permission
+from server.service.manager.bike_connection_manager import BikeConnectionManager
+from server.service.manager.rental_manager import RentalManager
+from server.service.manager.reservation_manager import ReservationManager
 
 
 class ViewConfigurationError(Exception):
@@ -28,8 +31,10 @@ class BaseView(View, CorsViewMixin):
 
     url: str
     name: Optional[str]
-    permissions: Optional[Permission]
     route: AbstractRoute
+    rental_manager: RentalManager
+    bike_connection_manager: BikeConnectionManager
+    reservation_manager: ReservationManager
 
     cors_config = {
         "*": ResourceOptions(
@@ -39,7 +44,7 @@ class BaseView(View, CorsViewMixin):
     }
 
     @classmethod
-    def register_route(cls, router: UrlDispatcher, base: Optional[str] = None):
+    def register_route(cls, app: Application, base: Optional[str] = None):
         """
         Registers the view with the given router.
 
@@ -55,7 +60,10 @@ class BaseView(View, CorsViewMixin):
         if name is not None:
             kwargs["name"] = name
 
-        cls.route = router.add_view(url, cls, **kwargs)
+        cls.route = app.router.add_view(url, cls, **kwargs)
+        cls.rental_manager = app["rental_manager"]
+        cls.bike_connection_manager = app["bike_location_manager"]
+        cls.reservation_manager = app["reservation_manager"]
 
     @classmethod
     def enable_cors(cls, cors: CorsConfig):

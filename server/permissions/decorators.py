@@ -3,28 +3,28 @@ Decorators
 ----------
 """
 
-
 from functools import wraps
 from http import HTTPStatus
-from typing import List
 
 from aiohttp import web
 from aiohttp.web_urldispatcher import View
+from aiohttp_apispec.decorators import default_apispec
 
-from server.permissions import Permission
+from server.permissions.permission import RoutePermissionError, Permission
 from server.serializer import JSendSchema, JSendStatus
 
 
-def flatten(permission_error) -> List[str]:
-    elements: List[str] = []
+def add_apispec_permission(original_function, new_func, permission):
+    """Set up the apispec documentation on the new function"""
+    if hasattr(original_function, "__apispec__"):
+        new_func.__apispec__ = original_function.__apispec__
+    else:
+        new_func.__apispec__ = default_apispec()
 
-    for arg in permission_error.args:
-        if isinstance(arg, PermissionError):
-            elements += flatten(arg)
-        else:
-            elements.append(arg)
+    if "security" not in new_func.__apispec__:
+        new_func.__apispec__["security"] = []
 
-    return elements
+    new_func.__apispec__["security"].extend(permission.openapi_security)
 
 
 def requires(permission: Permission):
@@ -37,24 +37,24 @@ def requires(permission: Permission):
 
         @wraps(original_function)
         async def new_func(self: View, **kwargs):
-            errors: List[str] = []
-
+            """Checks the given request against the supplied permission and gracefully fails."""
             try:
                 await permission(self, **kwargs)
-            except PermissionError as error:
-                errors += flatten(error)
-
-            if errors:
+            except RoutePermissionError as error:
                 response_schema = JSendSchema()
                 return web.json_response(response_schema.dump({
                     "status": JSendStatus.FAIL,
                     "data": {
-                        "message": "You do not have all the required permissions.",
-                        "authorization": errors
+                        "message": f"You cannot do that because because {str(error)}.",
+                        "reasons": error.serialize()
                     }
                 }), status=HTTPStatus.UNAUTHORIZED)
+            except Exception as error:
+                raise type(error)(original_function, *error.args) from error
 
             return await original_function(self, **kwargs)
+
+        add_apispec_permission(original_function, new_func, permission)
 
         return new_func
 

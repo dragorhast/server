@@ -4,11 +4,12 @@ Creates and registers multiple fake bikes with the server. Connections are autom
 .. note:: The public keys must be registered with the server.
 """
 from asyncio import get_event_loop, sleep, gather
-from datetime import timedelta
+from json import JSONDecodeError
 
 import aiohttp
 from aiobreaker import CircuitBreaker, CircuitBreakerError
-from aiohttp import ClientSession, ClientConnectorError
+from aiohttp import ClientSession, ClientConnectorError, WSMessage
+from datetime import timedelta
 from nacl.encoding import RawEncoder
 
 from fakebike import logger
@@ -17,14 +18,14 @@ from server.models.util import BikeType
 from server.views.bikes import BikeRegisterSchema
 
 bikes = {
-    0: Bike(0, bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55"),
-            locked=False),
+    0: Bike(0, bytes.fromhex("d09b31fc1bc4c05c8844148f06b0c218ac8fc3f1dcba0d622320b4284d67cc55")),
     1: Bike(1, bytes.fromhex("1e163e14b5a7d6e8914489d76ed17a52d16aba49357f3eeef7f1d5a4dc3d57b5")),
-    2: Bike(2, bytes.fromhex("4af429ad536e92d791ed3137c382b0ae48520867119654c8c10d8e81d9b65f0e"),
-            locked=True),
-    3: Bike(3, bytes.fromhex("a68f921cab9631842f6c4d2e792fc163a978c47dbba685eb5b88b0fb54b23939"),
-            locked=True)
+    2: Bike(2, bytes.fromhex("4af429ad536e92d791ed3137c382b0ae48520867119654c8c10d8e81d9b65f0e")),
+    3: Bike(3, bytes.fromhex("a68f921cab9631842f6c4d2e792fc163a978c47dbba685eb5b88b0fb54b23939"))
 }
+
+for bike in bikes.values():
+    get_event_loop().create_task(bike.update_loop(timedelta(seconds=10)))
 
 URL = "http://localhost:8080/api/v1/bikes"
 
@@ -59,27 +60,31 @@ async def bike_handler(session, bike: Bike, signed_challenge: bytes):
 
     :return: None
     """
-    async with session.ws_connect(URL + "/connect") as ws:
+    async with session.ws_connect(URL + "/connect") as socket:
         # send signature
-        await ws.send_bytes(bike.public_key.encode(RawEncoder))
-        await ws.send_bytes(signed_challenge)
-        confirmation = await ws.receive_str()
+        await socket.send_bytes(bike.public_key.encode(RawEncoder))
+        await socket.send_bytes(signed_challenge)
+        confirmation = await socket.receive_str()
         if "fail" in confirmation:
             raise AuthError(confirmation.split(":")[1])
         else:
             logger.info(f"Bike {bike.bid} established connection")
-            await ws.send_json({"locked": bike.locked})
-
+            await socket.send_json({"locked": bike.locked})
+        bike.socket = socket
         # handle messages
-        async for msg in ws:
+        async for msg in socket:
+            msg: WSMessage = msg
             logger.info("Message %s", msg)
             if msg.type == aiohttp.WSMsgType.TEXT:
-                if msg.data == 'close cmd':
-                    await ws.close()
-                    logger.info("closing connection")
-                    break
-                elif msg.data in bike.commands:
-                    await bike.commands[msg.data](msg, ws)
+                try:
+                    data = msg.json()
+                except JSONDecodeError:
+                    continue
+                else:
+                    if "method" in data:
+                        await bike.handle_request(data)
+                    else:
+                        await bike.handle_response(data)
 
 
 @ServerBreaker
@@ -120,7 +125,7 @@ async def start_session(bike: Bike):
                     return
             except ClientConnectorError as e:
                 logger.error("Connection lost, retrying..")
-                await sleep(1)
+                await sleep(2)
                 continue
             except CircuitBreakerError as e:
                 logger.debug("Circuit Breaker open after too many retries")

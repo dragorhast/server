@@ -1,10 +1,13 @@
 """
 The models package contains all the models used on the server.
 
-.. todo: Implement PickupPoint
-.. todo: Implement Reservation
+.. autoclasstree:: server.models
 """
 
 from .bike import Bike
+from .issue import Issue
+from .location_update import LocationUpdate
+from .pickup_point import PickupPoint
 from .rental import RentalUpdate, Rental
+from .reservation import Reservation
 from .user import User

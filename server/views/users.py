@@ -7,16 +7,23 @@ Handles all the user CRUD
 from http import HTTPStatus
 
 from aiohttp import web
+from aiohttp_apispec import docs
+from marshmallow.fields import String
 
-from server.models import User, Rental
-from server.permissions import UserMatchesFirebase
-from server.permissions.decorators import requires
-from server.permissions.permissions import ValidToken, BikeNotInUse
-from server.serializer import JSendSchema, JSendStatus, UserSchema, RentalSchema
+from server.models import User
+from server.permissions import UserMatchesToken, UserIsAdmin, requires, ValidToken
+from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import expects, returns
-from server.service.users import get_users, get_user, delete_user, create_user, UserExistsError, update_user
+from server.serializer.fields import Many
+from server.serializer.models import CurrentRentalSchema, IssueSchema, UserSchema, RentalSchema, ReservationSchema
+from server.service.access.issues import get_issues, open_issue
+from server.service.access.rentals import get_rentals
+from server.service.access.reservations import current_reservation, get_user_reservations
+from server.service.access.users import get_users, get_user, delete_user, create_user, UserExistsError, update_user
 from server.views.base import BaseView
-from server.views.utils import getter
+from server.views.decorators import match_getter, GetFrom
+
+USER_IDENTIFIER_REGEX = "(?!me)[^{}/]+"
 
 
 class UsersView(BaseView):
@@ -25,28 +32,37 @@ class UsersView(BaseView):
     """
     url = "/users"
     name = "users"
+    with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
 
+    @with_user
+    @docs(summary="Get All Users")
+    @requires(UserIsAdmin())
     @expects(None)
-    @returns(JSendSchema.of(UserSchema(), many=True))
-    async def get(self):
+    @returns(JSendSchema.of(users=Many(UserSchema())))
+    async def get(self, user):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": await get_users()
+            "data": {"users": await get_users()}
         }
 
+    @docs(summary="Create A User")
     @requires(ValidToken())
     @expects(UserSchema(only=('first', 'email')))
-    @returns(JSendSchema.of(UserSchema()), HTTPStatus.CREATED)
+    @returns(JSendSchema.of(user=UserSchema()), HTTPStatus.CREATED)
     async def post(self):
+        """
+        Anyone who has already authenticated with firebase can then create a user in the system.
+        This must be done before you use the rest of the system, but only has to be done once.
+        """
         try:
             user = await create_user(**self.request["data"], firebase_id=self.request["token"])
         except UserExistsError:
-            user = await User.get(firebase_id=self.request["token"])
+            user = await get_user(firebase_id=self.request["token"])
             user = await update_user(user, **self.request["data"])
 
         return {
             "status": JSendStatus.SUCCESS,
-            "data": user
+            "data": {"user": user}
         }
 
 
@@ -54,54 +70,60 @@ class UserView(BaseView):
     """
     Gets, replaces or deletes a single user.
     """
-    url = "/users/{id:[0-9]+}"
+    url = f"/users/{{id:{USER_IDENTIFIER_REGEX}}}"
     name = "user"
-    user_getter = getter(get_user, 'id', 'user_id', 'user')
+    with_user = match_getter(get_user, 'user', user_id='id')
 
-    @user_getter
-    @requires(UserMatchesFirebase())
+    @with_user
+    @docs(summary="Get A User")
+    @requires(UserMatchesToken() | UserIsAdmin())
     @expects(None)
-    @returns(JSendSchema.of(UserSchema()))
+    @returns(JSendSchema.of(user=UserSchema()))
     async def get(self, user: User):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": user.serialize()
+            "data": {"user": user.serialize()}
         }
 
-    @user_getter
-    @requires(UserMatchesFirebase())
-    @expects(UserSchema(only=('first', 'email')))
-    @returns(JSendSchema.of(UserSchema()))
+    @with_user
+    @docs(summary="Replace A User")
+    @requires(UserMatchesToken() | UserIsAdmin())
+    @expects(UserSchema(only=('first', 'email', 'stripe_id')))
+    @returns(JSendSchema.of(user=UserSchema()))
     async def put(self, user: User):
         user = await update_user(user, **self.request["data"])
         return {
             "status": JSendStatus.SUCCESS,
-            "data": user
+            "data": {"user": user}
         }
 
-    @user_getter
-    @requires(UserMatchesFirebase())
+    @with_user
+    @docs(summary="Delete A User")
+    @requires(UserMatchesToken() | UserIsAdmin())
     async def delete(self, user: User):
         await delete_user(user)
-        raise web.HTTPNoContent()
+        raise web.HTTPNoContent
 
 
 class UserRentalsView(BaseView):
     """
     Gets or adds to the users list of rentals.
     """
-    url = "/users/{id:[0-9]+}/rentals"
+    url = f"/users/{{id:{USER_IDENTIFIER_REGEX}}}/rentals"
     name = "user_rentals"
-    with_user = getter(get_user, 'id', 'user_id', 'user')
+    with_user = match_getter(get_user, 'user', user_id='id')
+    with_rentals = match_getter(get_rentals, 'rentals', user='id')
 
     @with_user
-    @requires(UserMatchesFirebase())
-    @returns(JSendSchema.of(RentalSchema(), many=True))
-    async def get(self, user):
-        rentals = await Rental.filter(user__id=user.id)
+    @with_rentals
+    @docs(summary="Get All Rentals For User")
+    @requires(UserMatchesToken() | UserIsAdmin())
+    @returns(JSendSchema.of(rentals=Many(RentalSchema())))
+    async def get(self, user, rentals):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": [await rental.serialize(self.request.app["rental_manager"], self.request.app.router) for rental in rentals]
+            "data": {
+                "rentals": [await rental.serialize(self.rental_manager, self.request.app.router) for rental in rentals]}
         }
 
 
@@ -109,76 +131,187 @@ class UserCurrentRentalView(BaseView):
     """
     Gets or ends the user's current rental.
     """
-    url = "/users/{id:[0-9]+}/rentals/current"
+    url = f"/users/{{id:{USER_IDENTIFIER_REGEX}}}/rentals/current"
     name = "user_current_rental"
-    with_user = getter(get_user, 'id', 'user_id', 'user')
+    with_user = match_getter(get_user, 'user', user_id='id')
 
     @with_user
-    @requires(UserMatchesFirebase())
+    @docs(summary="Get Current Rental For User")
+    @requires(UserMatchesToken() | UserIsAdmin())
     @returns(
         no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        rental_exists=JSendSchema.of(RentalSchema())
+        rental_exists=JSendSchema.of(rental=CurrentRentalSchema(only=(
+            'id', 'bike_identifier', 'bike_url', 'user_id', 'user_url', 'start_time',
+            'is_active', 'estimated_price', 'start_location', 'current_location'
+        )))
     )
     async def get(self, user: User):
-        if user.id not in self.request.app["rental_manager"].active_rental_ids:
+        if not self.rental_manager.has_active_rental(user):
             return "no_rental", {
                 "status": JSendStatus.FAIL,
                 "data": {"message": f"You have no current rental."}
             }
 
-        current_rental = await self.request.app["rental_manager"].active_rental(user)
+        current_rental, start_location, current_location = await self.rental_manager.active_rental(user,
+                                                                                                   with_locations=True)
         return "rental_exists", {
             "status": JSendStatus.SUCCESS,
-            "data": await current_rental.serialize(self.request.app["rental_manager"], self.request.app.router)
+            "data": {"rental": await current_rental.serialize(
+                self.rental_manager,
+                self.request.app.router,
+                start_location=start_location,
+                current_location=current_location
+            )}
         }
 
+
+class UserEndCurrentRentalView(BaseView):
+    """"""
+
+    url = f"/users/{{id:{USER_IDENTIFIER_REGEX}}}/rentals/current/{{action}}"
+    name = "user_end_current_rental"
+    with_user = match_getter(get_user, 'user', user_id='id')
+    actions = ("cancel", "complete")
+
     @with_user
-    @requires(UserMatchesFirebase())
+    @docs(summary="End Rental For User")
+    @requires(UserMatchesToken() | UserIsAdmin())
     @returns(
         no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        rental_deleted=JSendSchema.of(RentalSchema()),
+        invalid_action=(JSendSchema(), HTTPStatus.NOT_FOUND),
+        rental_completed=JSendSchema.of(rental=RentalSchema(), action=String()),
     )
-    async def delete(self, user: User):
-        """Ends a rental."""
-        if user.id not in self.request.app["rental_manager"].active_rental_ids:
+    async def patch(self, user: User):
+        """
+        Ends a rental for a user, in one of two ways:
+
+        - ``PATCH /users/me/rentals/current/cancel`` cancels the rental
+        - ``PATCH /users/me/rentals/current/complete`` completes the rental
+        """
+
+        if not self.rental_manager.has_active_rental(user):
             return "no_rental", {
                 "status": JSendStatus.FAIL,
-                "data": {"message": f"You have no current rental."}
+                "data": {"message": "You have no current rental."}
             }
 
-        current_rental = await self.request.app["rental_manager"].active_rental(user)
-        await self.request.app["rental_manager"].finish(current_rental)
-        return "rental_deleted", {
+        end_type = self.request.match_info["action"]
+        if end_type not in self.actions:
+            return "invalid_action", {
+                "status": JSendStatus.FAIL,
+                "data": {
+                    "message": f"Invalid action. Pick between {', '.join(self.actions)}",
+                    "actions": self.actions
+                }
+            }
+
+        if end_type == "complete":
+            rental = await self.rental_manager.finish(user)
+        elif end_type == "cancel":
+            rental = await self.rental_manager.cancel(user)
+
+        return "rental_completed", {
             "status": JSendStatus.SUCCESS,
-            "data": await current_rental.serialize(self.request.app["rental_manager"], self.request.app.router)
+            "data": {
+                "rental": await rental.serialize(self.rental_manager, self.request.app.router),
+                "action": "canceled" if end_type == "cancel" else "completed"
+            }
         }
 
 
 class UserReservationsView(BaseView):
     """
-    Gets or adds to the users' list of reservations.
+    Gets the users' list of reservations.
     """
-    url = "/users/{id:[0-9]+}/reservations"
+    url = f"/users/{{id:{USER_IDENTIFIER_REGEX}}}/reservations"
     name = "user_reservations"
 
-    async def get(self):
-        raise NotImplementedError()
+    with_user = match_getter(get_user, "user", user_id="id")
+    with_reservations = match_getter(get_user_reservations, "reservations", user="id")
 
-    async def post(self):
-        raise NotImplementedError()
+    @with_user
+    @with_reservations
+    @docs(summary="Get All Reservations For User")
+    @requires(UserMatchesToken() | UserIsAdmin())
+    @returns(JSendSchema.of(reservations=Many(ReservationSchema())))
+    async def get(self, user, reservations):
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"reservations": [reservation.serialize(self.request.app.router) for reservation in reservations]}
+        }
+
+
+class UserCurrentReservationView(BaseView):
+    """
+    Gets the users' current reservation.
+    """
+    url = f"/users/{{id:{USER_IDENTIFIER_REGEX}}}/reservations/current"
+
+    with_reservation = match_getter(current_reservation, "reservation", user="id")
+    with_user = match_getter(get_user, "user", user_id="id")
+
+    @with_user
+    @with_reservation
+    @docs(summary="Get Current Reservation For User")
+    @requires(UserMatchesToken() | UserIsAdmin())
+    @returns(JSendSchema.of(reservation=ReservationSchema()))
+    async def get(self, user, reservation):
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"reservation": reservation.serialize(self.request.app.router)}
+        }
+
+    @with_user
+    @with_reservation
+    @docs(summary="Cancel Reservation For User")
+    @requires(UserMatchesToken() | UserIsAdmin())
+    async def delete(self, user, reservation):
+        """Cancels a rental."""
+        await self.reservation_manager.cancel(reservation)
+        raise web.HTTPNoContent
 
 
 class UserIssuesView(BaseView):
     """
     Gets or adds to the users' list of issues.
     """
-    url = "/users/{id:[0-9]+}/issues"
+    url = f"/users/{{id:{USER_IDENTIFIER_REGEX}}}/issues"
     name = "user_issues"
+    with_issues = match_getter(get_issues, "issues", user='id')
+    with_user = match_getter(get_user, 'user', user_id='id')
 
-    async def get(self):
-        raise NotImplementedError()
+    @with_user
+    @with_issues
+    @docs(summary="Get All Issues For User")
+    @requires(UserMatchesToken() | UserIsAdmin())
+    @returns(JSendSchema.of(issues=Many(IssueSchema())))
+    async def get(self, user, issues):
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"issues": [issue.serialize(self.request.app.router) for issue in issues]}
+        }
 
-    async def post(self):
+    @with_user
+    @docs(summary="Open Issue For User")
+    @requires(UserMatchesToken() | UserIsAdmin())
+    @expects(IssueSchema(only=('bike_identifier', 'description')))
+    @returns(
+        JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time'))))
+    async def post(self, user):
+        kwargs = {
+            "description": self.request["data"]["description"],
+            "user": user
+        }
+        if "bike_id" in self.request["data"]:
+            kwargs["bike"] = self.request["data"]["bike_id"]
+
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"issue": (await open_issue(**kwargs)).serialize(self.request.app.router)}
+        }
+
+    async def patch(self):
+        """Allows someone to close their issue."""
         raise NotImplementedError()
 
 
@@ -218,14 +351,14 @@ class MeView(BaseView):
             return web.json_response(response_schema.dump({
                 "status": JSendStatus.FAIL,
                 "data": {
-                    "message": "User does not exist. Please use your token to create a user and try again.",
+                    "message": "User does not exist. Please use your jwt to create a user and try again.",
                     "url": create_user_url,
                     "method": "POST"
                 }
             }), status=HTTPStatus.BAD_REQUEST)
 
         concrete_url = MeView._get_concrete_user_url(self.request.path, self.request.match_info.get("tail"), user)
-        raise web.HTTPFound(concrete_url)
+        raise web.HTTPTemporaryRedirect(concrete_url)
 
     @staticmethod
     def _get_concrete_user_url(path, tail, user) -> str:

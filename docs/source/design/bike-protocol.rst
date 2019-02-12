@@ -1,6 +1,11 @@
 Bike Communication Protocol
 ===========================
 
+Every bike is connected to the server with a long-lasting websocket link. This allows us to always issue commands to the
+bike from the server and is critical to the ease of use of the system, when compared with competitors. Being able to
+issue commands such as "lock now" powers the system's flexibility. Websockets has no application layer protocols, which
+has meant that we have had to build a communication protocol.
+
 Authentication
 --------------
 
@@ -16,25 +21,27 @@ captures your authentication packets and re-uses them to authenticate in the fut
 password. Requiring the bikes to sign a one time challenge stops that entirely, because no useful information is ever
 sent.
 
-.. mermaid ::
+Once the bike connects, it sends its current state to the server as which point we are now able to send JSON-RPC calls
+over the socket.
+
+.. mermaid::
 
     sequenceDiagram
     participant B as Bike
     participant S as Server
-    Note left of B: POST request with public key.
+    Note left of B: POST Public Key
     B ->> S: Public Key
-    Note right of S: The key is checked against the known bike public keys.
     alt Foreign Public Key
     S ->> B: 401 Unauthorized
     else
-    Note right of S: Auth ticket is made with IP, public key, and challenge.
+    Note right of S: Create Ticket
     S ->> B: Challenge
     end
-    Note left of B: The bike signs the challenge.
-    Note left of B: The bike opens a web socket with the server.
+    Note left of B: Sign Challenge
+    Note left of B: Websocket
     B ->> S: Public Key
     B ->> S: Signature
-    Note right of S: The signature is verified against the public key.
+    Note right of S: Verify Signature
     alt Signature Incorrect
     S ->> B: "fail"
     else
@@ -42,11 +49,17 @@ sent.
     B ->> S: "current-status"
     end
 
-The last message in the pair process updates the server with the status of the bike, via a simple json update. Currently
-this is only the locked status of the bike.
-
-Protocol
+JSON RPC
 ------------------
 
-After the connection is made, we need to establish a protocol to work on top of. There are two types of communication
-that I propose we use. The first: call response, the second: pubsub.
+To handle the actual communication after the connection is made, we need to implement an application level protocol
+on top of web sockets. A light-weight option is JSON RPC which supports both remote procedure calls and what they
+call "notifications" or, simply, updates. Version 2 is explicitly designed for client-server communication, and has
+increased resilience due to decoupling of the protocol and the transport.
+
+The entire spec is available at `jsonrpc.org`_.
+
+The bikes implement a number of procedures such as ``lock`` and ``unlock`` as well as transmitting ``locationUpdate``
+notifications to the server whenever possible. These updates are archived and used to query the location of the bike.
+
+.. _`jsonrpc.org`: https://www.jsonrpc.org/specification

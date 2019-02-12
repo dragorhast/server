@@ -1,6 +1,16 @@
 import pytest
 
-from server.permissions import Permission
+from server.permissions.permission import RoutePermissionError, Permission
+
+
+@pytest.fixture
+def true_permission():
+    return BoolPermission(True)
+
+
+@pytest.fixture
+def false_permission():
+    return BoolPermission(False)
 
 
 class BoolPermission(Permission):
@@ -10,50 +20,64 @@ class BoolPermission(Permission):
 
     async def __call__(self, actual: bool, **kwargs) -> None:
         if not actual == self.expected_bool:
-            raise PermissionError(f"Got {actual}, expected {self.expected_bool}!")
+            raise RoutePermissionError(f"Got {actual}, expected {self.expected_bool}!")
 
 
 class TestPermissionBoolean:
     true_permission = BoolPermission(True)
     false_permission = BoolPermission(False)
 
-    or_permission = true_permission | false_permission
-    and_permission = true_permission & false_permission
+    async def test_permission_passes(self, true_permission):
+        """Assert that calling a permission that passes does not raise."""
+        assert await true_permission(True) is None
 
-    not_true_permission = ~true_permission
+    async def test_permission_fails(self, true_permission):
+        """Assert that calling a permission that fails raises a RoutePermissionError"""
+        with pytest.raises(RoutePermissionError):
+            await true_permission(False)
 
-    async def test_permission_passes(self):
-        assert await self.true_permission(True) is None
+    async def test_or_permission(self, true_permission, false_permission):
+        or_permission = true_permission | false_permission
+        assert await or_permission(True) is None
 
-    async def test_permission_fails(self):
-        with pytest.raises(PermissionError):
-            await self.true_permission(False)
-
-    async def test_or_permission(self):
-        assert await self.or_permission(True) is None
-
-    async def test_or_permission_fail(self):
+    async def test_or_permission_fail(self, true_permission, false_permission):
+        or_permission = true_permission | false_permission
         try:
-            assert await self.or_permission("FAIL")
-        except PermissionError as e:
-            assert len(e.args) == 2
-            assert (isinstance(error, PermissionError) for error in e.args)
+            assert await or_permission("FAIL")
+        except RoutePermissionError as e:
+            assert len(e.sub_errors) == 2
+            assert (isinstance(error, RoutePermissionError) for error in e.args)
         else:
             pytest.fail()
 
-    async def test_and_permission(self):
+    async def test_and_permission(self, true_permission, false_permission):
+        and_permission = true_permission & false_permission
         try:
-            assert await self.and_permission(True)
-        except PermissionError as e:
-            assert len(e.args) == 1
-            assert (isinstance(error, PermissionError) for error in e.args)
+            assert await and_permission(True)
+        except RoutePermissionError as e:
+            assert len(e.sub_errors) == 1
+            assert (isinstance(error, RoutePermissionError) for error in e.args)
         else:
             pytest.fail()
 
-    async def test_not_permission(self):
-        assert await self.not_true_permission(False) is None
-        assert await self.not_true_permission("PASS") is None
+    async def test_not_permission(self, true_permission):
+        not_true_permission = ~true_permission
+        assert await not_true_permission(False) is None
+        assert await not_true_permission("PASS") is None
 
-    async def test_not_permission_fail(self):
-        with pytest.raises(PermissionError):
-            assert await self.not_true_permission(True)
+    async def test_not_permission_fail(self, true_permission):
+        not_true_permission = ~true_permission
+        with pytest.raises(RoutePermissionError):
+            assert await not_true_permission(True)
+
+    @pytest.mark.parametrize(
+        "permission,length", [
+            (true_permission | true_permission | false_permission, 3),
+            (true_permission | (false_permission | false_permission), 3),
+            ((true_permission | false_permission) & false_permission & (false_permission & true_permission), 4),
+            ((true_permission & false_permission & false_permission), 3),
+            (true_permission | false_permission & true_permission, 2)
+        ]
+    )
+    async def test_permission_chaining(self, permission, length):
+        assert len(permission) == length

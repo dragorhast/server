@@ -10,6 +10,7 @@ from enum import Enum, IntEnum
 from typing import Union, Optional, Type
 
 from marshmallow import fields, ValidationError
+from marshmallow.validate import OneOf
 
 
 class BytesField(fields.Field):
@@ -18,14 +19,16 @@ class BytesField(fields.Field):
     to a hex-encoded :class:`str` and de-serializes it back to :class:`bytes`.
     """
 
-    def __init__(self, *args, max_length: Optional[int] = None, **kwargs):
+    def __init__(self, *args, max_length: Optional[int] = None, as_string=False, **kwargs):
         """
         :param max_length: The maximum length of the hex-encoded string.
+        :param as_string: Whether to serialize to and from hex-string instead of bytes.
         """
         super().__init__(*args, **kwargs)
         self.max_length = max_length
+        self.as_string = as_string
 
-    def _serialize(self, value: Union[str, bytes], attr, obj, **kwargs):
+    def _serialize(self, value: Union[str, bytes], attr, obj, **kwargs) -> str:
         """Converts a bytes-like-string or byte array to a hex-encoded string."""
         if isinstance(value, bytes):
             value = value.hex()
@@ -42,19 +45,17 @@ class BytesField(fields.Field):
 
         return value
 
-    def _deserialize(self, value: str, attr, data, **kwargs):
-        """Converts a hex-encoded string to a bytes-like object."""
+    def _deserialize(self, value: str, attr, data, **kwargs) -> Union[str, bytes]:
+        """Converts a hex-encoded string to bytes or a bytes-like-string."""
         try:
-            return bytes.fromhex(value)
+            int(value, 16)
         except ValueError:
             raise ValidationError(f"String {value} is not a valid hex-encoded string.")
 
-    @staticmethod
-    def _jsonschema_type_mapping():
-        """Defines the jsonschema type for the object."""
-        return {
-            'type': 'string',
-        }
+        if self.as_string:
+            return value if self.as_string else bytes.fromhex(value)
+        else:
+            return bytes.fromhex(value)
 
 
 class EnumField(fields.Field):
@@ -68,16 +69,18 @@ class EnumField(fields.Field):
         :param use_name: use enum's property name instead of value when serialize
         :param as_string: serialize value as string
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, validate=OneOf(enum_type))
         if not issubclass(enum_type, Enum):
             raise ValidationError(f"Expected enum type, got {type(enum_type)} instead")
         self._enum_type = enum_type
         self.use_name = use_name
         self.as_string = as_string
 
-    def _serialize(self, value: Enum, attr, obj, **kwargs):
+    def _serialize(self, value: Union[Enum, str], attr, obj, **kwargs):
         """Converts an enum to a string representation."""
-        if value is not None:
+        if isinstance(value, str) and value in (enum.value for enum in self._enum_type):
+            return value
+        elif isinstance(value, self._enum_type):
             if self.use_name:
                 return value.name
             if self.as_string:
@@ -99,9 +102,6 @@ class EnumField(fields.Field):
         else:
             return None
 
-    def _jsonschema_type_mapping(self):
-        """Defines the jsonschema type for the object."""
-        return {
-            'type': 'string',
-            'enum': [enum.value for enum in self._enum_type]
-        }
+
+def Many(schema):
+    return fields.List(fields.Nested(schema))

@@ -6,10 +6,10 @@ The system uses Firebase to handle authentication and session management. This i
 - time constraints
 - reduced server-side state
 
-To do this, the client authenticates with firebase, and simply hands the server its ID token which is then verified
+To do this, the user creates an account with firebase, and simply hands the server its ID token which is then verified
 against Google's cryptographic key using RS256. A valid token means the client has a valid session. All authenticated
 requests are made by sending this token to the server, which is then checked against a series of constraints
-(more info at `Firebase Verification`_)
+(for more info see `Firebase Verification`_).
 
 .. _Firebase Verification: https://firebase.google.com/docs/auth/admin/verify-id-tokens#verify_id_tokens_using_a_third-party_jwt_library
 
@@ -21,3 +21,14 @@ under specific conditions, the system would like to revoke a token. If a user re
 still be valid for at most one hour. The only way around this is to check every authenticated request against Firebase
 which is infeasible. At this point, we have decided to accept this window of vulnerability, given how little risk
 a compromised account poses.
+
+Using Your Firebase Token
+-------------------------
+
+When successfully authenticated on the client, the user can extract their firebase JWT as such:
+
+.. code-block:: javascript
+
+    const token = await firebase.auth().currentUser.getIdToken()
+
+This token is then sent in the ``Authorization`` header for every authenticated request.

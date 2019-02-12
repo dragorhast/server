@@ -17,8 +17,8 @@ Data Design
     Bike : bytes public_key
     Bike : type
     Bike : bool locked
-    Bike : is_connected()
-    Bike : set_locked()
+    Bike : str identifier()
+    Bike : dict serialize()
 
     LocationUpdate : int id
     LocationUpdate : Point location
@@ -29,22 +29,41 @@ Data Design
     User : bytes firebase_id
     User : str first
     User : str email
+    User : dict serialize()
 
     Issue : int id
     Issue : User user
     Issue : Bike bike
     Issue : datetime time
     Issue : str description
+    Issue : dict serialize()
 
     Rental : int id
     Rental : User user
     Rental : Bike bike
     Rental : float price
+    Rental : datetime start_time()
+    Rental : datetime end_time()
+    Rental : dict serialize()
 
     RentalUpdate : int id
     RentalUpdate : Rental rental
     RentalUpdate : type
     RentalUpdate : datetime time
+
+    PickupPoint : int id
+    PickupPoint : str name
+    PickupPoint : Polygon area
+    PickupPoint : List[Bike] bikes()
+    PickupPoint : dict serialize()
+
+    Reservation : int id
+    Reservation : PickupPoint pickup_point
+    Reservation : User user
+    Reservation : datetime made_at
+    Reservation : datetime reserved_for
+    Reservation : Rental claimed
+    Reservation : dict serialize()
 
 To support our design decisions we need to make accommodations in the way we store our data. We have opted to built an
 event-sourced database for the bike state and location updates so that we minimize the chances of database inconsistency.
@@ -59,9 +78,9 @@ current state of each bike is derived from a list of locations or state changes.
 the result of applying each delta to some start state :math:`S_0`.
 
 With this system, state can be mathematically expressed in the following way, where :math:`S_n` is the state after a given
-number of updates “n”, and :math:`Δ_n` is the nth update:
+number of updates :math:`n`, and :math:`\Delta_n` is the nth update:
 
-:math:`S_n = Δ_n(Δ_{n-1}(Δ_{n-2}(...(Δ_1(S_0)))))`
+:math:`S_n = \Delta_n(\Delta_{n-1}(\Delta_{n-2}(...(\Delta_1(S_0)))))`
 
 Optimizations
 -------------
