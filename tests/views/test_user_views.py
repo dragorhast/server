@@ -290,24 +290,6 @@ class TestUserCurrentReservationView:
         response_data = JSendSchema.of(reservations=Many(ReservationSchema())).load(await response.json())
         assert response_data["data"]["reservations"][0]["user_id"] == random_user.id
 
-    async def test_cancel_users_current_reservation(self, client, random_user, reservation_manager,
-                                                    random_pickup_point):
-        """Assert that a user can cancel their reservation."""
-        reservation = await reservation_manager.reserve(random_user, random_pickup_point,
-                                                        datetime.now(timezone.utc) + timedelta(hours=4))
-        response = await client.delete(
-            "/api/v1/users/me/reservations/current",
-            headers={"Authorization": f"Bearer {random_user.firebase_id}"}
-        )
-
-        assert response.status == 204
-        assert len(reservation_manager.reservations[random_pickup_point.id]) == 0
-
-        reservations = await get_user_reservations(random_user)
-        assert reservation in reservations
-        assert len(reservations) == 1
-        assert reservations[0].outcome == ReservationOutcome.CANCELLED
-
 
 class TestMeView:
 

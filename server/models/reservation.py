@@ -24,6 +24,8 @@ class Reservation(Model):
 
     def serialize(self, router):
         data = {
+            "id": self.id,
+            "url": router["reservation"].url_for(id=str(self.id)).path,
             "user_id": self.user_id,
             "user_url": router["user"].url_for(id=str(self.user_id)).path,
             "pickup_id": self.pickup_point_id,
