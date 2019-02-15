@@ -4,12 +4,11 @@ from aiohttp.test_utils import TestClient
 from marshmallow.fields import String
 
 from server.models import User
-from server.models.reservation import ReservationOutcome
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.fields import Many
-from server.serializer.models import IssueSchema, UserSchema, RentalSchema, CurrentRentalSchema, ReservationSchema
+from server.serializer.models import IssueSchema, UserSchema, RentalSchema, CurrentRentalSchema, ReservationSchema, \
+    CurrentReservationSchema
 from server.service.access.issues import open_issue
-from server.service.access.reservations import get_user_reservations
 
 
 class TestUsersView:
@@ -278,17 +277,18 @@ class TestUserReservationsView:
 
 class TestUserCurrentReservationView:
 
-    async def test_get_users_current_reservation(self, client, random_user, reservation_manager, random_pickup_point):
+    async def test_get_users_current_reservations(self, client, random_user, reservation_manager, random_pickup_point):
         """Assert that a user can get their current reservation."""
-        reservation = await reservation_manager.reserve(random_user, random_pickup_point,
-                                                        datetime.now(timezone.utc) + timedelta(hours=4))
+        await reservation_manager.reserve(random_user, random_pickup_point,
+                                          datetime.now(timezone.utc) + timedelta(hours=4))
         response = await client.get(
             "/api/v1/users/me/reservations/current",
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
 
-        response_data = JSendSchema.of(reservations=Many(ReservationSchema())).load(await response.json())
+        response_data = JSendSchema.of(reservations=Many(CurrentReservationSchema())).load(await response.json())
         assert response_data["data"]["reservations"][0]["user_id"] == random_user.id
+        assert "url" in response_data["data"]["reservations"][0]
 
 
 class TestMeView:
