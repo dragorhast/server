@@ -294,20 +294,17 @@ class UserIssuesView(BaseView):
     @with_user
     @docs(summary="Open Issue For User")
     @requires(UserMatchesToken() | UserIsAdmin())
-    @expects(IssueSchema(only=('bike_identifier', 'description')))
-    @returns(
-        JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time'))))
+    @expects(IssueSchema(only=('description',)))
+    @returns(JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'user_url', 'description', 'time'))))
     async def post(self, user):
-        kwargs = {
-            "description": self.request["data"]["description"],
-            "user": user
-        }
-        if "bike_id" in self.request["data"]:
-            kwargs["bike"] = self.request["data"]["bike_id"]
+        issue = await open_issue(
+            description=self.request["data"]["description"],
+            user=user
+        )
 
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"issue": (await open_issue(**kwargs)).serialize(self.request.app.router)}
+            "data": {"issue": issue.serialize(self.request.app.router)}
         }
 
     async def patch(self):

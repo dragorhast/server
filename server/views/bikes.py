@@ -30,7 +30,7 @@ from server.serializer.misc import MasterKeySchema, BikeRegisterSchema, BikeLock
 from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
 from server.service import TicketStore, ActiveRentalError
 from server.service.access.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike
-from server.service.access.issues import get_issues, get_broken_bikes
+from server.service.access.issues import get_issues, get_broken_bikes, open_issue
 from server.service.access.rentals import get_rentals_for_bike
 from server.service.access.reservations import current_reservation
 from server.service.access.users import get_user
@@ -318,6 +318,7 @@ class BikeRentalsView(BaseView):
 class BikeIssuesView(BaseView):
     url = f"/bikes/{{identifier:{BIKE_IDENTIFIER_REGEX}}}/issues"
     with_issues = match_getter(get_issues, 'issues', bike=('identifier', str))
+    with_bike = match_getter(get_bike, 'bike', identifier=('identifier', str))
     with_user = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
 
     @with_issues
@@ -329,6 +330,25 @@ class BikeIssuesView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"issues": [issue.serialize(self.request.app.router) for issue in issues]}
+        }
+
+    @with_user
+    @with_bike
+    @docs(summary="Open A New Issue About Bike")
+    @expects(IssueSchema(only=('description',)))
+    @returns(JSendSchema.of(
+        issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time')))
+    )
+    async def post(self, user, bike):
+        issue = await open_issue(
+            description=self.request["data"]["description"],
+            user=user,
+            bike=bike
+        )
+
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"issue": issue.serialize(self.request.app.router)}
         }
 
 

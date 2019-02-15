@@ -284,3 +284,13 @@ class TestBikeIssuesView:
         assert response_data["status"] == JSendStatus.SUCCESS
         assert "issues" in response_data["data"]
         assert all(issue["bike_identifier"] == random_bike.identifier for issue in response_data["data"]["issues"])
+
+    async def test_create_issue_for_bike(self, client, random_user, random_bike):
+        response = await client.post(
+            f"/api/v1/bikes/{random_bike.identifier}/issues",
+            headers={"Authorization": f"Bearer {random_user.firebase_id}"},
+            json={"description": "I HATE IT"}
+        )
+
+        response_data = JSendSchema.of(issue=IssueSchema()).load(await response.json())
+        assert response_data["data"]["issue"]["bike_identifier"] == random_bike.identifier

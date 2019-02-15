@@ -57,7 +57,7 @@ async def get_broken_bikes() -> Tuple[Set[str], Dict[str, Bike], Dict[str, List[
     return identifiers, bikes, issues
 
 
-async def open_issue(user: Union[User, int], description: str, bike: Union[User, int] = None):
+async def open_issue(user: Union[User, int], description: str, bike: Bike = None):
     options = {
         "description": description
     }
@@ -67,12 +67,12 @@ async def open_issue(user: Union[User, int], description: str, bike: Union[User,
     else:
         options["user_id"] = user
 
-    if isinstance(bike, Bike):
+    if bike is not None:
         options["bike"] = bike
-    elif isinstance(bike, int):
-        options["bike_id"] = bike
 
-    return await Issue.create(**options)
+    issue = await Issue.create(**options)
+    issue.bike = bike
+    return issue
 
 
 async def close_issue(issue: Union[Issue, int]):
