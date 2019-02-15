@@ -260,6 +260,19 @@ class TestUserIssuesView:
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["issue"]["description"] == "I'm not happy!"
 
+    async def test_add_user_bike_issue(self, client, random_user, random_bike):
+        """Assert that a user can create an issue for a bike."""
+        response = await client.post(
+            "/api/v1/users/me/issues",
+            headers={"Authorization": f"Bearer {random_user.firebase_id}"},
+            json={"description": "I'm not happy!", "bike_identifier": random_bike.identifier}
+        )
+
+        response_data = JSendSchema.of(issue=IssueSchema()).load(await response.json())
+        assert response_data["status"] == JSendStatus.SUCCESS
+        assert response_data["data"]["issue"]["description"] == "I'm not happy!"
+        assert response_data["data"]["issue"]["bike_identifier"] == random_bike.identifier
+
 
 class TestUserReservationsView:
 
