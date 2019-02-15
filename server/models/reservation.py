@@ -34,6 +34,12 @@ class Reservation(Model):
             "reserved_for": self.reserved_for,
         }
 
+        if not hasattr(self.user, "source_field"):
+            data["user"] = self.user.serialize()
+
+        if not hasattr(self.pickup_point, "source_field"):
+            data["pickup"] = self.pickup_point.serialize()
+
         if self.claimed_rental_id is not None:
             data["rental_id"] = self.claimed_rental_id
             data["rental_url"] = router["rental"].url_for(id=str(self.claimed_rental_id)).path
