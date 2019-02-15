@@ -287,8 +287,8 @@ class TestUserCurrentReservationView:
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
         )
 
-        response_data = JSendSchema.of(reservation=ReservationSchema()).load(await response.json())
-        assert response_data["data"]["reservation"]["user_id"] == random_user.id
+        response_data = JSendSchema.of(reservations=Many(ReservationSchema())).load(await response.json())
+        assert response_data["data"]["reservations"][0]["user_id"] == random_user.id
 
     async def test_cancel_users_current_reservation(self, client, random_user, reservation_manager,
                                                     random_pickup_point):

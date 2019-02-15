@@ -36,7 +36,7 @@ from shapely.geometry import Point
 
 from server.models import Reservation, PickupPoint, User, Bike, Rental
 from server.models.reservation import ReservationOutcome
-from server.service.access.reservations import create_reservation, current_reservation
+from server.service.access.reservations import create_reservation, current_reservations, get_reservations
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager, CurrentlyRentedError
 
@@ -53,25 +53,15 @@ class ReservationError(Exception):
 
 class CollectionError(ReservationError):
 
-    def __init__(self, message, reserved_for, reservation_window):
+    def __init__(self, message):
         self.message = message
-        self.reserved_for = reserved_for
-        self.reservation_window = reservation_window
-
-    @property
-    def lower_bound(self):
-        return self.reserved_for - self.reservation_window / 2
-
-    @property
-    def upper_bound(self):
-        return self.reserved_for + self.reservation_window / 2
 
 
 class ReservationManager:
 
     def __init__(self, bike_connection_manager: BikeConnectionManager, rental_manager: RentalManager):
-        self.reservations: Dict[int, Set[Tuple[int, datetime]]] = defaultdict(set)
-        """Maps a pickup point to its reservations."""
+        self.reservations: Dict[int, Set[Tuple[int, int, datetime]]] = defaultdict(set)
+        """Maps a pickup point to a list of reservations (and user id, and date for)."""
 
         self.pickup_points: Set[PickupPoint] = set()
         self._bike_connection_manager = bike_connection_manager
@@ -83,9 +73,6 @@ class ReservationManager:
 
         :raises ReservationError: If there are any issues with making the reservation.
         """
-        if await current_reservation(user) is not None:
-            raise ReservationError("User has reservation already.")
-
         if for_time - datetime.now(timezone.utc) < MINIMUM_RESERVATION_TIME:
             # ensure there is a bike there
             available_bikes = await self._available_bikes(pickup)
@@ -94,22 +81,33 @@ class ReservationManager:
                     f"No available bikes in the requested point, and not enough time to source one (less than {MINIMUM_RESERVATION_TIME}).")
 
         reservation = await create_reservation(user, pickup, for_time)
-        self.reservations[pickup.id].add((reservation.id, reservation.reserved_for))
+        self.reservations[pickup.id].add((reservation.id, user.id, reservation.reserved_for))
         return reservation
 
-    async def claim(self, reservation: Reservation, bike: Bike = None) -> Tuple[Rental, Point]:
+    async def claim(self, user: User, bike: Bike) -> Tuple[Rental, Point]:
         """
         Collects the bike for a given reservation, creating a rental.
 
         Collection can only happen 30 minutes before or after
 
-        :param reservation: The reservation to collect.
-        :param bike: Optionally the specific bike to collect.
+        :param user: The user collecting the reservation.
+        :param bike: The specific bike to collect.
         :raises CollectionError: If the bike is being picked up outside the reservation window.
         :raises ReservationError: If there are no bikes in the pickup point.
         :raises ActiveRentalError: If the user already has an active rental.
         :raises ValueError: If the pickup points
         """
+
+        active_reservations = await current_reservations(user)
+        collection_location = bike.updates[-1].location
+
+        valid_reservations = [x for x in active_reservations if collection_location.within(x.pickup_point.area)]
+
+        if not valid_reservations:
+            raise CollectionError("User has no active reservations at the pickup point of the requested bike.")
+
+        reservation = sorted(valid_reservations, key=lambda x: x.reserved_for)[0]
+
         lower_bound = reservation.reserved_for - RESERVATION_WINDOW / 2
         upper_bound = reservation.reserved_for + RESERVATION_WINDOW / 2
 
@@ -119,23 +117,17 @@ class ReservationManager:
 
         if not lower_bound <= datetime.now(timezone.utc) <= upper_bound:
             raise CollectionError(
-                f"You may only collect a rental in a {RESERVATION_WINDOW} window around {reservation.reserved_for}.",
-                reservation.reserved_for, RESERVATION_WINDOW
+                f"You may only collect a rental in a {RESERVATION_WINDOW} window around {reservation.reserved_for}."
             )
 
         available_bikes = await self._available_bikes(reservation.pickup_point)
         if not available_bikes:
             raise ReservationError("No bikes at this pickup point.")
 
-        if bike is None:
-            bike = random.choice(available_bikes)  # nosec - using random.choice here is not a vulnerability
-
         pickup = self._pickup_containing(bike)
         if not pickup or pickup.id != reservation.pickup_point.id:
             raise CollectionError(
-                "Requested bike is not in the pickup point of the reservation.",
-                reservation.reserved_for,
-                RESERVATION_WINDOW
+                "Requested bike is not in the pickup point of the reservation."
             )
 
         if bike not in available_bikes:
@@ -155,7 +147,7 @@ class ReservationManager:
 
     def reservations_in(self, pickup_point: int) -> List[int]:
         """Gets the reservation ids for a given pickup point."""
-        return [id for id, time in self.reservations[pickup_point]]
+        return [rid for rid, uid, time in self.reservations[pickup_point]]
 
     def is_reserved(self, bike: Bike) -> bool:
         """Checks if the given bike is reserved."""
@@ -176,16 +168,16 @@ class ReservationManager:
         unhandled_reservations = await Reservation.filter(outcome__isnull=True).prefetch_related("pickup_point")
 
         for reservation in unhandled_reservations:
-            self.reservations[reservation.pickup_point.id].add((reservation.id, reservation.reserved_for))
+            self.reservations[reservation.pickup_point.id].add((reservation.id, reservation.user_id, reservation.reserved_for))
             self.pickup_points.add(reservation.pickup_point)
 
-    async def _close_reservation(self, reservation, outcome):
-        self.reservations[reservation.pickup_point_id].remove((reservation.id, reservation.reserved_for))
+    async def _close_reservation(self, reservation: Reservation, outcome: ReservationOutcome):
+        self.reservations[reservation.pickup_point_id].remove((reservation.id, reservation.user_id, reservation.reserved_for))
         reservation.ended_at = datetime.now(timezone.utc)
         reservation.outcome = outcome
         await reservation.save()
 
-    async def _available_bikes(self, pickup_point) -> List[Bike]:
+    async def _available_bikes(self, pickup_point: PickupPoint) -> List[Bike]:
         """Gets the available bikes in a pickup point."""
         bike_ids = self._bike_connection_manager.bikes_in(pickup_point.area)
         return await self._rental_manager.get_available_bikes(bike_ids)
