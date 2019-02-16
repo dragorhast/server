@@ -20,18 +20,6 @@ class TestReservationManager:
         assert len(reservations) == 1
         assert reservation in reservations
 
-    async def test_reserve_already_renting(self, reservation_manager, random_user, random_pickup_point):
-        """Assert that a second rental fails when user has an active one."""
-        await reservation_manager.reserve(
-            random_user, random_pickup_point, datetime.now(timezone.utc) + timedelta(hours=5)
-        )
-
-        with pytest.raises(ReservationError) as e:
-            await reservation_manager.reserve(
-                random_user, random_pickup_point, datetime.now() + timedelta(hours=5)
-            )
-        assert any("reservation already" in arg for arg in e.value.args)
-
     async def test_reserve_close(self, reservation_manager, random_user, random_pickup_point):
         """Assert that creating a reservation in less than 3 hours from now fails if there are no bikes."""
         with pytest.raises(ReservationError) as e:
@@ -62,11 +50,11 @@ class TestReservationManager:
         """Assert that collecting a rental creates one."""
         await bike_connection_manager.update_location(random_bike, random_pickup_point.area.centroid)
         reservation_manager.pickup_points.add(random_pickup_point)
-        reservation = await reservation_manager.reserve(
+        await reservation_manager.reserve(
             random_user, random_pickup_point, datetime.now(timezone.utc) + timedelta(minutes=10)
         )
 
-        rental = await reservation_manager.claim(reservation)
+        rental = await reservation_manager.claim(random_user, random_bike)
 
         assert not reservation_manager.reservations[random_pickup_point.id]
         assert rental[0].bike == random_bike
@@ -83,7 +71,7 @@ class TestReservationManager:
         )
 
         with pytest.raises(CollectionError):
-            rental = await reservation_manager.claim(reservation, random_bike)
+            rental = await reservation_manager.claim(random_user, random_bike)
 
     async def test_collect_no_bikes(
         self, reservation_manager, bike_connection_manager,
@@ -92,14 +80,14 @@ class TestReservationManager:
         """Assert that trying to collect from a pickup point with no bikes fails."""
         await bike_connection_manager.update_location(random_bike, random_pickup_point.area.centroid)
         reservation_manager.pickup_points.add(random_pickup_point)
-        reservation = await reservation_manager.reserve(
+        await reservation_manager.reserve(
             random_user, random_pickup_point, datetime.now(timezone.utc) + timedelta(minutes=20)
         )
 
         await bike_connection_manager.update_location(random_bike, Point(1000, 1000))
 
         with pytest.raises(ReservationError):
-            rental = await reservation_manager.claim(reservation, random_bike)
+            await reservation_manager.claim(random_user, random_bike)
 
     async def test_collect_currently_rented_bike(
         self, reservation_manager, bike_connection_manager,
@@ -111,19 +99,19 @@ class TestReservationManager:
         """
         used_bike = await random_bike_factory()
         available_bike = await random_bike_factory()
+        reservation_manager.pickup_points.add(random_pickup_point)
 
         await bike_connection_manager.update_location(used_bike, random_pickup_point.area.centroid)
         await bike_connection_manager.update_location(available_bike, random_pickup_point.area.centroid)
 
-        reservation_manager.pickup_points.add(random_pickup_point)
-        reservation = await reservation_manager.reserve(
+        await reservation_manager.reserve(
             random_user, random_pickup_point, datetime.now(timezone.utc) + timedelta(minutes=20)
         )
 
-        rental = await rental_manager.create(random_admin, used_bike)
+        await rental_manager.create(random_admin, used_bike)
 
         with pytest.raises(CurrentlyRentedError) as e:
-            rental = await reservation_manager.claim(reservation, used_bike)
+            rental = await reservation_manager.claim(random_user, used_bike)
 
         assert available_bike in e.value.available_bikes
 
@@ -140,12 +128,12 @@ class TestReservationManager:
         await bike_connection_manager.update_location(far_bike, Point(100, 100))
 
         reservation_manager.pickup_points.add(random_pickup_point)
-        reservation = await reservation_manager.reserve(
+        await reservation_manager.reserve(
             random_user, random_pickup_point, datetime.now(timezone.utc) + timedelta(minutes=20)
         )
 
         with pytest.raises(CollectionError):
-            rental = await reservation_manager.claim(reservation, far_bike)
+            rental = await reservation_manager.claim(random_user, far_bike)
 
     async def test_bike_is_reserved(
         self, random_bike_factory, reservation_manager, random_pickup_point,

@@ -32,7 +32,7 @@ from server.service import TicketStore, ActiveRentalError
 from server.service.access.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike
 from server.service.access.issues import get_issues, get_broken_bikes, open_issue
 from server.service.access.rentals import get_rentals_for_bike
-from server.service.access.reservations import current_reservation
+from server.service.access.reservations import current_reservations
 from server.service.access.users import get_user
 from server.service.manager.reservation_manager import ReservationError, CollectionError
 from server.views.base import BaseView
@@ -268,11 +268,11 @@ class BikeRentalsView(BaseView):
         sending a POST request to the bike's rentals resource ``/api/v1/bikes/rentals``
         with the user's firebase token.
         """
-        reservation = await current_reservation(user)
+        reservations = await current_reservations(user)
 
-        if reservation:
+        if reservations:
             try:
-                rental, start_location = await self.reservation_manager.claim(reservation, bike)
+                rental, start_location = await self.reservation_manager.claim(user, bike)
             except CollectionError:
                 # they can try and rent it normally
                 pass

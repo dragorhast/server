@@ -162,3 +162,7 @@ class ReservationSchema(CreateReservationSchema):
     rental = Nested(RentalSchema())
     rental_io = Integer()
     rental_url = Url(relative=True)
+
+
+class CurrentReservationSchema(ReservationSchema):
+    url = Url(relative=True, required=True)
