@@ -15,10 +15,11 @@ from server.permissions import UserMatchesToken, UserIsAdmin, requires, ValidTok
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import expects, returns
 from server.serializer.fields import Many
-from server.serializer.models import CurrentRentalSchema, IssueSchema, UserSchema, RentalSchema, ReservationSchema
+from server.serializer.models import CurrentRentalSchema, IssueSchema, UserSchema, RentalSchema, ReservationSchema, \
+    CurrentReservationSchema
 from server.service.access.issues import get_issues, open_issue
 from server.service.access.rentals import get_rentals
-from server.service.access.reservations import current_reservation, get_user_reservations
+from server.service.access.reservations import current_reservations, get_user_reservations
 from server.service.access.users import get_users, get_user, delete_user, create_user, UserExistsError, update_user
 from server.views.base import BaseView
 from server.views.decorators import match_getter, GetFrom
@@ -247,28 +248,19 @@ class UserCurrentReservationView(BaseView):
     """
     url = f"/users/{{id:{USER_IDENTIFIER_REGEX}}}/reservations/current"
 
-    with_reservation = match_getter(current_reservation, "reservation", user="id")
+    with_reservation = match_getter(current_reservations, "reservations", user="id")
     with_user = match_getter(get_user, "user", user_id="id")
 
     @with_user
     @with_reservation
-    @docs(summary="Get Current Reservation For User")
+    @docs(summary="Get Current Reservations For User")
     @requires(UserMatchesToken() | UserIsAdmin())
-    @returns(JSendSchema.of(reservation=ReservationSchema()))
-    async def get(self, user, reservation):
+    @returns(JSendSchema.of(reservations=Many(CurrentReservationSchema())))
+    async def get(self, user, reservations):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"reservation": reservation.serialize(self.request.app.router)}
+            "data": {"reservations": [reservation.serialize(self.request.app.router) for reservation in reservations]}
         }
-
-    @with_user
-    @with_reservation
-    @docs(summary="Cancel Reservation For User")
-    @requires(UserMatchesToken() | UserIsAdmin())
-    async def delete(self, user, reservation):
-        """Cancels a rental."""
-        await self.reservation_manager.cancel(reservation)
-        raise web.HTTPNoContent
 
 
 class UserIssuesView(BaseView):

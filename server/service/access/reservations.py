@@ -27,7 +27,7 @@ async def get_reservation(rid) -> Optional[Reservation]:
     return None
 
 
-async def current_reservation(user: Union[User, int]) -> Optional[Reservation]:
+async def current_reservations(user: Union[User, int]) -> List[Reservation]:
     """
     Gets the current reservation for a given user or user id.
 
@@ -43,7 +43,7 @@ async def current_reservation(user: Union[User, int]) -> Optional[Reservation]:
     else:
         kwargs["user_id"] = user
 
-    return await Reservation.filter(**kwargs).first().prefetch_related("pickup_point", "user")
+    return await Reservation.filter(**kwargs).prefetch_related("pickup_point", "user")
 
 
 async def get_user_reservations(user: Union[User, int]):

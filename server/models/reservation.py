@@ -24,6 +24,8 @@ class Reservation(Model):
 
     def serialize(self, router):
         data = {
+            "id": self.id,
+            "url": router["reservation"].url_for(id=str(self.id)).path,
             "user_id": self.user_id,
             "user_url": router["user"].url_for(id=str(self.user_id)).path,
             "pickup_id": self.pickup_point_id,
@@ -31,6 +33,12 @@ class Reservation(Model):
             "made_at": self.made_at,
             "reserved_for": self.reserved_for,
         }
+
+        if not hasattr(self.user, "source_field"):
+            data["user"] = self.user.serialize()
+
+        if not hasattr(self.pickup_point, "source_field"):
+            data["pickup"] = self.pickup_point.serialize()
 
         if self.claimed_rental_id is not None:
             data["rental_id"] = self.claimed_rental_id
