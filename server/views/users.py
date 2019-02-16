@@ -15,6 +15,7 @@ from server.permissions import UserMatchesToken, UserIsAdmin, requires, ValidTok
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import expects, returns
 from server.serializer.fields import Many
+from server.service.access.bikes import get_bike
 from server.serializer.models import CurrentRentalSchema, IssueSchema, UserSchema, RentalSchema, ReservationSchema, \
     CurrentReservationSchema
 from server.service.access.issues import get_issues, open_issue
@@ -286,20 +287,22 @@ class UserIssuesView(BaseView):
     @with_user
     @docs(summary="Open Issue For User")
     @requires(UserMatchesToken() | UserIsAdmin())
-    @expects(IssueSchema(only=('bike_identifier', 'description')))
-    @returns(
-        JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time'))))
+    @expects(IssueSchema(only=('description', 'bike_identifier')))
+    @returns(JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time'))))
     async def post(self, user):
-        kwargs = {
+        issue_data = {
             "description": self.request["data"]["description"],
             "user": user
         }
-        if "bike_id" in self.request["data"]:
-            kwargs["bike"] = self.request["data"]["bike_id"]
+
+        if "bike_identifier" in self.request["data"]:
+            issue_data["bike"] = await get_bike(identifier=self.request["data"]["bike_identifier"])
+
+        issue = await open_issue(**issue_data)
 
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"issue": (await open_issue(**kwargs)).serialize(self.request.app.router)}
+            "data": {"issue": issue.serialize(self.request.app.router)}
         }
 
     async def patch(self):
