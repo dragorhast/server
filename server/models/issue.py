@@ -26,6 +26,6 @@ class Issue(Model):
 
         if self.bike_id is not None:
             data["bike_identifier"] = self.bike.identifier
-            data["bike_url"] = router["bike"].url_for(identifier=str(self.bike_id)).path
+            data["bike_url"] = router["bike"].url_for(identifier=str(self.bike.identifier)).path
 
         return data

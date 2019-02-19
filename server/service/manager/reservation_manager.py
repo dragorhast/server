@@ -27,16 +27,16 @@ This object handles everything needed for bike reservations.
 - collect a reservation
 - get reservations for a pickup point
 """
-import random
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Tuple, Set, Optional, List
 
 from shapely.geometry import Point
 
+from server.events import EventHub, EventList
 from server.models import Reservation, PickupPoint, User, Bike, Rental
 from server.models.reservation import ReservationOutcome
-from server.service.access.reservations import create_reservation, current_reservations, get_reservations
+from server.service.access.reservations import create_reservation, current_reservations
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager, CurrentlyRentedError
 
@@ -57,6 +57,15 @@ class CollectionError(ReservationError):
         self.message = message
 
 
+class ReservationEvent(EventList):
+
+    def new_reservation(self, pickup: PickupPoint, user: User, time: datetime):
+        """A new reservation is added to the system."""
+
+    def cancelled_reservation(self, pickup: PickupPoint, user: User, time: datetime):
+        """A reservation is cancelled."""
+
+
 class ReservationManager:
 
     def __init__(self, bike_connection_manager: BikeConnectionManager, rental_manager: RentalManager):
@@ -66,6 +75,7 @@ class ReservationManager:
         self.pickup_points: Set[PickupPoint] = set()
         self._bike_connection_manager = bike_connection_manager
         self._rental_manager = rental_manager
+        self.hub = EventHub(ReservationEvent)
 
     async def reserve(self, user: User, pickup: PickupPoint, for_time: datetime) -> Reservation:
         """
@@ -82,6 +92,7 @@ class ReservationManager:
 
         reservation = await create_reservation(user, pickup, for_time)
         self.reservations[pickup.id].add((reservation.id, user.id, reservation.reserved_for))
+        self.hub.new_reservation(pickup, user, for_time)
         return reservation
 
     async def claim(self, user: User, bike: Bike) -> Tuple[Rental, Point]:
@@ -144,6 +155,7 @@ class ReservationManager:
         Cancels a reservation.
         """
         await self._close_reservation(reservation, ReservationOutcome.CANCELLED)
+        self.hub.cancelled_reservation(reservation.pickup_point, reservation.user, reservation.reserved_for)
 
     def reservations_in(self, pickup_point: int) -> List[int]:
         """Gets the reservation ids for a given pickup point."""
@@ -163,16 +175,32 @@ class ReservationManager:
         bikes = self._bike_connection_manager.bikes_in(pickup.area)
         return len(bikes) <= len(self.reservations[pickup.id])
 
+    async def pickup_bike_surplus(self, pickup_point) -> int:
+        """
+        Returns how many more free bikes there are than reservations.
+
+        A negative value indicates a shortage.
+        """
+        available_bike_count = len(await self._available_bikes(pickup_point))
+        bikes_needed_for_reservations = len([
+            rid for rid, uid, time in self.reservations[pickup_point.id]
+            if time < datetime.now() + MINIMUM_RESERVATION_TIME
+        ])
+
+        return available_bike_count - bikes_needed_for_reservations
+
     async def rebuild(self):
         """Rebuilds the reservation manager from the database."""
         unhandled_reservations = await Reservation.filter(outcome__isnull=True).prefetch_related("pickup_point")
 
         for reservation in unhandled_reservations:
-            self.reservations[reservation.pickup_point.id].add((reservation.id, reservation.user_id, reservation.reserved_for))
+            self.reservations[reservation.pickup_point.id].add(
+                (reservation.id, reservation.user_id, reservation.reserved_for))
             self.pickup_points.add(reservation.pickup_point)
 
     async def _close_reservation(self, reservation: Reservation, outcome: ReservationOutcome):
-        self.reservations[reservation.pickup_point_id].remove((reservation.id, reservation.user_id, reservation.reserved_for))
+        self.reservations[reservation.pickup_point_id].remove(
+            (reservation.id, reservation.user_id, reservation.reserved_for))
         reservation.ended_at = datetime.now(timezone.utc)
         reservation.outcome = outcome
         await reservation.save()
