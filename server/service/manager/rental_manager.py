@@ -167,7 +167,9 @@ class RentalManager:
         if rental_ids:
             query = query.filter(rentals__id__not_in=rental_ids)
 
-        return await query.prefetch_related(Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
+        return await query.prefetch_related(
+            Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
+        )
 
     async def rebuild(self):
         """

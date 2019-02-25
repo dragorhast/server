@@ -23,10 +23,16 @@ class BadKeyError(Exception):
     pass
 
 
-async def get_bikes() -> List[Bike]:
+async def get_bikes(*, bike_ids: List[int] = None) -> List[Bike]:
     """Gets all the bikes from the system."""
-    bikes = await Bike.all().prefetch_related(Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
-    return bikes
+    if bike_ids is not None:
+        query = Bike.filter(id__in=bike_ids)
+    else:
+        query = Bike.all()
+
+    return await query.prefetch_related(
+        Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
+    )
 
 
 async def get_bike(*, identifier: Union[str, bytes] = None,
@@ -41,7 +47,8 @@ async def get_bike(*, identifier: Union[str, bytes] = None,
 
     try:
         return await Bike.get(**kwargs).first().prefetch_related(
-            Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
+            Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
+        )
     except DoesNotExist:
         return None
 

@@ -110,7 +110,12 @@ class ReservationManager:
         """
 
         active_reservations = await current_reservations(user)
-        collection_location = bike.updates[-1].location
+        collection_location = self._bike_connection_manager.most_recent_location(bike)
+
+        if collection_location is None:
+            return  # todo uh oh!
+        else:
+            collection_location, _, _ = collection_location
 
         valid_reservations = [x for x in active_reservations if collection_location.within(x.pickup_point.area)]
 
@@ -212,13 +217,14 @@ class ReservationManager:
 
     def _pickup_containing(self, bike: Bike) -> Optional[PickupPoint]:
         """Gets the pickup point the bike is currently in."""
-        if not bike.updates:
-            raise ValueError("No updates! Can't get location.")
+        if not self._bike_connection_manager.is_connected(bike):
+            raise ValueError("Bike not connected!")
+
+        bike_location = self._bike_connection_manager.most_recent_location(bike)
+
+        if bike_location is None:
+            raise ValueError("Bike has not submitted its location yet!")
         else:
-            bike_location: Point = bike.updates[-1].location
+            _, _, pickup = bike_location
 
-        for point in self.pickup_points:
-            if bike_location.within(point.area):
-                return point
-
-        return None
+        return pickup
