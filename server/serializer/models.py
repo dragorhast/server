@@ -110,6 +110,8 @@ class PickupPointData(Schema):
     name = String(required=True)
     bikes = Nested(BikeSchema(), many=True)
     center = Nested(LatLong())
+    shortage_count = Integer()
+    shortage_date = DateTime()
 
 
 class PickupPointSchema(GeoJSON):

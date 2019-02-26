@@ -10,7 +10,7 @@ Handles all the pick-up point CRUD
 from aiohttp import web
 from aiohttp_apispec import docs
 
-from server.models import PickupPoint
+from server.models import PickupPoint, User
 from server.permissions import requires, UserIsAdmin
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import returns, expects
@@ -23,6 +23,8 @@ from server.service.access.users import get_user
 from server.service.manager.reservation_manager import ReservationError
 from server.views.base import BaseView
 from server.views.decorators import match_getter, Optional, GetFrom
+
+PICKUP_IDENTIFIER_REGEX = "(?!shortages)[^{}/]+"
 
 
 class PickupsView(BaseView):
@@ -49,7 +51,7 @@ class PickupView(BaseView):
     """
     Gets, updates or deletes a single pick-up point.
     """
-    url = "/pickups/{id}"
+    url = f"/pickups/{{id:{PICKUP_IDENTIFIER_REGEX}}}"
     name = "pickup"
     with_pickup = match_getter(get_pickup_point, 'pickup', pickup_id='id')
     with_user = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
@@ -76,7 +78,7 @@ class PickupBikesView(BaseView):
     """
     Gets list of bikes currently at a pickup point.
     """
-    url = "/pickups/{id}/bikes"
+    url = f"/pickups/{{id:{PICKUP_IDENTIFIER_REGEX}}}/bikes"
     with_pickup = match_getter(get_pickup_point, 'pickup', pickup_id='id')
 
     @with_pickup
@@ -96,8 +98,8 @@ class PickupReservationsView(BaseView):
     """
     Gets or adds to a pickup point's list of reservations.
     """
-    url = "/pickups/{id}/reservations"
-    with_user = match_getter(get_user, Optional("user"), firebase_id=Optional(GetFrom.AUTH_HEADER))
+    url = f"/pickups/{{id:{PICKUP_IDENTIFIER_REGEX}}}/reservations"
+    with_user = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
     with_pickup = match_getter(get_pickup_point, "pickup", pickup_id="id")
 
     @with_user
@@ -141,3 +143,22 @@ class PickupReservationsView(BaseView):
                 "status": JSendStatus.SUCCESS,
                 "data": {"reservation": reservation.serialize(self.request.app.router)}
             }
+
+
+class PickupShortagesView(BaseView):
+    """
+    Gets all pickup points with shortages.
+    """
+
+    url = "/pickups/shortages"
+    with_user = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
+
+    @with_user
+    @requires(UserIsAdmin())
+    @returns(JSendSchema.of(pickups=Many(PickupPointSchema())))
+    async def get(self, user: User):
+        shortages = self.reservation_sourcer.shortages()
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"pickups": [pickup.serialize(count, date) for pickup, (count, date) in shortages.items()]}
+        }

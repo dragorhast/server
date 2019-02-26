@@ -17,6 +17,7 @@ from tortoise import Tortoise
 from tortoise.exceptions import OperationalError
 
 from server import logger
+from server.service.rebuildable import Rebuildable
 from server.service.verify_token import FirebaseVerifier
 from server.views import BikeSocketView
 
@@ -45,20 +46,20 @@ async def initialize_database(app: Application):
 
 async def rebuild_event_states(app: Application):
     """Rebuilds the event-based state from the database."""
-    await app['rental_manager'].rebuild()
-    await app['reservation_manager'].rebuild()
+    for rebuildable in (x for x in app.values() if isinstance(x, Rebuildable)):
+        await rebuildable.rebuild()
 
 
-async def start_background_tasks(app):
+async def start_background_tasks(app: Application):
     """Starts the background tasks."""
     logger.info("Starting Background Tasks")
+    loop = asyncio.get_event_loop()
 
-    app['ticket_cleaner'] = asyncio.get_event_loop().create_task(
-        BikeSocketView.open_tickets.remove_all_expired(timedelta(hours=1))
-    )
+    app['ticket_cleaner'] = loop.create_task(BikeSocketView.open_tickets.remove_all_expired(timedelta(hours=1)))
+    loop.create_task(app['reservation_sourcer'].run())
 
     if isinstance(app['token_verifier'], FirebaseVerifier):
-        asyncio.get_event_loop().create_task(app['token_verifier'].get_keys(timedelta(days=1)))
+        loop.create_task(app['token_verifier'].get_keys(timedelta(days=1)))
 
 
 async def stop_background_tasks(app):
@@ -74,10 +75,11 @@ async def stop_background_tasks(app):
 
 def register_signals(app, init_database=True):
     """Registers all the signals at the appropriate hooks."""
-    app.on_startup.append(start_background_tasks)
     if init_database:
         app.on_startup.append(initialize_database)
-    app.on_startup.append(rebuild_event_states)
+
+    app.on_startup.append(rebuild_event_states)  # we deliberately rebuild the event states
+    app.on_startup.append(start_background_tasks)  # before starting the background tasks
 
     app.on_shutdown.append(close_bike_connections)
 

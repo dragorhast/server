@@ -26,6 +26,7 @@ from server.models import Bike, Rental, User, RentalUpdate, LocationUpdate
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
 from server.service.access.rentals import get_rental
+from server.service.rebuildable import Rebuildable
 
 
 class InactiveRentalError(Exception):
@@ -46,7 +47,7 @@ class CurrentlyRentedError(Exception):
         self.available_bikes = available_bikes
 
 
-class RentalManager:
+class RentalManager(Rebuildable):
     """Handles the lifecycle of the rental in the system."""
 
     def __init__(self):

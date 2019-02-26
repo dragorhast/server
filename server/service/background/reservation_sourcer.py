@@ -1,7 +1,7 @@
 import heapq
 from asyncio import sleep, gather
 from collections import defaultdict
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 from typing import List, Tuple, Dict, Set
 
 from server.models import PickupPoint
@@ -10,16 +10,18 @@ from server.service.manager.reservation_manager import ReservationManager, Reser
 
 def is_within_reservation_time(date_pickup):
     date, pickup = date_pickup
-    return date < datetime.now() + MINIMUM_RESERVATION_TIME
+    return date < datetime.now(timezone.utc) + MINIMUM_RESERVATION_TIME
 
 
-class ShortageNotifier:
+class ReservationSourcer:
     """
     This background service keeps a track of reservations with missing bikes.
+
+    ..todo :: implement rebuild
     """
 
     def __init__(self, reservation_manager: ReservationManager):
-        reservation_manager.hub.subscribe(ReservationEvent.new_reservation, self.new_reservation)
+        reservation_manager.hub.subscribe(ReservationEvent.opened_reservation, self.opened_reservation)
         reservation_manager.hub.subscribe(ReservationEvent.cancelled_reservation, self.cancelled_reservation)
         self._reservation_manager = reservation_manager
         self._rental_heap: List[Tuple[datetime, PickupPoint]] = []
@@ -39,6 +41,9 @@ class ShortageNotifier:
 
     async def run(self, interval: timedelta = None):
         """Runs the reservation notifier at most once every ``interval``."""
+        if interval is None:
+            interval = timedelta(minutes=1)
+
         while True:
             await gather(
                 self._queue_shortages(),
@@ -52,6 +57,9 @@ class ShortageNotifier:
         the reservation time and add it to the set of shortages
         if there is not a bike at that pickup to claim.
         """
+        if not self._rental_heap:
+            return
+
         while is_within_reservation_time(self._rental_heap[0]):
             time, pickup = heapq.heappop(self._rental_heap)
 
@@ -79,8 +87,8 @@ class ShortageNotifier:
                     # remove the shortages filled by the bikes
                     self._shortages.remove(shortage)
 
-    def new_reservation(self, pickup, user, time):
-        if time < datetime.now() + MINIMUM_RESERVATION_TIME:
+    def opened_reservation(self, pickup, user, time):
+        if time < datetime.now(timezone.utc) + MINIMUM_RESERVATION_TIME:
             # we know that there is a bike there
             return
 
