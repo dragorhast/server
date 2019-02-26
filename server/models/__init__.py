@@ -4,7 +4,7 @@ The models package contains all the models used on the server.
 .. autoclasstree:: server.models
 """
 
-from .bike import Bike
+from .bike import Bike, BikeStateUpdate
 from .issue import Issue
 from .location_update import LocationUpdate
 from .pickup_point import PickupPoint

@@ -42,7 +42,7 @@ class UserIsRentingBike(Permission):
 
     @property
     def openapi_security(self):
-        return [{"FirebaseToken": ["user"]}]
+        return [{"FirebaseToken": ["renting_user"]}]
 
 
 class UserMatchesToken(Permission):

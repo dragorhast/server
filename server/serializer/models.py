@@ -8,6 +8,7 @@ Defines serializers for the various models in the system.
 from marshmallow import Schema, validates_schema, ValidationError
 from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float, Url
 
+from server.models.bike import CalculatedBikeStatus
 from server.models.reservation import ReservationOutcome
 from server.models.util import RentalUpdateType
 from server.serializer.geojson import GeoJSON, GeoJSONType
@@ -18,10 +19,14 @@ class BikeSchema(Schema):
     public_key = BytesField()
     identifier = BytesField(required=True, as_string=True, max_length=6)
     available = Boolean(required=True)
-    current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
     connected = Boolean()
+    rented = Boolean()
+    broken = Boolean()
+    in_circulation = Boolean()
+    status = EnumField(CalculatedBikeStatus)
     battery = Float()
     locked = Boolean()
+    current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
 
     @validates_schema
     def assert_current_location_on_available_bikes(self, data):

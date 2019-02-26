@@ -169,6 +169,7 @@ class RentalManager:
 
         return await query.prefetch_related(
             Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
+            "state_updates"
         )
 
     async def rebuild(self):

@@ -1,5 +1,5 @@
 import heapq
-from asyncio import sleep
+from asyncio import sleep, gather
 from collections import defaultdict
 from datetime import timedelta, datetime
 from typing import List, Tuple, Dict, Set
@@ -25,7 +25,7 @@ class ShortageNotifier:
         self._rental_heap: List[Tuple[datetime, PickupPoint]] = []
         self._shortages: Set[Tuple[datetime, PickupPoint]] = set()
 
-    async def shortages(self) -> Dict[PickupPoint, Tuple[int, datetime]]:
+    def shortages(self) -> Dict[PickupPoint, Tuple[int, datetime]]:
         """
         Gets a dictionary mapping all the pickup points with shortages
         to the number of bikes needed and the time they are needed by.
@@ -38,16 +38,46 @@ class ShortageNotifier:
         return shortages
 
     async def run(self, interval: timedelta = None):
-        """Runs the reservation notifier."""
-
+        """Runs the reservation notifier at most once every ``interval``."""
         while True:
-            while is_within_reservation_time(self._rental_heap[0]):
-                time, pickup = heapq.heappop(self._rental_heap)
+            await gather(
+                self._queue_shortages(),
+                self._cull_shortages(),
+                sleep(interval.total_seconds())
+            )
 
-                if await self._reservation_manager.pickup_bike_surplus(pickup) < 0:
-                    self._shortages.add((time, pickup))
+    async def _queue_shortages(self):
+        """
+        For each reservation in the heap, check if it is within
+        the reservation time and add it to the set of shortages
+        if there is not a bike at that pickup to claim.
+        """
+        while is_within_reservation_time(self._rental_heap[0]):
+            time, pickup = heapq.heappop(self._rental_heap)
 
-            await sleep(interval.total_seconds())
+            if await self._reservation_manager.pickup_bike_surplus(pickup) < 0:
+                self._shortages.add((time, pickup))
+
+    async def _cull_shortages(self):
+        """
+        For each shortage, if bikes have been added to the pickup
+        point, remove shortages from the set starting from the
+        earliest shortage.
+        """
+        for pickup, shortage in self.shortages().items():
+            stored_shortage_amount, closest_date = shortage
+            surplus = await self._reservation_manager.pickup_bike_surplus(pickup)
+            actual_storage_amount = -surplus
+
+            if stored_shortage_amount > actual_storage_amount:
+                # if more bikes have arrived...
+                new_bikes = stored_shortage_amount - actual_storage_amount
+                pickup_shortages = filter(lambda x: x[1] == pickup, self._shortages)
+                closest_shortages = list(sorted(pickup_shortages, key=lambda x: x[0]))[:new_bikes]
+
+                for shortage in closest_shortages:
+                    # remove the shortages filled by the bikes
+                    self._shortages.remove(shortage)
 
     def new_reservation(self, pickup, user, time):
         if time < datetime.now() + MINIMUM_RESERVATION_TIME:

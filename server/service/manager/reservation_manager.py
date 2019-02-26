@@ -109,27 +109,30 @@ class ReservationManager:
         :raises ValueError: If the pickup points
         """
 
-        active_reservations = await current_reservations(user)
         collection_location = self._bike_connection_manager.most_recent_location(bike)
 
         if collection_location is None:
-            return  # todo uh oh!
+            raise CollectionError("Could not find bike.")  # THIS SHOULD NEVER HAPPEN
         else:
             collection_location, _, _ = collection_location
 
-        valid_reservations = [x for x in active_reservations if collection_location.within(x.pickup_point.area)]
+        active_reservations = await current_reservations(user)
+        valid_reservations = []
+
+        for reservation in active_reservations:
+            upper_bound = reservation.reserved_for + RESERVATION_WINDOW / 2
+            if datetime.now(timezone.utc) >= upper_bound:
+                reservation.outcome = ReservationOutcome.EXPIRED
+                await reservation.save()
+            elif collection_location.within(reservation.pickup_point.area):
+                valid_reservations.append(reservation)
 
         if not valid_reservations:
             raise CollectionError("User has no active reservations at the pickup point of the requested bike.")
 
         reservation = sorted(valid_reservations, key=lambda x: x.reserved_for)[0]
-
         lower_bound = reservation.reserved_for - RESERVATION_WINDOW / 2
         upper_bound = reservation.reserved_for + RESERVATION_WINDOW / 2
-
-        if datetime.now(timezone.utc) >= upper_bound:
-            # todo delete reservation
-            pass
 
         if not lower_bound <= datetime.now(timezone.utc) <= upper_bound:
             raise CollectionError(
@@ -142,9 +145,7 @@ class ReservationManager:
 
         pickup = self._pickup_containing(bike)
         if not pickup or pickup.id != reservation.pickup_point.id:
-            raise CollectionError(
-                "Requested bike is not in the pickup point of the reservation."
-            )
+            raise CollectionError("Requested bike is not in the pickup point of the reservation.")
 
         if bike not in available_bikes:
             raise CurrentlyRentedError("Requested bike is currently being rented.", available_bikes)
