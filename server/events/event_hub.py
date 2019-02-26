@@ -1,5 +1,5 @@
 from collections import defaultdict
-from inspect import signature, iscoroutinefunction
+from inspect import signature, iscoroutinefunction, Signature
 from typing import Type, Union, Callable
 
 from .exceptions import NoSuchEventError, InvalidHandlerError, NoSuchListenerError
@@ -50,14 +50,20 @@ class EventHub:
         if event not in self:
             raise NoSuchEventError("Event does not exist on the given target.")
 
-        event_keys = signature(event).parameters.keys()
-        handler_keys = signature(handler).parameters.keys()
+        event_keys = [x for x in signature(event).parameters.items() if not x[0] == "self"]
+        handler_keys = [x for x in signature(handler).parameters.items() if not x[0] == "self"]
 
-        if not event_keys == handler_keys:
-            raise InvalidHandlerError(
-                "Handler signature does not match.",
-                event_keys, handler_keys
-            )
+        errors = []
+        for (e_name, e_param), (h_name, h_param) in zip(event_keys, handler_keys):
+            if not e_name == h_name:
+                errors.append(InvalidHandlerError("Keys do not match.", e_name, h_name))
+
+            if e_param.annotation is not Signature.empty and h_param.annotation is not Signature.empty:
+                if e_param.annotation is not h_param.annotation:
+                    errors.append(InvalidHandlerError(f"Conflicting annotations for parameter \"{e_name}\".", target, handler))
+
+        if errors:
+            raise InvalidHandlerError(errors)
 
         self._listeners[event].append(handler)
 
