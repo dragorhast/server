@@ -60,7 +60,7 @@ class CollectionError(ReservationError):
 
 class ReservationEvent(EventList):
 
-    def new_reservation(self, pickup: PickupPoint, user: User, time: datetime):
+    def opened_reservation(self, pickup: PickupPoint, user: User, time: datetime):
         """A new reservation is added to the system."""
 
     def cancelled_reservation(self, pickup: PickupPoint, user: User, time: datetime):
@@ -93,7 +93,7 @@ class ReservationManager(Rebuildable):
 
         reservation = await create_reservation(user, pickup, for_time)
         self.reservations[pickup.id].add((reservation.id, user.id, reservation.reserved_for))
-        self.hub.new_reservation(pickup, user, for_time)
+        self.hub.opened_reservation(pickup, user, for_time)
         return reservation
 
     async def claim(self, user: User, bike: Bike) -> Tuple[Rental, Point]:
@@ -198,12 +198,13 @@ class ReservationManager(Rebuildable):
 
     async def rebuild(self):
         """Rebuilds the reservation manager from the database."""
-        unhandled_reservations = await Reservation.filter(outcome__isnull=True).prefetch_related("pickup_point")
+        unhandled_reservations = await Reservation.filter(outcome__isnull=True).prefetch_related("pickup_point", "user")
 
         for reservation in unhandled_reservations:
             self.reservations[reservation.pickup_point.id].add(
                 (reservation.id, reservation.user_id, reservation.reserved_for))
             self.pickup_points.add(reservation.pickup_point)
+            self.hub.opened_reservation(reservation.pickup_point, reservation.user, reservation.reserved_for)
 
     async def _close_reservation(self, reservation: Reservation, outcome: ReservationOutcome):
         self.reservations[reservation.pickup_point_id].remove(
