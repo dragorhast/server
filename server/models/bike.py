@@ -20,7 +20,7 @@ from server.models.util import BikeType, BikeUpdateType
 from server.serializer.geojson import GeoJSONType
 
 
-class CalculatedBikeStatus(Enum):
+class CalculatedBikeStatus(str, Enum):
     """
     Represents the possible calculated states of a bike.
     """

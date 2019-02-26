@@ -54,9 +54,12 @@ class EventHub:
         handler_keys = [x for x in signature(handler).parameters.items() if not x[0] == "self"]
 
         errors = []
+        if not len(event_keys) == len(handler_keys):
+            errors.append(InvalidHandlerError("Parameters are of conflicting lengths.", target, handler))
+
         for (e_name, e_param), (h_name, h_param) in zip(event_keys, handler_keys):
             if not e_name == h_name:
-                errors.append(InvalidHandlerError("Keys do not match.", e_name, h_name))
+                errors.append(InvalidHandlerError("Parameters do not match.", e_name, h_name))
 
             if e_param.annotation is not Signature.empty and h_param.annotation is not Signature.empty:
                 if e_param.annotation is not h_param.annotation:

@@ -10,6 +10,9 @@ class UserIsAdmin(Permission):
     """Asserts that a given user is an admin."""
 
     async def __call__(self, view: View, user: User, **kwargs):
+        if user is None:
+            raise RoutePermissionError("User does not exist.")
+
         if "token" not in view.request:
             raise RoutePermissionError("No admin firebase jwt was included in the Authorization header.")
 
