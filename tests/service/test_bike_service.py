@@ -4,7 +4,7 @@ from server.models import Bike, BikeStateUpdate
 from server.models.util import BikeUpdateType
 from server.service import MASTER_KEY
 from server.service.access.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike, \
-    get_bike_in_circulation
+    get_bike_in_circulation, set_bike_in_circulation
 from tests.util import random_key
 
 
@@ -86,3 +86,9 @@ async def test_get_bike_status(random_bike):
 async def test_get_bike_status_no_status(random_bike):
     status = await get_bike_in_circulation(random_bike)
     assert status is False
+
+
+async def test_set_bike_status(random_bike):
+    await set_bike_in_circulation(random_bike, True)
+    bike = await Bike.all().first().prefetch_related("state_updates")
+    assert bike.in_circulation is True
