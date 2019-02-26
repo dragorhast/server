@@ -42,7 +42,9 @@ async def get_broken_bikes() -> Tuple[Set[str], Dict[str, Bike], Dict[str, List[
      a dictionary mapping the identifier to its bike,
      and a dictionary mapping the identifier to its list of issues
     """
-    active_issues = await Issue.filter(is_active=True, bike_id__not_isnull=True).prefetch_related('bike')
+    active_issues = await Issue.filter(is_active=True, bike_id__not_isnull=True).prefetch_related(
+        'bike', 'bike__state_updates'
+    )
 
     identifiers = set()
     bikes = {}

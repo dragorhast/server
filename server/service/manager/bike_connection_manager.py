@@ -128,7 +128,9 @@ class BikeConnectionManager:
         """Gets all bikes with less than the given battery level."""
         low_battery_ids = {k: v for k, v in self._bike_battery.items() if v <= percent}
         return await Bike.filter(id__in=low_battery_ids).prefetch_related(
-            Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)))
+            "state_updates",
+            Prefetch("location_updates", queryset=LocationUpdate.all().limit(100))
+        )
 
     def battery_level(self, bike_id) -> float:
         """Gets the battery level of a given bike."""
