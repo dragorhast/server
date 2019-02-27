@@ -2,7 +2,7 @@ from datetime import timedelta, datetime, timezone
 
 from shapely.geometry import Point
 
-from server.models import Bike, LocationUpdate, PickupPoint
+from server.models import Bike, PickupPoint
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.fields import Many
 from server.serializer.models import PickupPointSchema, BikeSchema, ReservationSchema, CreateReservationSchema
@@ -19,11 +19,13 @@ class TestPickupsView:
 
         assert data["status"] == JSendStatus.SUCCESS
 
-    async def test_get_bikes_in_pickup(self, client, random_pickup_point: PickupPoint):
+    async def test_get_bikes_in_pickup(self, client, random_pickup_point: PickupPoint, bike_connection_manager):
         bike1 = await Bike.create(public_key_hex="abcdef")
-        location1 = await LocationUpdate.create(bike=bike1, location=random_pickup_point.area.centroid)
         bike2 = await Bike.create(public_key_hex="badcfe")
-        location2 = await LocationUpdate.create(bike=bike2, location=Point(100, 100))
+
+        await bike_connection_manager.update_location(bike1, location=Point(100, 100))
+        await bike_connection_manager.update_location(bike1, location=random_pickup_point.area.centroid)
+        await bike_connection_manager.update_location(bike2, location=Point(100, 100))
 
         resp = await client.get(f'/api/v1/pickups/{random_pickup_point.id}/bikes')
         schema = JSendSchema.of(bikes=Many(BikeSchema()))
@@ -54,7 +56,8 @@ class TestPickupView:
 class TestPickupReservationsView:
 
     async def test_get_pickup_reservations(self, client, random_pickup_point, reservation_manager, random_admin):
-        await reservation_manager.reserve(random_admin, random_pickup_point, datetime.now(timezone.utc) + timedelta(hours=4))
+        await reservation_manager.reserve(random_admin, random_pickup_point,
+                                          datetime.now(timezone.utc) + timedelta(hours=4))
         resp = await client.get(
             f'/api/v1/pickups/{random_pickup_point.id}/reservations',
             headers={"Authorization": f"Bearer {random_admin.firebase_id}"}
@@ -63,7 +66,6 @@ class TestPickupReservationsView:
         assert len(response_data["data"]["reservations"]) == 1
 
     async def test_create_pickup_reservation(self, client, random_pickup_point, reservation_manager, random_user):
-
         request_data = CreateReservationSchema().dump({
             "reserved_for": datetime.now() + timedelta(hours=4)
         })

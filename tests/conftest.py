@@ -16,6 +16,7 @@ from server.middleware import validate_token_middleware
 from server.models import Bike, User, Rental
 from server.models.pickup_point import PickupPoint
 from server.service import TicketStore
+from server.service.background.reservation_sourcer import ReservationSourcer
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager
 from server.service.manager.reservation_manager import ReservationManager
@@ -78,6 +79,11 @@ async def init_db(database_url):
     await Tortoise.close_connections()
 
 
+@pytest.fixture
+def reservation_sourcer(reservation_manager):
+    return ReservationSourcer(reservation_manager)
+
+
 @pytest.fixture(scope="session")
 def _database(database_url):
     loop = asyncio.new_event_loop()
@@ -108,7 +114,7 @@ async def database(_database, loop, database_url):
 @pytest.fixture
 async def client(
     aiohttp_client, database,
-    rental_manager, bike_connection_manager, reservation_manager
+    rental_manager, bike_connection_manager, reservation_manager, reservation_sourcer
 ) -> TestClient:
     asyncio.get_event_loop().set_debug(True)
     app = web.Application(middlewares=[validate_token_middleware])
@@ -116,6 +122,7 @@ async def client(
     app['rental_manager'] = rental_manager
     app['bike_location_manager'] = bike_connection_manager
     app['reservation_manager'] = reservation_manager
+    app['reservation_sourcer'] = reservation_sourcer
     app['token_verifier'] = DummyVerifier()
 
     register_signals(app, init_database=False)  # we get the database from a fixture

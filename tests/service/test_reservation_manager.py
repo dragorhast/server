@@ -48,6 +48,8 @@ class TestReservationManager:
         random_user, random_pickup_point, random_bike
     ):
         """Assert that collecting a rental creates one."""
+        bike_connection_manager.is_connected = lambda x: True
+
         await bike_connection_manager.update_location(random_bike, random_pickup_point.area.centroid)
         reservation_manager.pickup_points.add(random_pickup_point)
         await reservation_manager.reserve(
@@ -97,6 +99,8 @@ class TestReservationManager:
         Assert that trying to collect a bike that is currently
         being rented fails, and returns bikes that are free.
         """
+        bike_connection_manager.is_connected = lambda x: True
+
         used_bike = await random_bike_factory()
         available_bike = await random_bike_factory()
         reservation_manager.pickup_points.add(random_pickup_point)
@@ -133,7 +137,7 @@ class TestReservationManager:
         )
 
         with pytest.raises(CollectionError):
-            rental = await reservation_manager.claim(random_user, far_bike)
+            await reservation_manager.claim(random_user, far_bike)
 
     async def test_bike_is_reserved(
         self, random_bike_factory, reservation_manager, random_pickup_point,
@@ -143,6 +147,8 @@ class TestReservationManager:
         Assert that if there are the same or more reservations as there are bikes
         in a pickup point that all the bikes are considered "reserved".
         """
+        bike_connection_manager.is_connected = lambda x: True
+
         first = await random_bike_factory()
         second = await random_bike_factory()
 

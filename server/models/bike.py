@@ -9,15 +9,47 @@ the server maintains a :class:`~server.service.bike_connection_Manager.BikeConne
 which facilitates bike location updates and remote procedure calls on all
 connected bikes.
 """
-
+from enum import Enum
 from typing import Dict, Any
 
 from shapely.geometry import mapping
 from tortoise import Model, fields
 
 from server.models.fields import EnumField
-from server.models.util import BikeType
+from server.models.util import BikeType, BikeUpdateType
 from server.serializer.geojson import GeoJSONType
+
+
+class CalculatedBikeStatus(str, Enum):
+    """
+    Represents the possible calculated states of a bike.
+    """
+
+    AVAILABLE = "available",
+    BROKEN = "broken",
+    OUT_OF_CIRCULATION = "out_of_circulation"
+    RENTED = "rented",
+    DISCONNECTED = "disconnected"
+
+    @classmethod
+    def get(cls, available, rented, in_circulation, broken):
+        if not in_circulation:
+            return cls.OUT_OF_CIRCULATION
+        elif broken:
+            return cls.BROKEN
+        elif rented:
+            return cls.RENTED
+        elif available:
+            return cls.AVAILABLE
+        else:
+            return cls.DISCONNECTED
+
+
+class BikeStateUpdate(Model):
+    id = fields.IntField(pk=True)
+    bike = fields.ForeignKeyField("models.Bike", related_name="state_updates")
+    time = fields.DatetimeField(auto_now_add=True)
+    state = EnumField(BikeUpdateType)
 
 
 class Bike(Model):
@@ -26,7 +58,8 @@ class Bike(Model):
     type = EnumField(enum_type=BikeType, default=BikeType.ROAD)
 
     def serialize(
-        self, bike_connection_manager, rental_manager, reservation_manager, include_location=False
+        self, bike_connection_manager, rental_manager,
+        reservation_manager, include_location=False
     ) -> Dict[str, Any]:
         """
         Serializes the bike into a format that can be turned into JSON.
@@ -34,15 +67,26 @@ class Bike(Model):
         :param include_location: Whether to force include the location, ignoring whether it is available (PRIVACY WARNING)
         :return: A dictionary.
         """
+        connected = bike_connection_manager.is_connected(self)
+        rented = not rental_manager.is_available(self, reservation_manager)
+        available = connected and not rented
+        broken = False  # todo implement
+        in_circulation = self.in_circulation
+
+        status = CalculatedBikeStatus.get(available, rented, in_circulation, broken)
+
         data = {
-            "identifier": self.identifier,
             "public_key": self.public_key,
-            "connected": bike_connection_manager.is_connected(self),
+            "identifier": self.identifier,
+            "available": available,
+            "connected": connected,
+            "rented": rented,
+            "broken": broken,
+            "in_circulation": in_circulation,
+            "status": status
         }
 
-        data["available"] = data["connected"] and rental_manager.is_available(self, reservation_manager)
-
-        if data["connected"]:
+        if connected:
             data["battery"] = bike_connection_manager.battery_level(self.id)
             data["locked"] = bike_connection_manager.is_locked(self.id)
 
@@ -69,3 +113,11 @@ class Bike(Model):
     def identifier(self) -> str:
         """The 6 character bike identifier."""
         return self.public_key_hex[:6]
+
+    @property
+    def in_circulation(self) -> bool:
+        for update in reversed(self.state_updates):
+            if update.state in (BikeUpdateType.IN_CIRCULATION, BikeUpdateType.OUT_OF_CIRCULATION):
+                return update.state is BikeUpdateType.IN_CIRCULATION
+
+        return False

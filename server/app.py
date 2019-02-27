@@ -14,6 +14,7 @@ from aiohttp_sentry import SentryMiddleware
 from server import server_mode, logger
 from server.config import api_root
 from server.middleware import validate_token_middleware
+from server.service.background.reservation_sourcer import ReservationSourcer
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager
 from server.service.manager.reservation_manager import ReservationManager
@@ -32,6 +33,7 @@ def build_app(db_uri=None):
     app['bike_location_manager'] = BikeConnectionManager()
     app['rental_manager'] = RentalManager()
     app['reservation_manager'] = ReservationManager(app['bike_location_manager'], app['rental_manager'])
+    app['reservation_sourcer'] = ReservationSourcer(app['reservation_manager'])
     app['database_uri'] = db_uri if db_uri is not None else 'spatialite://:memory:'
 
     if server_mode == "development":

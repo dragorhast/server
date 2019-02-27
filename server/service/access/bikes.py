@@ -10,12 +10,11 @@ upon actual deployment, will be replaced with a more secure method.
 """
 from typing import Optional, Dict, Union, List
 
-from shapely.wkt import dumps
-from tortoise import BaseTransactionWrapper
 from tortoise.exceptions import DoesNotExist
 from tortoise.query_utils import Prefetch
 
-from server.models import Bike, LocationUpdate, PickupPoint
+from server.models import Bike, LocationUpdate, BikeStateUpdate
+from server.models.util import BikeUpdateType
 from server.service import MASTER_KEY
 
 
@@ -23,10 +22,17 @@ class BadKeyError(Exception):
     pass
 
 
-async def get_bikes() -> List[Bike]:
+async def get_bikes(*, bike_ids: List[int] = None) -> List[Bike]:
     """Gets all the bikes from the system."""
-    bikes = await Bike.all().prefetch_related(Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
-    return bikes
+    if bike_ids is not None:
+        query = Bike.filter(id__in=bike_ids)
+    else:
+        query = Bike.all()
+
+    return await query.prefetch_related(
+        Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
+        "state_updates"
+    )
 
 
 async def get_bike(*, identifier: Union[str, bytes] = None,
@@ -41,30 +47,11 @@ async def get_bike(*, identifier: Union[str, bytes] = None,
 
     try:
         return await Bike.get(**kwargs).first().prefetch_related(
-            Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
+            Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
+            "state_updates"
+        )
     except DoesNotExist:
         return None
-
-
-async def get_bikes_in_pickup(pickup: PickupPoint):
-    """
-    Retrieves all bikes whose most recent location is inside a given pickup point..
-
-    .. note:: Works with both Postgres and Sqlite"""
-
-    capabilities = PickupPoint._meta.db._old_context_value.capabilities \
-        if isinstance(PickupPoint._meta.db, BaseTransactionWrapper) \
-        else PickupPoint._meta.db.capabilities
-
-    return [
-        Bike(**row) for row in await Bike._meta.db.execute_query(f"""
-            select B.* from bike B
-                inner join locationupdate L on B.id = L.bike_id
-            where ST_Within(L.location, ST_GeomFromText('{dumps(pickup.area)}', {PickupPoint.area.srid}))
-            group by B.id, L.time
-            order by L.time
-        """)
-    ]
 
 
 async def register_bike(public_key: Union[str, bytes], master_key: Union[str, bytes]) -> Bike:
@@ -118,3 +105,24 @@ async def delete_bike(bike, master_key) -> None:
         raise BadKeyError("Incorrect master key")
 
     await bike.delete()
+
+
+async def get_bike_in_circulation(bike: Bike) -> bool:
+    """Checks whether the given bike is in circulation or not."""
+    bike_state = await bike.state_updates\
+        .filter(state__in=(BikeUpdateType.IN_CIRCULATION, BikeUpdateType.OUT_OF_CIRCULATION))\
+        .first()
+
+    return bike_state is not None and bike_state.state is BikeUpdateType.IN_CIRCULATION
+
+
+async def set_bike_in_circulation(bike: Bike, in_circulation: bool):
+    """
+    Sets the bike state to the provided value, given it isn't already in that state.
+
+    :param bike: The bike to set
+    :param in_circulation: True if it is in circulation or False for out
+    """
+    if in_circulation is not await get_bike_in_circulation(bike):
+        new_state = BikeUpdateType.IN_CIRCULATION if in_circulation else BikeUpdateType.OUT_OF_CIRCULATION
+        await BikeStateUpdate.create(bike=bike, state=new_state)

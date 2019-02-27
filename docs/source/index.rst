@@ -42,6 +42,7 @@ to the micro-mobility problem.
    server/server
    server/service
    server/serializer
+   server/events
 
 .. toctree::
    :maxdepth: 2

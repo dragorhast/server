@@ -19,17 +19,19 @@ from shapely.geometry import Point
 
 from server import logger
 from server.models import Issue, User
-from server.models.bike import Bike
+from server.models.bike import Bike, BikeStateUpdate
+from server.models.util import BikeUpdateType
 from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsConnected, BikeNotInUse, BikeNotBroken, \
     UserMatchesToken
 from server.serializer import JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
 from server.serializer.fields import Many, BytesField
 from server.serializer.json_rpc import JsonRPCRequest, JsonRPCResponse
-from server.serializer.misc import MasterKeySchema, BikeRegisterSchema, BikeLockSchema
+from server.serializer.misc import MasterKeySchema, BikeRegisterSchema, BikeModifySchema
 from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
 from server.service import TicketStore, ActiveRentalError
-from server.service.access.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike
+from server.service.access.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike, \
+    get_bike_in_circulation, set_bike_in_circulation
 from server.service.access.issues import get_issues, get_broken_bikes, open_issue
 from server.service.access.rentals import get_rentals_for_bike
 from server.service.access.reservations import current_reservations
@@ -51,7 +53,7 @@ class BikesView(BaseView):
     @with_user
     @docs(summary="Get All Bikes")
     @returns(JSendSchema.of(
-        bikes=Many(BikeSchema(only=("identifier", "current_location", "available", "battery", "locked")))))
+        bikes=Many(BikeSchema(only=("identifier", "current_location", "available", "battery", "locked", "status")))))
     async def get(self, user):
         """Gets all the bikes from the system."""
         return {
@@ -211,13 +213,23 @@ class BikeView(BaseView):
 
     @with_user
     @with_bike
-    @docs(summary="Lock A Bike")
+    @docs(summary="Update A Bike")
     @requires(UserIsAdmin() | UserIsRentingBike() & BikeIsConnected())
-    @expects(BikeLockSchema())
+    @expects(BikeModifySchema())
     @returns(JSendSchema.of(bike=BikeSchema(only=("identifier", "current_location", "battery", "locked"))))
-    async def patch(self, user, bike):
-        """Allows locking and unlocking of the bike."""
-        await self.bike_connection_manager.set_locked(bike.id, self.request["data"]["locked"])
+    async def patch(self, user: User, bike: Bike):
+        """
+        Allows users to update the status of a bike.
+
+        - locked status
+        - circulation status
+        """
+        if "locked" in self.request["data"]:
+            await self.bike_connection_manager.set_locked(bike.id, self.request["data"]["locked"])
+
+        if user.is_admin and "in_circulation" in self.request["data"]:
+            await set_bike_in_circulation(bike, self.request["data"]["in_circulation"])
+
         return {
             "status": JSendStatus.SUCCESS,
             "data": {

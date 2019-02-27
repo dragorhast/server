@@ -33,7 +33,7 @@ from server import logger
 from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView, BikeIssuesView, BrokenBikesView, LowBikesView
 from .issues import IssuesView, IssueView
 from .misc import redoc, logo
-from .pickups import PickupView, PickupsView, PickupBikesView, PickupReservationsView
+from .pickups import PickupView, PickupsView, PickupBikesView, PickupReservationsView, PickupShortagesView
 from .rentals import RentalView, RentalsView
 from .reservations import ReservationView, ReservationsView
 from .users import UserView, UsersView, UserIssuesView, UserRentalsView, UserReservationsView, MeView, \
@@ -42,7 +42,7 @@ from .users import UserView, UsersView, UserIssuesView, UserRentalsView, UserRes
 views = [
     BikeView, BikesView, BrokenBikesView, LowBikesView, BikeRentalsView, BikeIssuesView, BikeSocketView,
     IssuesView, IssueView,
-    PickupView, PickupsView, PickupBikesView, PickupReservationsView,
+    PickupView, PickupsView, PickupBikesView, PickupReservationsView, PickupShortagesView,
     RentalView, RentalsView,
     ReservationView, ReservationsView,
     MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView,

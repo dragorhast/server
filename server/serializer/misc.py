@@ -15,6 +15,7 @@ class BikeRegisterSchema(MasterKeySchema):
     type = EnumField(BikeType, description="The type of bike.")
 
 
-class BikeLockSchema(Schema):
+class BikeModifySchema(Schema):
     """"""
     locked = Bool()
+    in_circulation = Bool()

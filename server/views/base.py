@@ -12,6 +12,7 @@ from aiohttp.abc import Application
 from aiohttp.web import View, AbstractRoute
 from aiohttp_cors import CorsConfig, CorsViewMixin, ResourceOptions
 
+from server.service.background.reservation_sourcer import ReservationSourcer
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager
 from server.service.manager.reservation_manager import ReservationManager
@@ -35,6 +36,7 @@ class BaseView(View, CorsViewMixin):
     rental_manager: RentalManager
     bike_connection_manager: BikeConnectionManager
     reservation_manager: ReservationManager
+    reservation_sourcer: ReservationSourcer
 
     cors_config = {
         "*": ResourceOptions(
@@ -64,6 +66,7 @@ class BaseView(View, CorsViewMixin):
         cls.rental_manager = app["rental_manager"]
         cls.bike_connection_manager = app["bike_location_manager"]
         cls.reservation_manager = app["reservation_manager"]
+        cls.reservation_sourcer = app["reservation_sourcer"]
 
     @classmethod
     def enable_cors(cls, cors: CorsConfig):

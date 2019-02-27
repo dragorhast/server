@@ -103,7 +103,7 @@ class TestBrokenBikesView:
 
         response = await client.get(f"/api/v1/bikes/broken",
                                     headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
-        text = await response.text()
+
         response_data = JSendSchema.of(
             identifiers=List(BytesField(as_string=True)),
             bikes=Dict(keys=BytesField(as_string=True), values=Nested(BikeSchema())),
@@ -217,6 +217,7 @@ class TestBikeRentalsView:
         """
         Assert that a user can initiate a rental from the same pickup point as their current reservation.
         """
+        bike_connection_manager.is_connected = lambda x: True
         await bike_connection_manager.update_location(random_bike, random_pickup_point.area.centroid)
         reservation_manager.pickup_points.add(random_pickup_point)
         await reservation_manager.reserve(random_user, random_pickup_point, datetime.now(timezone.utc) + timedelta(minutes=10))
@@ -226,7 +227,7 @@ class TestBikeRentalsView:
         response = await client.post(f"/api/v1/bikes/{random_bike.identifier}/rentals",
                                      headers={"Authorization": f"Bearer {random_user.firebase_id}"})
 
-        response_data = await response.text()
+        response_data = JSendSchema().load(await response.json())
 
         assert len(reservation_manager.reservations[random_pickup_point.id]) == 0
 

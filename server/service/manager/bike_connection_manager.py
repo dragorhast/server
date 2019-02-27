@@ -108,13 +108,10 @@ class BikeConnectionManager:
         """
         bid = target.id if isinstance(target, Bike) else target
         time = time if time is not None else datetime.now()
+        await LocationUpdate.create(bike_id=bid, location=location, time=time)
+
         pickup = await get_pickup_at(location)
-        update = await LocationUpdate.create(bike_id=bid, location=location, time=time)
         self._bike_locations[bid] = (location, time, pickup)
-
-        if isinstance(target, Bike):
-            target.updates.append(update)
-
         return pickup
 
     def update_battery(self, bike_id, percent: float):
@@ -131,7 +128,9 @@ class BikeConnectionManager:
         """Gets all bikes with less than the given battery level."""
         low_battery_ids = {k: v for k, v in self._bike_battery.items() if v <= percent}
         return await Bike.filter(id__in=low_battery_ids).prefetch_related(
-            Prefetch("updates", queryset=LocationUpdate.all().limit(100)))
+            "state_updates",
+            Prefetch("location_updates", queryset=LocationUpdate.all().limit(100))
+        )
 
     def battery_level(self, bike_id) -> float:
         """Gets the battery level of a given bike."""

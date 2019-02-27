@@ -29,3 +29,9 @@ def resolve_id(target: Union[Model, int]):
         return target
     else:
         raise TypeError(f"Target {target} is neither a Model or an int.")
+
+
+class BikeUpdateType(str, Enum):
+    OUT_OF_CIRCULATION = "out_of_circulation"
+    SERVICED = "serviced"
+    IN_CIRCULATION = "in_circulation"
