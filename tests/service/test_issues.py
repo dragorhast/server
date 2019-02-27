@@ -28,12 +28,12 @@ class TestIssues:
 
     async def test_close_issue(self, random_user):
         issue = await Issue.create(user=random_user, description="Uh oh!")
-        await close_issue(issue)
+        await close_issue(issue, resolution="Fixed!")
         assert await Issue.filter(status=IssueStatus.CLOSED).count() == 1
 
     async def test_close_issue_by_id(self, random_user):
         issue = await Issue.create(user=random_user, description="Uh oh!")
-        await close_issue(issue.id)
+        await close_issue(issue.id, resolution="Fixed!")
         assert await Issue.filter(status=IssueStatus.CLOSED).count() == 1
 
     async def test_get_broken_bikes(self, random_bike_factory, random_user):
@@ -42,6 +42,7 @@ class TestIssues:
         bike3 = await random_bike_factory()
 
         issue = await open_issue(random_user, "My bike sucks!", bike1)
-        identifiers, bikes, issues = await get_broken_bikes()
+        broken_bikes = await get_broken_bikes()
 
-        assert bike1 in bikes.values()
+        bikes, issues = zip(*broken_bikes)
+        assert bike1 in bikes

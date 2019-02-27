@@ -28,7 +28,8 @@ from shapely.geometry import Point, Polygon
 from tortoise.query_utils import Prefetch
 
 from server import logger
-from server.models import Bike, LocationUpdate, PickupPoint
+from server.models import Bike, LocationUpdate, PickupPoint, Issue
+from server.models.issue import IssueStatus
 from server.models.util import resolve_id
 from server.service.access.pickup_points import get_pickup_at
 
@@ -129,7 +130,8 @@ class BikeConnectionManager:
         low_battery_ids = {k: v for k, v in self._bike_battery.items() if v <= percent}
         return await Bike.filter(id__in=low_battery_ids).prefetch_related(
             "state_updates",
-            Prefetch("location_updates", queryset=LocationUpdate.all().limit(100))
+            Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
+            Prefetch("issues", queryset=Issue.filter(status__not=IssueStatus.CLOSED))
         )
 
     def battery_level(self, bike_id) -> float:

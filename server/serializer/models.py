@@ -27,6 +27,7 @@ class BikeSchema(Schema):
     battery = Float()
     locked = Boolean()
     current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
+    open_issues = Nested('IssueSchema', many=True, exclude=('bike',))
 
     @validates_schema
     def assert_current_location_on_available_bikes(self, data):

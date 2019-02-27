@@ -23,6 +23,7 @@ from shapely.geometry import Point
 from tortoise.query_utils import Prefetch
 
 from server.models import Bike, Rental, User, RentalUpdate, LocationUpdate
+from server.models.issue import IssueStatus, Issue
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
 from server.service.access.rentals import get_rental
@@ -170,7 +171,8 @@ class RentalManager(Rebuildable):
 
         return await query.prefetch_related(
             Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
-            "state_updates"
+            "state_updates",
+            Prefetch("issues", queryset=Issue.filter(status__not=IssueStatus.CLOSED))
         )
 
     async def rebuild(self):

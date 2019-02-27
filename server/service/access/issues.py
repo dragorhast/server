@@ -5,6 +5,8 @@ Issues
 from collections import defaultdict
 from typing import Union, Tuple, List, Dict, Set
 
+from tortoise.query_utils import Prefetch
+
 from server.models import User, Bike
 from server.models.issue import Issue, IssueStatus
 
@@ -42,7 +44,7 @@ async def get_issue(iid: int):
     return await Issue.filter(id=iid).prefetch_related('bike').first()
 
 
-async def get_broken_bikes() -> Tuple[Set[str], Dict[str, Bike], Dict[str, List[Issue]]]:
+async def get_broken_bikes() -> List[Tuple[Bike, List[Issue]]]:
     """
     Gets the list of all broken bikes ie. those with active issues.
 
@@ -50,21 +52,20 @@ async def get_broken_bikes() -> Tuple[Set[str], Dict[str, Bike], Dict[str, List[
      a dictionary mapping the identifier to its bike,
      and a dictionary mapping the identifier to its list of issues
     """
-    active_issues = await Issue.filter(status__not=IssueStatus.CLOSED, bike_id__not_isnull=True).prefetch_related(
-        'bike', 'bike__state_updates'
+    active_issues: List[Issue] = await Issue.filter(status__not=IssueStatus.CLOSED, bike_id__not_isnull=True).prefetch_related(
+        'bike', 'bike__state_updates', Prefetch("bike__issues", queryset=Issue.filter(status__not=IssueStatus.CLOSED))
     )
 
-    identifiers = set()
-    bikes = {}
-    issues = defaultdict(list)
+    broken_bikes = {}
 
     for issue in active_issues:
-        identifier = issue.bike.identifier
-        identifiers.add(identifier)
-        bikes[identifier] = issue.bike
-        issues[identifier].append(issue)
+        if issue.bike.identifier not in broken_bikes:
+            broken_bikes[issue.bike.identifier] = (issue.bike, [])
 
-    return identifiers, bikes, issues
+        bike, issues = broken_bikes[issue.bike.identifier]
+        issues.append(issue)
+
+    return list(broken_bikes.values())
 
 
 async def open_issue(user: Union[User, int], description: str, bike: Bike = None):
@@ -93,9 +94,11 @@ async def review_issue(issue: Union[Issue, int]):
     await issue.save()
 
 
-async def close_issue(issue: Union[Issue, int]):
+async def close_issue(issue: Union[Issue, int], resolution: str) -> Issue:
     if isinstance(issue, int):
         issue = await Issue.filter(id=issue).first()
 
     issue.status = IssueStatus.CLOSED
+    issue.resolution = resolution
     await issue.save()
+    return issue

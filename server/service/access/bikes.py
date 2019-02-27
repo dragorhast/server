@@ -13,7 +13,8 @@ from typing import Optional, Dict, Union, List
 from tortoise.exceptions import DoesNotExist
 from tortoise.query_utils import Prefetch
 
-from server.models import Bike, LocationUpdate, BikeStateUpdate
+from server.models import Bike, LocationUpdate, BikeStateUpdate, Issue
+from server.models.issue import IssueStatus
 from server.models.util import BikeUpdateType
 from server.service import MASTER_KEY
 
@@ -31,7 +32,8 @@ async def get_bikes(*, bike_ids: List[int] = None) -> List[Bike]:
 
     return await query.prefetch_related(
         Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
-        "state_updates"
+        "state_updates",
+        Prefetch("issues", queryset=Issue.filter(status__not=IssueStatus.CLOSED))
     )
 
 
@@ -48,7 +50,8 @@ async def get_bike(*, identifier: Union[str, bytes] = None,
     try:
         return await Bike.get(**kwargs).first().prefetch_related(
             Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),
-            "state_updates"
+            "state_updates",
+            Prefetch("issues", queryset=Issue.filter(status__not=IssueStatus.CLOSED))
         )
     except DoesNotExist:
         return None

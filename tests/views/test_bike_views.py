@@ -104,14 +104,10 @@ class TestBrokenBikesView:
         response = await client.get(f"/api/v1/bikes/broken",
                                     headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
 
-        response_data = JSendSchema.of(
-            identifiers=List(BytesField(as_string=True)),
-            bikes=Dict(keys=BytesField(as_string=True), values=Nested(BikeSchema())),
-            issues=Dict(keys=BytesField(as_string=True), values=Many(IssueSchema()))
-        ).load(await response.json())
+        response_data = JSendSchema.of(bikes=Many(BikeSchema())).load(await response.json())
 
         assert response_data["status"] == JSendStatus.SUCCESS
-        assert set(response_data["data"]["identifiers"]) == set(response_data["data"]["bikes"].keys())
+        assert len(response_data["data"]["bikes"]) == 1
 
 
 class TestLowBikesView:

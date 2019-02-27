@@ -12,10 +12,11 @@ from server.models import Issue
 from server.permissions.decorators import requires
 from server.permissions.users import UserIsAdmin
 from server.serializer import JSendSchema, JSendStatus
-from server.serializer.decorators import returns
+from server.serializer.decorators import returns, expects
 from server.serializer.fields import Many
+from server.serializer.misc import IssueCloseSchema
 from server.serializer.models import IssueSchema
-from server.service.access.issues import get_issues, get_issue
+from server.service.access.issues import get_issues, get_issue, close_issue, review_issue
 from server.service.access.users import get_user
 from server.views.base import BaseView
 from server.views.decorators import match_getter, GetFrom
@@ -55,6 +56,27 @@ class IssueView(BaseView):
     @docs(summary="Get An Open Issue")
     @returns(JSendSchema.of(issue=IssueSchema()))
     async def get(self, issue):
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"issue": issue.serialize(self.request.app.router)}
+        }
+
+    @with_issue
+    @docs(summary="Review An Issue")
+    @returns(JSendSchema.of(issue=IssueSchema()))
+    async def patch(self, issue):
+        issue = await review_issue(issue)
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {"issue": issue.serialize(self.request.app.router)}
+        }
+
+    @with_issue
+    @docs(summary="Close An Issue")
+    @expects(IssueCloseSchema())
+    @returns(JSendSchema.of(issue=IssueSchema()))
+    async def delete(self, issue):
+        issue = await close_issue(issue, self.request["data"]["resolution"])
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"issue": issue.serialize(self.request.app.router)}
