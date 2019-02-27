@@ -29,6 +29,7 @@ class PickupPoint(Model):
             "type": GeoJSONType.FEATURE,
             "geometry": mapping(self.area),
             "properties": {
+                "id": self.id,
                 "name": self.name,
                 "center": {"latitude": centroid.x, "longitude": centroid.y}
             }
