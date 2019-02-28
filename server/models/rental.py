@@ -13,7 +13,7 @@ from shapely.geometry import mapping
 from tortoise import Model, fields
 
 from server.models.fields import EnumField
-from server.models.util import RentalUpdateType
+from server.models.util import RentalUpdateType, get_serialized_location_for_bike
 from server.serializer.geojson import GeoJSONType
 
 
@@ -54,7 +54,7 @@ class Rental(Model):
         else:
             return None
 
-    async def serialize(self, rental_manager, router=None, *,
+    async def serialize(self, rental_manager, bike_connection_manager, router=None, *,
                         distance: float = None,
                         start_location: Point = None,
                         current_location: Point = None
@@ -91,10 +91,8 @@ class Rental(Model):
                 "type": GeoJSONType.FEATURE,
                 "geometry": mapping(start_location)
             }
+
         if current_location:
-            data["current_location"] = {
-                "type": GeoJSONType.FEATURE,
-                "geometry": mapping(current_location)
-            }
+            data["current_location"] = get_serialized_location_for_bike(self.bike, bike_connection_manager)
 
         return data

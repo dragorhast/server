@@ -16,7 +16,7 @@ from shapely.geometry import mapping
 from tortoise import Model, fields
 
 from server.models.fields import EnumField
-from server.models.util import BikeType, BikeUpdateType
+from server.models.util import BikeType, BikeUpdateType, get_serialized_location_for_bike
 from server.serializer.geojson import GeoJSONType
 
 
@@ -90,17 +90,8 @@ class Bike(Model):
             data["battery"] = bike_connection_manager.battery_level(self.id)
             data["locked"] = bike_connection_manager.is_locked(self.id)
 
-        recent_location = bike_connection_manager.most_recent_location(self)
-        if recent_location is not None and (data["available"] or include_location):
-            location, time, pickup_point = recent_location
-
-            data["current_location"] = {
-                "type": GeoJSONType.FEATURE,
-                "geometry": mapping(location)
-            }
-
-            if pickup_point is not None:
-                data["current_location"]["properties"] = {"pickup_point": pickup_point.name}
+        if data["available"] or include_location:
+            data["current_location"] = get_serialized_location_for_bike(self, bike_connection_manager)
 
         return data
 
