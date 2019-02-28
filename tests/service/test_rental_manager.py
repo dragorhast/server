@@ -11,7 +11,7 @@ async def test_rebuild_rentals(rental_manager: RentalManager, random_user, rando
     """Assert that rebuilding the rental manager from the database has the expected result."""
     rental = await Rental.create(user=random_user, bike=random_bike)
     await RentalUpdate.create(rental=rental, type=RentalUpdateType.RENT)
-    await rental_manager.rebuild()
+    await rental_manager._rebuild()
 
     assert rental_manager._active_rentals[random_user.id] == (rental.id, random_bike.id)
 

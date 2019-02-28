@@ -47,7 +47,7 @@ async def initialize_database(app: Application):
 async def rebuild_event_states(app: Application):
     """Rebuilds the event-based state from the database."""
     for rebuildable in (x for x in app.values() if isinstance(x, Rebuildable)):
-        await rebuildable.rebuild()
+        await rebuildable._rebuild()
 
 
 async def start_background_tasks(app: Application):

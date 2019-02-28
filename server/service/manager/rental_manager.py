@@ -173,7 +173,7 @@ class RentalManager(Rebuildable):
             "state_updates"
         )
 
-    async def rebuild(self):
+    async def _rebuild(self):
         """
         Rebuilds the currently active rentals from the database.
         """
