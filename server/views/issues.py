@@ -34,9 +34,7 @@ class IssuesView(BaseView):
     @with_issues
     @docs(summary="Get All Open Issues")
     @requires(UserIsAdmin())
-    @returns(JSendSchema.of(issues=Many(IssueSchema(only=(
-        'id', 'user_id', 'user_url', 'bike_identifier', 'bike_url', 'time', 'description'
-    )))))
+    @returns(JSendSchema.of(issues=Many(IssueSchema(exclude=('user', 'bike')))))
     async def get(self, user, issues: List[Issue]):
         return {
             "status": JSendStatus.SUCCESS,

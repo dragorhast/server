@@ -160,6 +160,7 @@ class UserCurrentRentalView(BaseView):
             "status": JSendStatus.SUCCESS,
             "data": {"rental": await current_rental.serialize(
                 self.rental_manager,
+                self.bike_connection_manager,
                 self.request.app.router,
                 start_location=start_location,
                 current_location=current_location
@@ -215,7 +216,7 @@ class UserEndCurrentRentalView(BaseView):
         return "rental_completed", {
             "status": JSendStatus.SUCCESS,
             "data": {
-                "rental": await rental.serialize(self.rental_manager, self.request.app.router),
+                "rental": await rental.serialize(self.rental_manager, self.bike_connection_manager, self.request.app.router),
                 "action": "canceled" if end_type == "cancel" else "completed"
             }
         }

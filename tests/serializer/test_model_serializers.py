@@ -15,7 +15,7 @@ class TestBikeSerializer:
 
         data = random_bike.serialize(bike_connection_manager, rental_manager, reservation_manager)
         assert "current_location" in data
-        assert "properties" not in data["current_location"]
+        assert data["current_location"]["properties"]["pickup_point"] is None
 
     def test_serializer_unavailable(self, random_bike, rental_manager, bike_connection_manager, reservation_manager):
         """Assert that a bike that is unavailable does not include its location."""
@@ -48,7 +48,7 @@ class TestBikeSerializer:
         bike_connection_manager.is_locked = lambda x: True
 
         data = random_bike.serialize(bike_connection_manager, rental_manager, reservation_manager)
-        assert data["current_location"]["properties"]["pickup_point"] == random_pickup_point.name
+        assert data["current_location"]["properties"]["pickup_point"]["properties"]["name"] == random_pickup_point.name
 
 
 class TestRentalSerializer:
@@ -56,4 +56,4 @@ class TestRentalSerializer:
     async def test_serializer(self, random_bike, random_user, rental_manager, bike_connection_manager):
         await bike_connection_manager.update_location(random_bike, Point(0, 0))
         rental, location = await rental_manager.create(random_user, random_bike)
-        rental_data = await rental.serialize(rental_manager, current_location=location)
+        rental_data = await rental.serialize(rental_manager, bike_connection_manager, current_location=location)
