@@ -53,7 +53,7 @@ class RentalView(BaseView):
     """
     url = "/rentals/{id}"
     name = "rental"
-    with_rental = match_getter(get_rental_with_distance, 'rental', Optional('distance'), target='id')
+    with_rental = match_getter(get_rental_with_distance, 'rental', Optional('distance'), rental='id')
     with_user = match_getter(get_user, 'user', firebase_id=GetFrom.AUTH_HEADER)
 
     @with_rental

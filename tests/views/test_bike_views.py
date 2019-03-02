@@ -2,16 +2,17 @@ from datetime import timedelta, datetime, timezone
 
 from aiohttp.test_utils import TestClient
 from marshmallow.fields import Dict, Nested, List
+from shapely.geometry import Point
 
 from server.models import Issue
 from server.models.bike import Bike
 from server.models.util import BikeType
 from server.serializer.fields import Many, BytesField
 from server.serializer.jsend import JSendStatus, JSendSchema
+from server.serializer.misc import MasterKeySchema, BikeRegisterSchema
 from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
 from server.service import MASTER_KEY
 from server.service.access.issues import open_issue
-from server.serializer.misc import MasterKeySchema, BikeRegisterSchema
 from tests.util import random_key
 
 
@@ -122,8 +123,8 @@ class TestLowBikesView:
         bike_connection_manager.is_locked = lambda x: True
         bike_connection_manager.most_recent_location = lambda x: None
 
-        bike1 = await random_bike_factory()
-        bike2 = await random_bike_factory()
+        bike1 = await random_bike_factory(bike_connection_manager)
+        bike2 = await random_bike_factory(bike_connection_manager)
 
         bike_connection_manager.update_battery(bike1.id, 10)
         bike_connection_manager.update_battery(bike2.id, 40)
@@ -199,8 +200,10 @@ class TestBikeRentalsView:
         assert response_data["status"] == JSendStatus.SUCCESS
         assert isinstance(response_data["data"]["rentals"], list)
 
-    async def test_create_bike_rental(self, client: TestClient, random_user, random_bike):
+    async def test_create_bike_rental(self, client: TestClient, random_user, random_bike, bike_connection_manager):
         """Assert that you can create a rental."""
+        await bike_connection_manager.update_location(random_bike, Point(0, 0))
+
         response = await client.post(
             f'/api/v1/bikes/{random_bike.identifier}/rentals',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
@@ -220,7 +223,8 @@ class TestBikeRentalsView:
         bike_connection_manager.is_connected = lambda x: True
         await bike_connection_manager.update_location(random_bike, random_pickup_point.area.centroid)
         reservation_manager.pickup_points.add(random_pickup_point)
-        await reservation_manager.reserve(random_user, random_pickup_point, datetime.now(timezone.utc) + timedelta(minutes=10))
+        await reservation_manager.reserve(random_user, random_pickup_point,
+                                          datetime.now(timezone.utc) + timedelta(minutes=10))
 
         assert len(reservation_manager.reservations[random_pickup_point.id]) == 1
 
@@ -254,10 +258,10 @@ class TestBikeRentalsView:
         assert response_data["status"] == JSendStatus.FAIL
         assert "bike is in use" in response_data["data"]["message"]
 
-    async def test_create_bike_rental_user_has_rental(self, client, random_user, random_bike_factory):
+    async def test_create_bike_rental_user_has_rental(self, client, random_user, random_bike_factory, bike_connection_manager):
         """Assert that creating a bike rental with one active """
-        bike_1 = await random_bike_factory()
-        bike_2 = await random_bike_factory()
+        bike_1 = await random_bike_factory(bike_connection_manager)
+        bike_2 = await random_bike_factory(bike_connection_manager)
 
         await client.app["rental_manager"].create(random_user, bike_1)
         response = await client.post(f"/api/v1/bikes/{bike_2.identifier}/rentals",
@@ -280,7 +284,8 @@ class TestBikeIssuesView:
 
     async def test_get_issues_for_bike(self, client, random_admin, random_bike):
         await Issue.create(user=random_admin, bike=random_bike, description="OMG AWFUL")
-        response = await client.get(f"/api/v1/bikes/{random_bike.identifier}/issues", headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
+        response = await client.get(f"/api/v1/bikes/{random_bike.identifier}/issues",
+                                    headers={"Authorization": f"Bearer {random_admin.firebase_id}"})
         response_data = JSendSchema.of(issues=Many(IssueSchema())).load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert "issues" in response_data["data"]

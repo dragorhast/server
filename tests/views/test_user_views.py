@@ -2,6 +2,7 @@ from datetime import timezone, datetime, timedelta
 
 from aiohttp.test_utils import TestClient
 from marshmallow.fields import String
+from shapely.geometry import Point
 
 from server.models import User
 from server.serializer import JSendSchema, JSendStatus
@@ -186,9 +187,11 @@ class TestUserCurrentRentalView:
         assert response_data["status"] == JSendStatus.FAIL
         assert response_data["data"]["message"] == "You have no current rental."
 
-    async def test_end_current_rental(self, client: TestClient, random_user, random_bike, rental_manager):
+    async def test_end_current_rental(self, client: TestClient, random_user, random_bike, rental_manager, bike_connection_manager):
         """Assert that a user can end their rental."""
         rental, location = await rental_manager.create(random_user, random_bike)
+        await bike_connection_manager.update_location(random_bike, Point(100, 0))
+
         response_schema = JSendSchema.of(rental=RentalSchema(), action=String())
         response = await client.patch(
             '/api/v1/users/me/rentals/current/complete',

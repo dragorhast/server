@@ -101,8 +101,8 @@ class TestReservationManager:
         """
         bike_connection_manager.is_connected = lambda x: True
 
-        used_bike = await random_bike_factory()
-        available_bike = await random_bike_factory()
+        used_bike = await random_bike_factory(bike_connection_manager)
+        available_bike = await random_bike_factory(bike_connection_manager)
         reservation_manager.pickup_points.add(random_pickup_point)
 
         await bike_connection_manager.update_location(used_bike, random_pickup_point.area.centroid)
@@ -125,8 +125,8 @@ class TestReservationManager:
     ):
         """Assert that collecting a bike that isn't in the correct pickup point fails."""
 
-        close_bike = await random_bike_factory()
-        far_bike = await random_bike_factory()
+        close_bike = await random_bike_factory(bike_connection_manager)
+        far_bike = await random_bike_factory(bike_connection_manager)
 
         await bike_connection_manager.update_location(close_bike, random_pickup_point.area.centroid)
         await bike_connection_manager.update_location(far_bike, Point(100, 100))
@@ -149,8 +149,8 @@ class TestReservationManager:
         """
         bike_connection_manager.is_connected = lambda x: True
 
-        first = await random_bike_factory()
-        second = await random_bike_factory()
+        first = await random_bike_factory(bike_connection_manager)
+        second = await random_bike_factory(bike_connection_manager)
 
         first_user = await random_user_factory()
         second_user = await random_user_factory()

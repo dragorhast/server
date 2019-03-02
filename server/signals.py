@@ -47,7 +47,7 @@ async def initialize_database(app: Application):
 async def rebuild_event_states(app: Application):
     """Rebuilds the event-based state from the database."""
     for rebuildable in (x for x in app.values() if isinstance(x, Rebuildable)):
-        await rebuildable.rebuild()
+        await rebuildable._rebuild()
 
 
 async def start_background_tasks(app: Application):
@@ -55,8 +55,10 @@ async def start_background_tasks(app: Application):
     logger.info("Starting Background Tasks")
     loop = asyncio.get_event_loop()
 
+
     app['ticket_cleaner'] = loop.create_task(BikeSocketView.open_tickets.remove_all_expired(timedelta(hours=1)))
     loop.create_task(app['reservation_sourcer'].run())
+    loop.create_task(app['statistics_reporter'].run())
 
     if isinstance(app['token_verifier'], FirebaseVerifier):
         loop.create_task(app['token_verifier'].get_keys(timedelta(days=1)))

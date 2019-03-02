@@ -287,7 +287,7 @@ class BikeRentalsView(BaseView):
                 rental, start_location = await self.reservation_manager.claim(user, bike)
             except CollectionError:
                 # they can try and rent it normally
-                pass
+                reservations = None
             except ReservationError as e:
                 return "reservation_error", {
                     "status": JSendStatus.FAIL,
@@ -304,7 +304,8 @@ class BikeRentalsView(BaseView):
                         "url": str(self.request.app.router["me"].url_for(tail="/rentals/current"))
                     }
                 }
-        else:
+
+        if not reservations:
             try:
                 rental, start_location = await self.rental_manager.create(user, bike)
             except ActiveRentalError as e:

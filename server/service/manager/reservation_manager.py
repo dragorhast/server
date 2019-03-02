@@ -196,7 +196,7 @@ class ReservationManager(Rebuildable):
 
         return available_bike_count - bikes_needed_for_reservations
 
-    async def rebuild(self):
+    async def _rebuild(self):
         """Rebuilds the reservation manager from the database."""
         unhandled_reservations = await Reservation.filter(outcome__isnull=True).prefetch_related("pickup_point", "user")
 

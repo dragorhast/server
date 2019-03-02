@@ -10,5 +10,5 @@ from abc import ABC, abstractmethod
 class Rebuildable(ABC):
 
     @abstractmethod
-    async def rebuild(self):
+    async def _rebuild(self):
         pass
