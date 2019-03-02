@@ -47,7 +47,7 @@ def get_serialized_location_for_bike(bike, bike_connection_manager) -> Optional[
         "type": GeoJSONType.FEATURE,
         "geometry": mapping(location),
         "properties": {
-            "pickup_point": pickup_point.serialize()
+            "pickup_point": pickup_point.serialize() if pickup_point is not None else None
         }
     }
 

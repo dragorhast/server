@@ -19,8 +19,7 @@ from shapely.geometry import Point
 
 from server import logger
 from server.models import Issue, User
-from server.models.bike import Bike, BikeStateUpdate
-from server.models.util import BikeUpdateType
+from server.models.bike import Bike
 from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsConnected, BikeNotInUse, BikeNotBroken, \
     UserMatchesToken
 from server.serializer import JSendStatus, JSendSchema
@@ -31,7 +30,7 @@ from server.serializer.misc import MasterKeySchema, BikeRegisterSchema, BikeModi
 from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
 from server.service import TicketStore, ActiveRentalError
 from server.service.access.bikes import get_bikes, get_bike, register_bike, BadKeyError, delete_bike, \
-    get_bike_in_circulation, set_bike_in_circulation
+    set_bike_in_circulation
 from server.service.access.issues import get_issues, get_broken_bikes, open_issue
 from server.service.access.rentals import get_rentals_for_bike
 from server.service.access.reservations import current_reservations
@@ -53,7 +52,7 @@ class BikesView(BaseView):
     @with_user
     @docs(summary="Get All Bikes")
     @returns(JSendSchema.of(
-        bikes=Many(BikeSchema(only=("identifier", "current_location", "available", "battery", "locked", "status")))))
+        bikes=Many(BikeSchema(exclude=("public_key",)))))
     async def get(self, user):
         """Gets all the bikes from the system."""
         return {
@@ -178,7 +177,7 @@ class BikeView(BaseView):
     @with_bike
     @with_user
     @docs(summary="Get A Bike")
-    @returns(JSendSchema.of(bike=BikeSchema(only=("identifier", "current_location", "available", "battery", "locked"))))
+    @returns(JSendSchema.of(bike=BikeSchema(exclude=("public_key",))))
     async def get(self, bike: Bike, user):
         """Gets a single bike by its id."""
         return {
@@ -216,7 +215,7 @@ class BikeView(BaseView):
     @docs(summary="Update A Bike")
     @requires(UserIsAdmin() | UserIsRentingBike() & BikeIsConnected())
     @expects(BikeModifySchema())
-    @returns(JSendSchema.of(bike=BikeSchema(only=("identifier", "current_location", "battery", "locked"))))
+    @returns(JSendSchema.of(bike=BikeSchema(exclude=("public_key",))))
     async def patch(self, user: User, bike: Bike):
         """
         Allows users to update the status of a bike.
@@ -265,10 +264,7 @@ class BikeRentalsView(BaseView):
     @docs(summary="Start A New Rental")
     @requires(UserMatchesToken() & BikeNotInUse() & BikeNotBroken(max_issues=3))
     @returns(
-        rental_created=JSendSchema.of(rental=CurrentRentalSchema(only=(
-            'id', 'user_id', 'user_url', 'bike_identifier', 'bike_url', 'start_location',
-            'current_location', 'start_time', 'estimated_price', 'is_active'
-        ))),
+        rental_created=JSendSchema.of(rental=CurrentRentalSchema(exclude=('user', 'bike', 'events'))),
         active_rental=JSendSchema(),
         reservation_error=JSendSchema()
     )
@@ -320,7 +316,7 @@ class BikeRentalsView(BaseView):
         return "rental_created", {
             "status": JSendStatus.SUCCESS,
             "data": {"rental": await rental.serialize(
-                self.rental_manager, self.request.app.router,
+                self.rental_manager, self.bike_connection_manager, self.request.app.router,
                 start_location=start_location,
                 current_location=start_location
             )}

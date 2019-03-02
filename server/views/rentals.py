@@ -42,7 +42,8 @@ class RentalsView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"rentals": [
-                await rental.serialize(self.rental_manager, self.request.app.router) for rental in await get_rentals()
+                await rental.serialize(self.rental_manager, self.bike_connection_manager, self.request.app.router)
+                for rental in await get_rentals()
             ]}
         }
 
@@ -67,5 +68,7 @@ class RentalView(BaseView):
     async def get(self, rental: Rental, user, distance: float):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"rental": await rental.serialize(self.rental_manager, self.request.app.router, distance=distance)}
+            "data": {"rental": await rental.serialize(
+                self.rental_manager, self.bike_connection_manager, self.request.app.router, distance=distance
+            )}
         }
