@@ -101,19 +101,15 @@ class BrokenBikesView(BaseView):
     Gets the list of bikes with active issues, along with the open issues for those bikes.
     """
     url = "/bikes/broken"
-    with_bikes = match_getter(get_broken_bikes, "identifiers", "bikes", "issues")
+    with_bikes = match_getter(get_broken_bikes, "broken_bikes")
     with_admin = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
 
     @with_admin
     @with_bikes
     @docs(summary="Get All Broken Bikes")
     @requires(UserIsAdmin())
-    @returns(JSendSchema.of(
-        identifiers=fields.List(BytesField(as_string=True)),
-        bikes=fields.Dict(keys=BytesField(as_string=True), values=Nested(BikeSchema())),
-        issues=fields.Dict(keys=BytesField(as_string=True), values=Many(IssueSchema()))
-    ))
-    async def get(self, user, identifiers, bikes, issues):
+    @returns(JSendSchema.of(bikes=Many(BikeSchema())))
+    async def get(self, user, broken_bikes):
         """
         A broken bike is one that has at least one issue open. Broken bikes must be
         serviced, and so their status is shown here for use by the operators. These
@@ -122,15 +118,10 @@ class BrokenBikesView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {
-                "identifiers": identifiers,
-                "bikes": {
-                    bid: bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager)
-                    for bid, bike in bikes.items()
-                },
-                "issues": {
-                    bid: [issue.serialize(self.request.app.router) for issue in issues]
-                    for bid, issues in issues.items()
-                }
+                "bikes": [
+                    bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager, issues=issues)
+                    for bike, issues in broken_bikes
+                ]
             }
         }
 

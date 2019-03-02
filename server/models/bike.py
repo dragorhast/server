@@ -10,7 +10,7 @@ which facilitates bike location updates and remote procedure calls on all
 connected bikes.
 """
 from enum import Enum
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from shapely.geometry import mapping
 from tortoise import Model, fields
@@ -59,18 +59,19 @@ class Bike(Model):
 
     def serialize(
         self, bike_connection_manager, rental_manager,
-        reservation_manager, include_location=False
+        reservation_manager, *, include_location=False, issues: List = None
     ) -> Dict[str, Any]:
         """
         Serializes the bike into a format that can be turned into JSON.
 
         :param include_location: Whether to force include the location, ignoring whether it is available (PRIVACY WARNING)
+        :param issues: The open issues for the given bike.
         :return: A dictionary.
         """
         connected = bike_connection_manager.is_connected(self)
         rented = not rental_manager.is_available(self, reservation_manager)
         available = connected and not rented
-        broken = False  # todo implement
+        broken = self.broken
         in_circulation = self.in_circulation
 
         status = CalculatedBikeStatus.get(available, rented, in_circulation, broken)
@@ -85,6 +86,9 @@ class Bike(Model):
             "in_circulation": in_circulation,
             "status": status
         }
+
+        if isinstance(issues, list):
+            data["issues"] = issues
 
         if connected:
             data["battery"] = bike_connection_manager.battery_level(self.id)
@@ -121,3 +125,7 @@ class Bike(Model):
                 return update.state is BikeUpdateType.IN_CIRCULATION
 
         return False
+
+    @property
+    def broken(self) -> bool:
+        return len(self.issues) > 0

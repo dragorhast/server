@@ -1,5 +1,5 @@
 from marshmallow import Schema
-from marshmallow.fields import Bool
+from marshmallow.fields import Bool, String
 
 from server.models.util import BikeType
 from server.serializer import BytesField, EnumField
@@ -19,3 +19,7 @@ class BikeModifySchema(Schema):
     """"""
     locked = Bool()
     in_circulation = Bool()
+
+
+class IssueCloseSchema(Schema):
+    resolution = String(required=True)

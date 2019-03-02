@@ -2,9 +2,18 @@
 Issue
 ---------------------------
 """
+from enum import Enum
 from typing import Any, Dict
 
 from tortoise import Model, fields
+
+from server.models.fields import EnumField
+
+
+class IssueStatus(str, Enum):
+    OPEN = "open"
+    IN_REVIEW = "in_review"
+    CLOSED = "closed"
 
 
 class Issue(Model):
@@ -13,7 +22,8 @@ class Issue(Model):
     bike = fields.ForeignKeyField("models.Bike", null=True, related_name="issues")
     time = fields.DatetimeField(auto_now_add=True)
     description = fields.TextField()
-    is_active = fields.BooleanField(default=True)
+    resolution = fields.TextField(null=True)
+    status = EnumField(IssueStatus, default=IssueStatus.OPEN)
 
     def serialize(self, router) -> Dict[str, Any]:
         data = {

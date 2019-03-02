@@ -16,8 +16,6 @@ def is_within_reservation_time(date_pickup):
 class ReservationSourcer:
     """
     This background service keeps a track of reservations with missing bikes.
-
-    ..todo :: implement rebuild
     """
 
     def __init__(self, reservation_manager: ReservationManager):
