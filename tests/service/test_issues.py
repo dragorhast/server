@@ -36,10 +36,10 @@ class TestIssues:
         await close_issue(issue.id)
         assert await Issue.filter(is_active=False).count() == 1
 
-    async def test_get_broken_bikes(self, random_bike_factory, random_user):
-        bike1 = await random_bike_factory()
-        bike2 = await random_bike_factory()
-        bike3 = await random_bike_factory()
+    async def test_get_broken_bikes(self, random_bike_factory, random_user, bike_connection_manager):
+        bike1 = await random_bike_factory(bike_connection_manager)
+        bike2 = await random_bike_factory(bike_connection_manager)
+        bike3 = await random_bike_factory(bike_connection_manager)
 
         issue = await open_issue(random_user, "My bike sucks!", bike1)
         identifiers, bikes, issues = await get_broken_bikes()

@@ -15,17 +15,17 @@ This object handles everything needed for bike rentals.
 - estimating rental price
 """
 
-from collections import defaultdict
 from datetime import datetime
-from typing import Dict, Set, Callable, Union, Tuple, List
+from typing import Dict, Union, Tuple, List
 
 from shapely.geometry import Point
 from tortoise.query_utils import Prefetch
 
+from server.events import EventHub, EventList
 from server.models import Bike, Rental, User, RentalUpdate, LocationUpdate
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
-from server.service.access.rentals import get_rental
+from server.service.access.rentals import get_rental_with_distance
 from server.service.rebuildable import Rebuildable
 
 
@@ -47,15 +47,31 @@ class CurrentlyRentedError(Exception):
         self.available_bikes = available_bikes
 
 
+class RentalEvent(EventList):
+
+    def rental_started(self, user: User, bike: Bike, location: Point):
+        """A new rental was started."""
+
+    def rental_ended(self, user: User, bike: Bike, location: Point, price: float, distance: float):
+        """A rental was ended."""
+
+    def rental_cancelled(self, user: User, bike: Bike):
+        """A rental was cancelled."""
+
+
 class RentalManager(Rebuildable):
-    """Handles the lifecycle of the rental in the system."""
+    """
+    Handles the lifecycle of the rental in the system.
+
+    Also publishes events on its hub, so that other modules can stay up to date with the system.
+    When the module starts, it will replay all events from midnight that night.
+    """
 
     def __init__(self):
         self._active_rentals: Dict[int, Tuple[int, int]] = {}
         """Maps user ids to a tuple containing their current rental and current bike."""
 
-        self._subscribers: Dict[int, Set[Callable]] = defaultdict(set)
-        """Maps a rental to a set of event subscribers."""
+        self.hub = EventHub(RentalEvent)
 
     async def create(self, user: User, bike: Bike) -> Tuple[Rental, Point]:
         """
@@ -78,28 +94,36 @@ class RentalManager(Rebuildable):
         self._active_rentals[user.id] = (rental.id, bike.id)
         current_location = await LocationUpdate.filter(bike=bike).first()
 
+        self.hub.emit(RentalEvent.rental_started, user, bike, current_location.location)
+
         return rental, current_location.location if current_location is not None else None
 
-    async def finish(self, target: Union[Rental, User], *, extra_cost=0.0) -> Rental:
+    async def finish(self, user: User, *, extra_cost=0.0) -> Rental:
         """
         Completes a rental.
 
         :raises InactiveRentalError: When there is no active rental for that user, or the given rental is not active.
         """
-        rental, user = await self._resolve_target(target)
+        rental, distance = await self._get_rental_with_distance(user)
+        rental.price = await get_price(rental.updates[0].time, rental.updates[-1].time, extra_cost)
 
-        await self._publish_event(rental, RentalUpdateType.RETURN)
-        rental_events = await RentalUpdate.filter(rental=rental).order_by('time')
-        rental.price = await get_price(rental_events[0].time, rental_events[-1].time, extra_cost)
+        current_location = await LocationUpdate.filter(bike_id=rental.bike_id).first()
+
         del self._active_rentals[user.id]
         await rental.save()
+        await self._publish_event(rental, RentalUpdateType.RETURN)
+
+        self.hub.emit(RentalEvent.rental_ended, user, rental.bike, current_location.location, rental.price, distance)
+
         return rental
 
-    async def cancel(self, target: Union[Rental, User]) -> Rental:
+    async def cancel(self, user: User) -> Rental:
         """Cancels a rental, effective immediately, waiving the rental fee."""
-        rental, user = await self._resolve_target(target)
+        rental, distance = await self._get_rental_with_distance(user)
 
         await self._publish_event(rental, RentalUpdateType.CANCEL)
+        self.hub.emit(RentalEvent.rental_cancelled, user, rental.bike)
+
         del self._active_rentals[user.id]
         return rental
 
@@ -176,43 +200,43 @@ class RentalManager(Rebuildable):
     async def _rebuild(self):
         """
         Rebuilds the currently active rentals from the database.
+
+        Also replays events that happened today for use by subscribers.
         """
         unfinished_rentals = await Rental.filter(
-            updates__type__not_in=(t.value for t in RentalUpdateType.terminating_types()))
+            updates__type__not_in=(t.value for t in RentalUpdateType.terminating_types())
+        )
+
         for rental in unfinished_rentals:
             self._active_rentals[rental.user_id] = (rental.id, rental.bike_id)
 
-    async def _resolve_target(self, target: Union[Rental, User]) -> Tuple[Rental, User]:
+        midnight = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        todays_updates = await RentalUpdate.filter(time__gt=midnight).prefetch_related("rental", "rental__user",
+                                                                                       "rental__bike")
+
+        for update in todays_updates:
+            if update.type == RentalUpdateType.RENT:
+                self.hub.emit(RentalEvent.rental_started, update.rental.user, update.rental.bike, None)  # todo location
+            elif update.type == RentalUpdateType.RETURN:
+                self.hub.emit(RentalEvent.rental_ended, update.rental.user, update.rental.bike, None, update.rental.price, None)
+            elif update.type == RentalUpdateType.CANCEL:
+                self.hub.emit(RentalEvent.rental_cancelled, update.rental.user, update.rental.bike)
+
+    async def _get_rental_with_distance(self, user: User) -> Tuple[Rental, float]:
         """Given a rental or user, "resolves" the rental, user pair."""
-        if isinstance(target, Rental):
-            rental = target
-            user = await User.filter(id=rental.user_id).first()
-            if user.id not in self._active_rentals or not self._active_rentals[user.id][0] == rental.id:
-                raise InactiveRentalError("Given rental is not the active rental for the user!")
-        elif isinstance(target, User):
-            user = target
-            if user.id not in self._active_rentals:
-                raise InactiveRentalError("Given user has no active rentals!")
-            rental_id, bike_id = self._active_rentals[target.id]
-            rental = await get_rental(rental_id)
-        else:
-            raise TypeError(f"Supplied target must be a Rental or User, not {type(target)}")
+        if not isinstance(user, User):
+            raise TypeError(f"Supplied target must be a Rental or User, not {type(user)}")
 
-        return rental, user
+        if user.id not in self._active_rentals:
+            raise InactiveRentalError("Given user has no active rentals!")
+        rental_id, bike_id = self._active_rentals[user.id]
+        rental, distance = await get_rental_with_distance(rental_id)
 
-    async def _publish_event(self, rental: Rental, event_type: RentalUpdateType):
+        return rental, distance
+
+    @staticmethod
+    async def _publish_event(rental: Rental, event_type: RentalUpdateType):
         update = await RentalUpdate.create(rental=rental, type=event_type)
 
         if rental.updates._fetched:
             rental.updates.related_objects.append(update)
-
-        for subscriber in self._subscribers[rental]:
-            subscriber(rental, event_type)
-
-    def subscribe(self, rental: Rental, handler):
-        """Subscribes a handler to a rental's events."""
-        self._subscribers[rental].add(handler)
-
-    def unsubscribe(self, rental: Rental, handler):
-        """Un-subscribes a handler from a rental's events."""
-        self._subscribers[rental].remove(handler)

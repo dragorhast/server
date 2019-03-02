@@ -7,7 +7,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient
 from faker import Faker
 from faker.providers import address, internet, misc
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 from tortoise import Tortoise
 from tortoise.exceptions import OperationalError
 from tortoise.transactions import start_transaction
@@ -17,6 +17,7 @@ from server.models import Bike, User, Rental
 from server.models.pickup_point import PickupPoint
 from server.service import TicketStore
 from server.service.background.reservation_sourcer import ReservationSourcer
+from server.service.background.stats_reporter import StatisticsReporter
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager
 from server.service.manager.reservation_manager import ReservationManager
@@ -42,9 +43,10 @@ def random_user_factory(database):
 
 @pytest.fixture
 def random_bike_factory(database):
-    async def create_bike():
+    async def create_bike(bike_connection_manager):
         bike = await Bike.create(public_key_hex=fake.sha1())
-        bike.updates = []
+        await bike_connection_manager.update_location(bike, Point(0,0))
+        await bike.fetch_related("location_updates")
         return bike
 
     return create_bike
@@ -84,6 +86,11 @@ def reservation_sourcer(reservation_manager):
     return ReservationSourcer(reservation_manager)
 
 
+@pytest.fixture
+def statistics_reporter(rental_manager, reservation_manager):
+    return StatisticsReporter(rental_manager, reservation_manager)
+
+
 @pytest.fixture(scope="session")
 def _database(database_url):
     loop = asyncio.new_event_loop()
@@ -114,7 +121,7 @@ async def database(_database, loop, database_url):
 @pytest.fixture
 async def client(
     aiohttp_client, database,
-    rental_manager, bike_connection_manager, reservation_manager, reservation_sourcer
+    rental_manager, bike_connection_manager, reservation_manager, reservation_sourcer, statistics_reporter
 ) -> TestClient:
     asyncio.get_event_loop().set_debug(True)
     app = web.Application(middlewares=[validate_token_middleware])
@@ -123,6 +130,7 @@ async def client(
     app['bike_location_manager'] = bike_connection_manager
     app['reservation_manager'] = reservation_manager
     app['reservation_sourcer'] = reservation_sourcer
+    app['statistics_reporter'] = statistics_reporter
     app['token_verifier'] = DummyVerifier()
 
     register_signals(app, init_database=False)  # we get the database from a fixture
@@ -152,9 +160,9 @@ def reservation_manager(database, bike_connection_manager, rental_manager) -> Re
 
 
 @pytest.fixture
-async def random_bike(random_bike_factory) -> Bike:
+async def random_bike(random_bike_factory, bike_connection_manager) -> Bike:
     """Creates a random bike in the database."""
-    return await random_bike_factory()
+    return await random_bike_factory(bike_connection_manager)
 
 
 @pytest.fixture
@@ -169,8 +177,9 @@ async def random_admin(random_user_factory) -> User:
 
 
 @pytest.fixture
-async def random_rental(rental_manager, random_bike, random_user) -> Rental:
+async def random_rental(rental_manager, random_bike, random_user, bike_connection_manager) -> Rental:
     """Creates a random rental in the database."""
+    await bike_connection_manager.update_location(random_bike, Point(0, 0))
     rental, location = await rental_manager.create(random_user, random_bike)
     rental.bike = random_bike
     return rental

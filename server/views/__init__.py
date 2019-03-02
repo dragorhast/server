@@ -30,6 +30,7 @@ import aiohttp_cors
 from aiohttp.abc import Application
 
 from server import logger
+from server.views.reports import AnnualReportView, MonthlyReportView, DailyReportView
 from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView, BikeIssuesView, BrokenBikesView, LowBikesView
 from .issues import IssuesView, IssueView
 from .misc import redoc, logo
@@ -46,7 +47,8 @@ views = [
     RentalView, RentalsView,
     ReservationView, ReservationsView,
     MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView,
-    UserCurrentReservationView, UserEndCurrentRentalView
+    UserCurrentReservationView, UserEndCurrentRentalView,
+    AnnualReportView, MonthlyReportView, DailyReportView
 ]
 
 

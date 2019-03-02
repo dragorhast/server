@@ -37,9 +37,9 @@ class TestBikeConnectionManager:
     async def test_update_location(self, bike_connection_manager, random_bike):
         """Assert that the location update saves to the db."""
         await bike_connection_manager.update_location(random_bike, Point(0, 0))
-        assert (await LocationUpdate.filter(bike=random_bike).count()) == 1
-        await bike_connection_manager.update_location(random_bike, Point(1, 1))
         assert (await LocationUpdate.filter(bike=random_bike).count()) == 2
+        await bike_connection_manager.update_location(random_bike, Point(1, 1))
+        assert (await LocationUpdate.filter(bike=random_bike).count()) == 3
 
     async def test_add_connection(self, bike_connection_manager, random_bike):
         """Assert that the list of connected bikes is maintained."""
