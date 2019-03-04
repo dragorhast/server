@@ -125,10 +125,7 @@ async def set_user_admin(target: Union[User, int], level: UserType) -> User:
 
     user.type = level
 
-    try:
-        await CLAIM_MANAGER.set_user_type(user, level)
-    except Exception as e:
-        pass
+    await CLAIM_MANAGER.set_user_type(user, level)
 
     await user.save()
 
