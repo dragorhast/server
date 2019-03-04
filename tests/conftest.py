@@ -15,6 +15,7 @@ from tortoise.transactions import start_transaction
 from server.middleware import validate_token_middleware
 from server.models import Bike, User, Rental
 from server.models.pickup_point import PickupPoint
+from server.models.user import UserType
 from server.service import TicketStore
 from server.service.background.reservation_sourcer import ReservationSourcer
 from server.service.background.stats_reporter import StatisticsReporter
@@ -36,7 +37,7 @@ fake.add_provider(misc)
 @pytest.fixture
 def random_user_factory(database):
     async def create_user(is_admin=False):
-        return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), is_admin=is_admin)
+        return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), type=UserType.MANAGER if is_admin else UserType.USER)
 
     return create_user
 

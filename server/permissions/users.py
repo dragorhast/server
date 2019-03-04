@@ -1,6 +1,7 @@
 from aiohttp.web_urldispatcher import View
 
 from server.models import User, Bike, Reservation
+from server.models.user import UserType
 from server.permissions.permission import RoutePermissionError, Permission
 from server.service.access.users import get_user
 from server.service.verify_token import verify_token, TokenVerificationError
@@ -20,7 +21,7 @@ class UserIsAdmin(Permission):
             # an admin is fetching a user's details; we need to get the admin's details
             user = await get_user(firebase_id=view.request["token"])
 
-        if user is None or not user.is_admin:
+        if user is None or not user.type is not UserType.USER:
             raise RoutePermissionError("The supplied token doesn't have admin rights.")
 
     @property

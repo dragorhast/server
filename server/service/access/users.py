@@ -11,6 +11,8 @@ from server.models import User
 from server.models.user import UserType
 from server.service.firebase import FirebaseClaimManager
 
+CLAIM_MANAGER: FirebaseClaimManager = None
+
 
 class UserExistsError(Exception):
     def __init__(self, errors):
@@ -19,6 +21,8 @@ class UserExistsError(Exception):
 
 
 def initialize_firebase():
+    global CLAIM_MANAGER
+
     data = {
         "type": "service_account", "project_id": "dragorhast-420",
         "client_email": "firebase-adminsdk-ixz3j@dragorhast-420.iam.gserviceaccount.com",
@@ -27,13 +31,15 @@ def initialize_firebase():
         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
         "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-ixz3j%40dragorhast-420.iam.gserviceaccount.com",
         "private_key_id": os.getenv("FIREBASE_KEY_ID"),
-        "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace("\\n", "\n")
+        "private_key": os.getenv("FIREBASE_PRIVATE_KEY")
     }
 
-    return FirebaseClaimManager(data)
+    try:
+        data["private_key"] = data["private_key"].replace("\\n", "\n")
+    except AttributeError:
+        raise RuntimeError("You must specify the Firebase private key in the environment variables.")
 
-
-CLAIM_MANAGER: FirebaseClaimManager = initialize_firebase()
+    CLAIM_MANAGER = FirebaseClaimManager(data)
 
 
 async def get_users(*, name: str = None) -> List[User]:
