@@ -14,6 +14,7 @@ from aiohttp_sentry import SentryMiddleware
 from server import server_mode, logger
 from server.config import api_root
 from server.middleware import validate_token_middleware
+from server.service.access.users import initialize_firebase
 from server.service.background.reservation_sourcer import ReservationSourcer
 from server.service.background.stats_reporter import StatisticsReporter
 from server.service.manager.bike_connection_manager import BikeConnectionManager
@@ -37,6 +38,8 @@ def build_app(db_uri=None):
     app['reservation_sourcer'] = ReservationSourcer(app['reservation_manager'])
     app['statistics_reporter'] = StatisticsReporter(app['rental_manager'], app['reservation_manager'])
     app['database_uri'] = db_uri if db_uri is not None else 'spatialite://:memory:'
+
+    initialize_firebase()
 
     if server_mode == "development":
         verifier = DummyVerifier()

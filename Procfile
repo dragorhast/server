@@ -1,1 +1,1 @@
-web: gunicorn server.heroku:app -k 'aiohttp.worker.GunicornUVLoopWebWorker'
+web: gunicorn server.heroku:app -k 'server.worker.GunicornUVLoopAiomonitorWebWorker'

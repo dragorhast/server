@@ -20,6 +20,7 @@ from shapely.geometry import Point
 from server import logger
 from server.models import Issue, User
 from server.models.bike import Bike
+from server.models.user import UserType
 from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsConnected, BikeNotInUse, BikeNotBroken, \
     UserMatchesToken
 from server.serializer import JSendStatus, JSendSchema
@@ -61,7 +62,7 @@ class BikesView(BaseView):
                 self.bike_connection_manager,
                 self.rental_manager,
                 self.reservation_manager,
-                include_location=user is not None and user.is_admin
+                include_location=user is not None and user.type is not UserType.USER
             ) for bike in await get_bikes()]}
         }
 
@@ -217,7 +218,7 @@ class BikeView(BaseView):
         if "locked" in self.request["data"]:
             await self.bike_connection_manager.set_locked(bike.id, self.request["data"]["locked"])
 
-        if user.is_admin and "in_circulation" in self.request["data"]:
+        if user.type is not UserType.USER and "in_circulation" in self.request["data"]:
             await set_bike_in_circulation(bike, self.request["data"]["in_circulation"])
 
         return {
