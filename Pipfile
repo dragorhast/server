@@ -47,6 +47,8 @@ dateparser = "*"
 pynacl = "*"
 python-jose = "*"
 cryptography = "*"
+aiomonitor = "*"
+firebase-admin = "*"
 
 [requires]
 python_version = "3.6"

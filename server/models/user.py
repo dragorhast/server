@@ -2,8 +2,17 @@
 User
 ---------------------------
 """
+from enum import Enum
 
 from tortoise import Model, fields
+
+from server.models.fields import EnumField
+
+
+class UserType(Enum):
+    USER = "user"
+    OPERATOR = "operator"
+    MANAGER = "manager"
 
 
 class User(Model):
@@ -17,7 +26,7 @@ class User(Model):
     first = fields.CharField(max_length=255)
     email = fields.CharField(max_length=255, unique=True)
 
-    is_admin: bool = fields.BooleanField(default=False)
+    type: UserType = EnumField(UserType, default=UserType.USER)
     stripe_id = fields
 
     def serialize(self):
@@ -26,3 +35,6 @@ class User(Model):
             "first": self.first,
             "email": self.email
         }
+
+    def __str__(self):
+        return f"[{self.id}] {self.first} ({self.email})"
