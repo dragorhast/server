@@ -49,6 +49,7 @@ python-jose = "*"
 cryptography = "*"
 aiomonitor = "*"
 firebase-admin = "*"
+asyncio-stripe = "*"
 
 [requires]
 python_version = "3.6"

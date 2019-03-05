@@ -48,7 +48,7 @@ class UserSchema(Schema):
 
     @validates_schema
     def assert_strip_id_valid(self, data):
-        if "stripe_id" not in data:
+        if "stripe_id" not in data or data["stripe_id"] is None:
             return True
 
         return data["stripe_id"].startswith("cus_")

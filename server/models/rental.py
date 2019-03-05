@@ -28,7 +28,9 @@ class Rental(Model):
     id = fields.IntField(pk=True)
     user = fields.ForeignKeyField(model_name="models.User", related_name="rentals")
     bike = fields.ForeignKeyField(model_name="models.Bike", related_name="rentals")
-    price = fields.FloatField(null=True)
+
+    price = fields.IntField(null=True)
+    """The price of the rental (in pennies)."""
 
     @property
     def start_time(self) -> datetime:

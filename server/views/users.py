@@ -9,7 +9,7 @@ from typing import List
 
 from aiohttp import web
 from aiohttp_apispec import docs
-from marshmallow.fields import String
+from marshmallow.fields import String, Url
 
 from server.models import User, Rental
 from server.permissions import UserMatchesToken, UserIsAdmin, requires, ValidToken
@@ -24,7 +24,6 @@ from server.service.access.issues import get_issues, open_issue
 from server.service.access.rentals import get_rentals
 from server.service.access.reservations import current_reservations, get_user_reservations
 from server.service.access.users import get_users, get_user, delete_user, create_user, UserExistsError, update_user
-from server.service.payment import create_customer, update_customer, delete_customer
 from server.views.base import BaseView
 from server.views.decorators import match_getter, GetFrom
 
@@ -132,9 +131,9 @@ class UserPaymentView(BaseView):
     @expects(PaymentSourceSchema())
     async def put(self, user: User):
         if user.can_pay:
-            await update_customer(user, self.request["data"]["token"])
+            await self.payment_manager.update_customer(user, self.request["data"]["token"])
         else:
-            await create_customer(user, self.request["data"]["token"])
+            await self.payment_manager.create_customer(user, self.request["data"]["token"])
 
         raise web.HTTPOk
 
@@ -157,7 +156,7 @@ class UserPaymentView(BaseView):
                 }
             }
         else:
-            await delete_customer(user)
+            await self.payment_manager.delete_customer(user)
 
 
 
@@ -236,7 +235,7 @@ class UserEndCurrentRentalView(BaseView):
     @returns(
         no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
         invalid_action=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        rental_completed=JSendSchema.of(rental=RentalSchema(), action=String()),
+        rental_completed=JSendSchema.of(rental=RentalSchema(), action=String(), receipt_url=Url()),
     )
     async def patch(self, user: User):
         """
@@ -263,16 +262,20 @@ class UserEndCurrentRentalView(BaseView):
             }
 
         if end_type == "complete":
-            rental = await self.rental_manager.finish(user)
+            rental, receipt_url = await self.rental_manager.finish(user)
         elif end_type == "cancel":
             rental = await self.rental_manager.cancel(user)
+            receipt_url = None
+        else:
+            raise Exception
 
         return "rental_completed", {
             "status": JSendStatus.SUCCESS,
             "data": {
                 "rental": await rental.serialize(self.rental_manager, self.bike_connection_manager,
                                                  self.request.app.router),
-                "action": "canceled" if end_type == "cancel" else "completed"
+                "action": "canceled" if end_type == "cancel" else "completed",
+                "receipt_url": receipt_url,
             }
         }
 

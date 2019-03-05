@@ -11,15 +11,17 @@ DAILY_PRICE = 5
 WEEKLY_PRICE = 25
 MONTHLY_PRICE = 50
 
+MINIMUM = 1
 
-async def get_price(start_date: datetime, end_date: datetime, extra_cost=0.0) -> float:
+
+async def get_price(start_date: datetime, end_date: datetime, extra_cost=0.0) -> int:
     """
     Given a start location and end location, returns the price for a given ride.
 
-    :return: The final price.
+    :return: The final price (in pennies).
     """
 
-    price = 0.0
+    price = 0
     delta = end_date - start_date
 
     days = delta.days
@@ -37,4 +39,6 @@ async def get_price(start_date: datetime, end_date: datetime, extra_cost=0.0) ->
     price += HOURLY_PRICE * hours
     price += extra_cost
 
-    return round(price, 2)
+    price = max(MINIMUM, price)
+
+    return int(price * 100)

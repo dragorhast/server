@@ -22,6 +22,7 @@ from server.service.background.stats_reporter import StatisticsReporter
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager
 from server.service.manager.reservation_manager import ReservationManager
+from server.service.payment import DummyPaymentManager
 from server.service.verify_token import DummyVerifier
 from server.signals import register_signals
 from server.views import register_views
@@ -152,7 +153,7 @@ def bike_connection_manager(database):
 
 @pytest.fixture
 def rental_manager(database):
-    return RentalManager()
+    return RentalManager(DummyPaymentManager())
 
 
 @pytest.fixture

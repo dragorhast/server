@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e3f8eba81b052c4a32c3a06a3392e2248b0ab57939f18f8036fe2716b967df66"
+            "sha256": "17656b4dd7b86fc5808d7b6347cd6e5dfbd5cbc8bb8c88eb02ba14f3e14055e5"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -125,6 +125,13 @@
                 "sha256:4291ca197d287d274d0b6cb5d6f8f8f82d434ed288f962539ff18cc9012f9ea3"
             ],
             "version": "==3.0.1"
+        },
+        "asyncio-stripe": {
+            "hashes": [
+                "sha256:5e101a8d7664564d9f9dfe022bbbcf91c43c81f45d1530c4e5e506cfaa314f98"
+            ],
+            "index": "pypi",
+            "version": "==0.2.1"
         },
         "asyncpg": {
             "hashes": [
@@ -992,6 +999,15 @@
             "git": "https://github.com/arlyon/tortoise-orm.git",
             "ref": "193fd4c6db8abb04d14800adff5a503c7d4f609d"
         },
+        "typing-extensions": {
+            "hashes": [
+                "sha256:07b2c978670896022a43c4b915df8958bec4a6b84add7f2c87b2b728bda3ba64",
+                "sha256:f3f0e67e1d42de47b5c67c32c9b26641642e9170fe7e292991793705cd5fef7c",
+                "sha256:fb2cd053238d33a8ec939190f30cfd736c00653a85a2919415cecf7dc3d9da71"
+            ],
+            "markers": "python_version < '3.7'",
+            "version": "==3.7.2"
+        },
         "tzlocal": {
             "hashes": [
                 "sha256:27d58a0958dc884d208cdaf45ef5892bf2a57d21d9611f2ac45e51f1973e8cab",
@@ -1048,10 +1064,10 @@
     "develop": {
         "astroid": {
             "hashes": [
-                "sha256:bfa089d8ebeccc44c35fb06cc9ebf951d9b47b371d25dc14be85b30fef46267f",
-                "sha256:d76f540795deb23b2f4ca6d3e40ab4ff543fdb5c82c083664b8651a4cb129ac7"
+                "sha256:39183aecc01d6f74eb54edc6739992e842f3bf3068bdfaaba30b5a1742f44091",
+                "sha256:62bd1d8d2ace3e812b3a22eb3c4b7856536d8cc0cdb37466f6a53cf881dbad1f"
             ],
-            "version": "==2.2.2"
+            "version": "==2.2.4"
         },
         "atomicwrites": {
             "hashes": [
@@ -1390,7 +1406,7 @@
                 "sha256:d659517ca116e6750101a1326107d3479028c5191f0ecee3c7203c50f5b915b0",
                 "sha256:eddd3fb1f3e0f82e5915a899285a39ee34ce18fd25d89582bc89fc9fb16cd2c6"
             ],
-            "markers": "python_version >= '3.7' and implementation_name == 'cpython'",
+            "markers": "implementation_name == 'cpython'",
             "version": "==1.3.1"
         },
         "urllib3": {

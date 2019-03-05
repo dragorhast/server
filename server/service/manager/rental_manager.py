@@ -27,6 +27,7 @@ from server.models.issue import IssueStatus, Issue
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
 from server.service.access.rentals import get_rental_with_distance
+from server.service.payment import PaymentManager, CustomerError
 from server.service.rebuildable import Rebuildable
 
 
@@ -68,11 +69,12 @@ class RentalManager(Rebuildable):
     When the module starts, it will replay all events from midnight that night.
     """
 
-    def __init__(self):
+    def __init__(self, payment_manager: PaymentManager):
         self._active_rentals: Dict[int, Tuple[int, int]] = {}
         """Maps user ids to a tuple containing their current rental and current bike."""
 
         self.hub = EventHub(RentalEvent)
+        self._payment_manager = payment_manager
 
     async def create(self, user: User, bike: Bike) -> Tuple[Rental, Point]:
         """
@@ -87,6 +89,9 @@ class RentalManager(Rebuildable):
         if self.is_in_use(bike):
             raise CurrentlyRentedError("The requested bike is in use.", [])
 
+        if not await self._payment_manager.is_customer(user):
+            raise CustomerError()
+
         rental = await Rental.create(user=user, bike=bike)
         rental.bike = bike
         rental.user = user
@@ -99,24 +104,29 @@ class RentalManager(Rebuildable):
 
         return rental, current_location.location if current_location is not None else None
 
-    async def finish(self, user: User, *, extra_cost=0.0) -> Rental:
+    async def finish(self, user: User, *, extra_cost=0.0) -> Tuple[Rental, str]:
         """
-        Completes a rental.
+        Completes a rental, charging the customer.
 
+        :returns: A tuple with the rental and the URL of the receipt.
         :raises InactiveRentalError: When there is no active rental for that user, or the given rental is not active.
         """
         rental, distance = await self._get_rental_with_distance(user)
-        rental.price = await get_price(rental.updates[0].time, rental.updates[-1].time, extra_cost)
+        rental.price = await get_price(rental.updates[0].time, datetime.now(), extra_cost)
 
         current_location = await LocationUpdate.filter(bike_id=rental.bike_id).first()
 
-        del self._active_rentals[user.id]
-        await rental.save()
-        await self._publish_event(rental, RentalUpdateType.RETURN)
+        success, receipt_url = await self._payment_manager.charge_customer(user, rental, distance)
 
-        self.hub.emit(RentalEvent.rental_ended, user, rental.bike, current_location.location, rental.price, distance)
+        if success:
+            del self._active_rentals[user.id]
+            await rental.save()
+            await self._publish_event(rental, RentalUpdateType.RETURN)
+            self.hub.emit(RentalEvent.rental_ended, user, rental.bike, current_location.location, rental.price, distance)
+        else:
+            raise Exception("Couldn't charge card!")
 
-        return rental
+        return rental, receipt_url
 
     async def cancel(self, user: User) -> Rental:
         """Cancels a rental, effective immediately, waiving the rental fee."""
@@ -220,7 +230,8 @@ class RentalManager(Rebuildable):
             if update.type == RentalUpdateType.RENT:
                 self.hub.emit(RentalEvent.rental_started, update.rental.user, update.rental.bike, None)  # todo location
             elif update.type == RentalUpdateType.RETURN:
-                self.hub.emit(RentalEvent.rental_ended, update.rental.user, update.rental.bike, None, update.rental.price, None)
+                self.hub.emit(RentalEvent.rental_ended, update.rental.user, update.rental.bike, None,
+                              update.rental.price, None)
             elif update.type == RentalUpdateType.CANCEL:
                 self.hub.emit(RentalEvent.rental_cancelled, update.rental.user, update.rental.bike)
 
