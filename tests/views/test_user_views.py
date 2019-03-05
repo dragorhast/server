@@ -46,10 +46,10 @@ class TestUsersView:
             "first": "Alex",
             "email": "test@test.com"
         })
-        response = await client.post('/api/v1/users', json=request_data, headers={"Authorization": "Bearer invalid"})
+        response = await client.post('/api/v1/users', json=request_data, headers={"Authorization": "Bearer "})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("Not a valid hex string" in error for error in response_data["data"]["errors"])
+        assert any("Invalid" == error for error in response_data["data"]["errors"])
 
     async def test_create_user_bad_schema(self, client: TestClient):
         """Assert that creating a user with a bad schema gives a descriptive error."""
@@ -329,11 +329,11 @@ class TestMeView:
 
     async def test_get_me_invalid_auth(self, client: TestClient, random_user):
         """Assert that an invalid token returns an appropriate error."""
-        response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer bad_token"})
+        response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer "})
         response_schema = JSendSchema()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("valid hex string" in error for error in response_data["data"]["errors"])
+        assert any("Invalid" == error for error in response_data["data"]["errors"])
 
     async def test_get_me_missing_user(self, client: TestClient):
         """Assert that calling me gives a descriptive error."""

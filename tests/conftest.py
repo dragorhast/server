@@ -1,6 +1,8 @@
 import asyncio
 import os
 from datetime import datetime
+from itertools import count
+from random import randint
 
 import pytest
 from aiohttp import web
@@ -37,8 +39,13 @@ fake.add_provider(misc)
 
 @pytest.fixture
 def random_user_factory(database):
+    user_id = count(1)
+
     async def create_user(is_admin=False):
-        return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), type=UserType.MANAGER if is_admin else UserType.USER)
+        return await User.create(
+            firebase_id=fake.sha1(), first=fake.name(), email=fake.email(),
+            type=UserType.MANAGER if is_admin else UserType.USER, stripe_id="cus_"+hex(next(user_id))
+        )
 
     return create_user
 

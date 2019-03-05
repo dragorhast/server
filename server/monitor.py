@@ -4,7 +4,9 @@ from aiomonitor import Monitor
 from firebase_admin.auth import AuthError
 
 from server.models.user import UserType
+from server.service.access.bikes import get_bikes, get_bike, set_bike_in_circulation
 from server.service.access.users import get_users, set_user_admin
+from server.service.manager.bike_connection_manager import BikeConnectionManager
 
 
 class Tap2GoMonitor(Monitor):
@@ -34,3 +36,36 @@ class Tap2GoMonitor(Monitor):
 
         for user in users:
             self._sout.write(f"- {user}\n")
+
+    def do_get_bikes(self):
+        """Get all bikes."""
+        fetch = asyncio.run_coroutine_threadsafe(get_bikes(), self._loop)
+        bikes = fetch.result()
+
+        manager: BikeConnectionManager = self._locals["app"]["bike_location_manager"]
+
+        for bike in bikes:
+            location = manager.most_recent_location(bike)
+            if location is not None:
+                location, _, _ = location
+                location = f"({location.x}, {location.y})"
+            else:
+                location = ""
+
+            self._sout.write(f"- {bike} {'not ' if not bike.in_circulation else ''}in circulation {location}\n")
+
+    def do_take_out_of_circulation(self, bike: str):
+        """Take a bike out of circulation."""
+        fetch = asyncio.run_coroutine_threadsafe(get_bike(identifier=bike), self._loop)
+        bike = fetch.result()
+
+        fetch = asyncio.run_coroutine_threadsafe(set_bike_in_circulation(bike, False), self._loop)
+        result = fetch.result()
+
+    def do_put_bike_into_circulation(self, bike: str):
+        """Put bike in circulation."""
+        fetch = asyncio.run_coroutine_threadsafe(get_bike(identifier=bike), self._loop)
+        bike = fetch.result()
+
+        fetch = asyncio.run_coroutine_threadsafe(set_bike_in_circulation(bike, True), self._loop)
+        result = fetch.result()

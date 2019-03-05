@@ -120,3 +120,6 @@ class Bike(Model):
     @property
     def broken(self) -> bool:
         return len(self.issues) > 0
+
+    def __str__(self):
+        return f"[{self.type}] {self.identifier}"

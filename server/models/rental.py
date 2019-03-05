@@ -48,10 +48,10 @@ class Rental(Model):
 
     @property
     def outcome(self) -> Optional[str]:
-        last_update: RentalUpdate = self.updates[-1]
-        if last_update.type == RentalUpdateType.CANCEL:
+        last_update: RentalUpdate = self.updates[-1].type
+        if last_update is RentalUpdateType.CANCEL:
             return "canceled"
-        elif last_update.type == RentalUpdateType.RETURN:
+        elif last_update is RentalUpdateType.RETURN:
             return "returned"
         else:
             return None
@@ -83,6 +83,8 @@ class Rental(Model):
                 data["price"] = self.price
             elif self.cancel_time is not None:
                 data["cancel_time"] = self.cancel_time
+            else:
+                raise Exception("Bad State")
         else:
             data["estimated_price"] = await rental_manager.get_price_estimate(self)
 

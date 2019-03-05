@@ -270,10 +270,10 @@ class TestBikeRentalsView:
         """Assert that creating a rental with an invalid firebase key fails."""
         response_schema = JSendSchema()
         response = await client.post(f'/api/v1/bikes/{random_bike.identifier}/rentals',
-                                     headers={"Authorization": "Bearer invalid"})
+                                     headers={"Authorization": "Bearer "})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("Not a valid hex string." == error for error in response_data["data"]["errors"])
+        assert any("Invalid" == error for error in response_data["data"]["errors"])
 
 
 class TestBikeIssuesView:

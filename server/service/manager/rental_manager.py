@@ -19,14 +19,14 @@ from datetime import datetime
 from typing import Dict, Union, Tuple, List
 
 from shapely.geometry import Point
-from tortoise.query_utils import Prefetch
+from tortoise.query_utils import Prefetch, Q
 
 from server.events import EventHub, EventList
 from server.models import Bike, Rental, User, RentalUpdate, LocationUpdate
 from server.models.issue import IssueStatus, Issue
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
-from server.service.access.rentals import get_rental_with_distance
+from server.service.access.rentals import get_rental_with_distance, get_rentals, unfinished_rentals
 from server.service.payment import PaymentManager, CustomerError
 from server.service.rebuildable import Rebuildable
 
@@ -215,11 +215,7 @@ class RentalManager(Rebuildable):
 
         Also replays events that happened today for use by subscribers.
         """
-        unfinished_rentals = await Rental.filter(
-            updates__type__not_in=(t.value for t in RentalUpdateType.terminating_types())
-        )
-
-        for rental in unfinished_rentals:
+        async for rental in await unfinished_rentals():
             self._active_rentals[rental.user_id] = (rental.id, rental.bike_id)
 
         midnight = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)

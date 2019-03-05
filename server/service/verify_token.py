@@ -85,10 +85,8 @@ class DummyVerifier(TokenVerifier):
     """
 
     def verify_token(self, token: str) -> str:
-        try:
-            bytes.fromhex(token)
-        except (ValueError, TypeError):
-            raise TokenVerificationError("Not a valid hex string.", token)
+        if not isinstance(token, str) or not len(token) > 0:
+            raise TokenVerificationError("Invalid")
 
         return token
 
