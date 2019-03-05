@@ -38,7 +38,7 @@ from .pickups import PickupView, PickupsView, PickupBikesView, PickupReservation
 from .rentals import RentalView, RentalsView
 from .reservations import ReservationView, ReservationsView
 from .users import UserView, UsersView, UserIssuesView, UserRentalsView, UserReservationsView, MeView, \
-    UserCurrentRentalView, UserCurrentReservationView, UserEndCurrentRentalView
+    UserCurrentRentalView, UserCurrentReservationView, UserEndCurrentRentalView, UserPaymentView
 
 views = [
     BikeView, BikesView, BrokenBikesView, LowBikesView, BikeRentalsView, BikeIssuesView, BikeSocketView,
@@ -46,7 +46,7 @@ views = [
     PickupView, PickupsView, PickupBikesView, PickupReservationsView, PickupShortagesView,
     RentalView, RentalsView,
     ReservationView, ReservationsView,
-    MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView,
+    MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView, UserPaymentView,
     UserCurrentReservationView, UserEndCurrentRentalView,
     AnnualReportView, MonthlyReportView, DailyReportView
 ]

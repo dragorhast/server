@@ -5,6 +5,10 @@ from server.models.util import BikeType
 from server.serializer import BytesField, EnumField
 
 
+class PaymentSourceSchema(Schema):
+    token = String()
+
+
 class MasterKeySchema(Schema):
     master_key = BytesField(required=True, description="The bike registration master key.")
 

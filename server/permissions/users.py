@@ -66,6 +66,18 @@ class UserMatchesToken(Permission):
         return [{"FirebaseToken": ["user"]}]
 
 
+class UserCanPay(Permission):
+    """Asserts that the given user matches the firebase id."""
+
+    async def __call__(self, view: View, user: User, **kwargs):
+        if not user.can_pay:
+            raise RoutePermissionError("User does not have any payment details associated with their account.")
+
+    @property
+    def openapi_security(self):
+        return [{"FirebaseToken": ["user"]}]
+
+
 class ValidToken(Permission):
     """Asserts that the request has a valid firebase token."""
 

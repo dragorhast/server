@@ -42,9 +42,16 @@ class UserSchema(Schema):
 
     id = Integer()
     firebase_id = String(required=True)
-    stripe_id = String()
+    stripe_id = String(allow_none=True)
     first = String(required=True)
     email = Email(required=True)
+
+    @validates_schema
+    def assert_strip_id_valid(self, data):
+        if "stripe_id" not in data:
+            return True
+
+        return data["stripe_id"].startswith("cus_")
 
 
 class RentalUpdateSchema(Schema):

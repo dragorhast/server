@@ -23,6 +23,7 @@ from server.models.bike import Bike
 from server.models.user import UserType
 from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsConnected, BikeNotInUse, BikeNotBroken, \
     UserMatchesToken
+from server.permissions.users import UserCanPay
 from server.serializer import JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
 from server.serializer.fields import Many, BytesField
@@ -254,7 +255,7 @@ class BikeRentalsView(BaseView):
     @with_bike
     @with_user
     @docs(summary="Start A New Rental")
-    @requires(UserMatchesToken() & BikeNotInUse() & BikeNotBroken(max_issues=3))
+    @requires(UserMatchesToken() & UserCanPay() & BikeNotInUse() & BikeNotBroken(max_issues=1))
     @returns(
         rental_created=JSendSchema.of(rental=CurrentRentalSchema(exclude=('user', 'bike', 'events'))),
         active_rental=JSendSchema(),

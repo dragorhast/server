@@ -124,7 +124,7 @@ def expects(schema: Optional[Schema], into="data"):
 
 def returns(
     schema: Optional[Schema] = None, return_code: HTTPStatus = HTTPStatus.OK,
-    **named_schema: Union[Schema, Tuple[Schema, HTTPStatus]]
+    **named_schema: Union[Schema, Tuple[Optional[Schema], HTTPStatus]]
 ):
     """
     A decorator that asserts a the data returned
@@ -191,10 +191,13 @@ def returns(
 
         for description, associated_schema in named_schema.items():
             associated_schema, return_code = associated_schema
-            new_func.__apispec__["responses"][str(int(return_code))] = {
-                "description": description if description is not None else "default",
-                "content": {"application/json": {"schema": associated_schema}}
-            }
+
+            spec = {"description": description if description is not None else "default"}
+
+            if associated_schema is not None:
+                spec["content"] = {"application/json": {"schema": associated_schema}}
+
+            new_func.__apispec__["responses"][str(int(return_code))] = spec
 
         return new_func
 
