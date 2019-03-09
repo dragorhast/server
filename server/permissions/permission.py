@@ -124,7 +124,7 @@ class AndPermission(Permission):
         """.. note:: Not sure how this interacts with nested or..."""
 
         # we don't want duplicates
-        security = defaultdict(set)
+        security: Dict[str, Set[str]] = defaultdict(set)
 
         # get the security dictionary for each sub-permission
         security_entries = chain.from_iterable(permission.openapi_security for permission in self._permissions)

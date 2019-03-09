@@ -10,7 +10,7 @@ from server.service.verify_token import verify_token, TokenVerificationError
 class UserIsAdmin(Permission):
     """Asserts that a given user is an admin."""
 
-    async def __call__(self, view: View, user: User, **kwargs):
+    async def __call__(self, view: View, user: User = None, **kwargs):
         if user is None:
             raise RoutePermissionError("User does not exist.")
 
@@ -32,7 +32,7 @@ class UserIsAdmin(Permission):
 class UserOwnsReservation(Permission):
     """Assert that a user owns the given reservation."""
 
-    async def __call__(self, view: View, user: User, reservation: Reservation):
+    async def __call__(self, view: View, user: User = None, reservation: Reservation = None, **kwargs):
         if not reservation.user_id == user.id:
             raise RoutePermissionError("The supplied token did not make this reservation.")
 
@@ -40,7 +40,7 @@ class UserOwnsReservation(Permission):
 class UserIsRentingBike(Permission):
     """Asserts that the given user is renting the given bike."""
 
-    async def __call__(self, view: View, user: User, bike: Bike, **kwargs):
+    async def __call__(self, view: View, user: User = None, bike: Bike = None, **kwargs):
         if not view.rental_manager.is_renting(user.id, bike.id):
             raise RoutePermissionError("The supplied token does not have an active rental for this bike.")
 
@@ -52,7 +52,7 @@ class UserIsRentingBike(Permission):
 class UserMatchesToken(Permission):
     """Asserts that the given user matches the firebase id."""
 
-    async def __call__(self, view: View, user: User, **kwargs):
+    async def __call__(self, view: View, user: User = None, **kwargs):
         if "token" not in view.request:
             raise RoutePermissionError("No firebase jwt was included in the Authorization header.")
         else:
@@ -69,7 +69,7 @@ class UserMatchesToken(Permission):
 class UserCanPay(Permission):
     """Asserts that the given user matches the firebase id."""
 
-    async def __call__(self, view: View, user: User, **kwargs):
+    async def __call__(self, view: View, user: User = None, **kwargs):
         if not user.can_pay:
             raise RoutePermissionError("User does not have any payment details associated with their account.")
 

@@ -276,7 +276,7 @@ class BikeRentalsView(BaseView):
                 rental, start_location = await self.reservation_manager.claim(user, bike)
             except CollectionError:
                 # they can try and rent it normally
-                reservations = None
+                reservations = []
             except ReservationError as e:
                 return "reservation_error", {
                     "status": JSendStatus.FAIL,

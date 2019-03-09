@@ -25,11 +25,13 @@ DELETE requests respond with a 204 content not found.
 .. _`Web Api Design`: https://pages.apigee.com/rs/apigee/images/api-design-ebook-2012-03.pdf
 .. _idempotent: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.1.2
 """
+from typing import List, Type
 
 import aiohttp_cors
 from aiohttp.abc import Application
 
 from server import logger
+from server.views.base import BaseView
 from server.views.reports import AnnualReportView, MonthlyReportView, DailyReportView
 from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView, BikeIssuesView, BrokenBikesView, LowBikesView
 from .issues import IssuesView, IssueView
@@ -40,13 +42,14 @@ from .reservations import ReservationView, ReservationsView
 from .users import UserView, UsersView, UserIssuesView, UserRentalsView, UserReservationsView, MeView, \
     UserCurrentRentalView, UserCurrentReservationView, UserEndCurrentRentalView, UserPaymentView
 
-views = [
+views: List[Type[BaseView]] = [
     BikeView, BikesView, BrokenBikesView, LowBikesView, BikeRentalsView, BikeIssuesView, BikeSocketView,
     IssuesView, IssueView,
     PickupView, PickupsView, PickupBikesView, PickupReservationsView, PickupShortagesView,
     RentalView, RentalsView,
     ReservationView, ReservationsView,
-    MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView, UserPaymentView,
+    MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView,
+    UserPaymentView,
     UserCurrentReservationView, UserEndCurrentRentalView,
     AnnualReportView, MonthlyReportView, DailyReportView
 ]

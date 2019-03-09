@@ -36,9 +36,9 @@ async def get_price(start_date: datetime, end_date: datetime, extra_cost=0.0) ->
         price += WEEKLY_PRICE
 
     price += DAILY_PRICE * days
-    price += HOURLY_PRICE * hours
+    price += int(HOURLY_PRICE * hours)
     price += extra_cost
 
     price = max(MINIMUM, price)
 
-    return int(price * 100)
+    return price * 100

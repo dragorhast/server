@@ -86,12 +86,12 @@ class PaymentManager:
         :param rental: The rental to charge for.
         :param distance: The optional distance.
         """
-        distance = "" if distance is None else f"{distance:.2f} miles "
+        distance_string = "" if distance is None else f"{distance:.2f} miles "
 
         charge: Charge = await self._client.create_charge(
             amount=rental.price,
             currency='gbp',
-            description=f'Travelled {distance}on bike {rental.bike.identifier}',
+            description=f'Travelled {distance_string}on bike {rental.bike.identifier}',
             customer=user.stripe_id
         )
 

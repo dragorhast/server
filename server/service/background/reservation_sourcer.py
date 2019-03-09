@@ -30,7 +30,7 @@ class ReservationSourcer:
         Gets a dictionary mapping all the pickup points with shortages
         to the number of bikes needed and the time they are needed by.
         """
-        shortages = defaultdict(lambda: (0, datetime.max))
+        shortages: Dict[PickupPoint, Tuple[int, datetime]] = defaultdict(lambda: (0, datetime.max))
         for date, pickup in self._shortages:
             count, closest_date = shortages[pickup]
             closest_date = min(closest_date, date)

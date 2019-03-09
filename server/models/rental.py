@@ -37,12 +37,12 @@ class Rental(Model):
         return self.updates[0].time
 
     @property
-    def end_time(self) -> datetime:
+    def end_time(self) -> Optional[datetime]:
         last_update: RentalUpdate = self.updates[-1]
         return last_update.time if last_update.type == RentalUpdateType.RETURN else None
 
     @property
-    def cancel_time(self) -> datetime:
+    def cancel_time(self) -> Optional[datetime]:
         last_update: RentalUpdate = self.updates[-1]
         return last_update.time if last_update.type == RentalUpdateType.CANCEL else None
 
