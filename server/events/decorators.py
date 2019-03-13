@@ -1,4 +1,4 @@
-from typing import List, Type
+from typing import Type
 
 from .event_hub import EventHub
 from .event_list import EventList

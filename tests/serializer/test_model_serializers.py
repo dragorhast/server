@@ -53,7 +53,7 @@ class TestBikeSerializer:
 
 class TestRentalSerializer:
 
-    async def test_serializer(self, random_bike, random_user, rental_manager, bike_connection_manager):
+    async def test_serializer(self, random_bike, random_user, rental_manager, bike_connection_manager, reservation_manager):
         await bike_connection_manager.update_location(random_bike, Point(0, 0))
         rental, location = await rental_manager.create(random_user, random_bike)
-        rental_data = await rental.serialize(rental_manager, bike_connection_manager, current_location=location)
+        rental_data = await rental.serialize(rental_manager, bike_connection_manager, reservation_manager, current_location=location)

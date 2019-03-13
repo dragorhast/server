@@ -16,7 +16,7 @@ class PickupPoint(Model):
     name = fields.CharField(255)
     area = gis_fields.PolygonField(srid=27700)
 
-    def serialize(self, shortage_count: int = None, shortage_date: datetime = None):
+    def serialize(self, reservation_manager, shortage_count: int = None, shortage_date: datetime = None):
         """
         Serializes a pickup point into a json format.
 
@@ -31,7 +31,8 @@ class PickupPoint(Model):
             "properties": {
                 "id": self.id,
                 "name": self.name,
-                "center": {"latitude": centroid.x, "longitude": centroid.y}
+                "center": [centroid.x, centroid.y],
+                "free_bikes": max(reservation_manager.pickup_bike_surplus(self), 0),
             }
         }
 

@@ -2,9 +2,9 @@ from collections import defaultdict
 from inspect import signature, iscoroutinefunction, Signature
 from typing import Type, Union, Callable, List, Dict
 
-from .exceptions import NoSuchEventError, InvalidHandlerError, NoSuchListenerError
 from .event_emitter import EventEmitter, AsyncEventEmitter
 from .event_list import EventList, AsyncEventList
+from .exceptions import NoSuchEventError, InvalidHandlerError, NoSuchListenerError
 
 
 class EventHub:
@@ -63,7 +63,8 @@ class EventHub:
 
             if e_param.annotation is not Signature.empty and h_param.annotation is not Signature.empty:
                 if e_param.annotation is not h_param.annotation:
-                    errors.append(InvalidHandlerError(f"Conflicting annotations for parameter \"{e_name}\".", target, handler))
+                    errors.append(
+                        InvalidHandlerError(f"Conflicting annotations for parameter \"{e_name}\".", target, handler))
 
         if errors:
             raise InvalidHandlerError(errors)
@@ -143,4 +144,3 @@ class AsyncEventHub(EventHub):
                 else:
                     return EventEmitter(self, event)
         raise NoSuchEventError()
-

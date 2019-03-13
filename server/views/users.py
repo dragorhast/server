@@ -11,7 +11,7 @@ from aiohttp import web
 from aiohttp_apispec import docs
 from marshmallow.fields import String, Url
 
-from server.models import User, Rental
+from server.models import User, Rental, Reservation
 from server.permissions import UserMatchesToken, UserIsAdmin, requires, ValidToken
 from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import expects, returns
@@ -159,7 +159,6 @@ class UserPaymentView(BaseView):
             await self.payment_manager.delete_customer(user)
 
 
-
 class UserRentalsView(BaseView):
     """
     Gets or adds to the users list of rentals.
@@ -214,6 +213,7 @@ class UserCurrentRentalView(BaseView):
             "data": {"rental": await current_rental.serialize(
                 self.rental_manager,
                 self.bike_connection_manager,
+                self.reservation_manager,
                 self.request.app.router,
                 start_location=start_location,
                 current_location=current_location
@@ -273,6 +273,7 @@ class UserEndCurrentRentalView(BaseView):
             "status": JSendStatus.SUCCESS,
             "data": {
                 "rental": await rental.serialize(self.rental_manager, self.bike_connection_manager,
+                                                 self.reservation_manager,
                                                  self.request.app.router),
                 "action": "canceled" if end_type == "cancel" else "completed",
                 "receipt_url": receipt_url,
@@ -295,10 +296,11 @@ class UserReservationsView(BaseView):
     @docs(summary="Get All Reservations For User")
     @requires(UserMatchesToken() | UserIsAdmin())
     @returns(JSendSchema.of(reservations=Many(ReservationSchema())))
-    async def get(self, user, reservations):
+    async def get(self, user, reservations: List[Reservation]):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"reservations": [reservation.serialize(self.request.app.router) for reservation in reservations]}
+            "data": {"reservations": [reservation.serialize(self.request.app.router, self.reservation_manager) for
+                                      reservation in reservations]}
         }
 
 
@@ -316,10 +318,11 @@ class UserCurrentReservationView(BaseView):
     @docs(summary="Get Current Reservations For User")
     @requires(UserMatchesToken() | UserIsAdmin())
     @returns(JSendSchema.of(reservations=Many(CurrentReservationSchema())))
-    async def get(self, user, reservations):
+    async def get(self, user, reservations: List[Reservation]):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"reservations": [reservation.serialize(self.request.app.router) for reservation in reservations]}
+            "data": {"reservations": [reservation.serialize(self.request.app.router, self.reservation_manager) for
+                                      reservation in reservations]}
         }
 
 

@@ -42,7 +42,8 @@ class RentalsView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"rentals": [
-                await rental.serialize(self.rental_manager, self.bike_connection_manager, self.request.app.router)
+                await rental.serialize(self.rental_manager, self.bike_connection_manager, self.reservation_manager,
+                                       self.request.app.router)
                 for rental in await get_rentals()
             ]}
         }
@@ -69,6 +70,7 @@ class RentalView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"rental": await rental.serialize(
-                self.rental_manager, self.bike_connection_manager, self.request.app.router, distance=distance
+                self.rental_manager, self.bike_connection_manager, self.reservation_manager, self.request.app.router,
+                distance=distance
             )}
         }

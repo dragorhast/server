@@ -46,4 +46,4 @@ class TestReservationView:
         )
         response_data = JSendSchema().load(await response.json())
         assert response_data["data"]["reservation"]["user_id"] == random_user.id
-        assert response_data["data"]["reservation"]["outcome"] == ReservationOutcome.CANCELLED
+        assert response_data["data"]["reservation"]["status"] == ReservationOutcome.CANCELLED

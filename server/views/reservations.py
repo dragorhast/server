@@ -6,13 +6,11 @@ Handles all the reservations CRUD
 
 To create a new reservation, go through the pickup point.
 """
-from datetime import timezone
 from http import HTTPStatus
 
-from aiohttp import web
 from aiohttp_apispec import docs
 
-from server.models.reservation import ReservationOutcome
+from server.models.reservation import Reservation
 from server.permissions import UserIsAdmin, requires
 from server.permissions.users import UserOwnsReservation
 from server.serializer import JSendStatus, returns, JSendSchema
@@ -40,7 +38,8 @@ class ReservationsView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"reservations": [
-                reservation.serialize(self.request.app.router) for reservation in await get_reservations()
+                reservation.serialize(self.request.app.router, self.reservation_manager) for reservation in
+                await get_reservations()
             ]}
         }
 
@@ -59,10 +58,10 @@ class ReservationView(BaseView):
     @docs(summary="Get A Reservation")
     @requires(UserIsAdmin() | UserOwnsReservation())
     @returns(JSendSchema.of(reservation=ReservationSchema()))
-    async def get(self, reservation, user):
+    async def get(self, reservation: Reservation, user):
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"reservation": reservation.serialize(self.request.app.router)}
+            "data": {"reservation": reservation.serialize(self.request.app.router, self.reservation_manager)}
         }
 
     @with_user
@@ -73,7 +72,7 @@ class ReservationView(BaseView):
         already_ended=(JSendSchema(), HTTPStatus.BAD_REQUEST),
         cancelled=JSendSchema.of(reservation=ReservationSchema()),
     )
-    async def delete(self, reservation, user):
+    async def delete(self, reservation: Reservation, user):
 
         if reservation.outcome is not None:
             return "already_ended", {
@@ -85,6 +84,5 @@ class ReservationView(BaseView):
 
         return "cancelled", {
             "status": JSendStatus.SUCCESS,
-            "data": {"reservation": reservation.serialize(self.request.app.router)}
+            "data": {"reservation": reservation.serialize(self.request.app.router, self.reservation_manager)}
         }
-

@@ -21,7 +21,6 @@ New weather: It is raining.
 Hubs can be also be globally attached to classes with a decorator.
 """
 
-
 from .event_hub import EventHub, AsyncEventHub
-from .exceptions import NoSuchEventError, NoSuchListenerError, InvalidHandlerError
 from .event_list import EventList, AsyncEventList
+from .exceptions import NoSuchEventError, NoSuchListenerError, InvalidHandlerError

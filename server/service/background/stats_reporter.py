@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from typing import Generator, Dict, List, Any
+from typing import Dict, List
 
 from server.models import StatisticsReport
 from server.service.manager.rental_manager import RentalManager, RentalEvent

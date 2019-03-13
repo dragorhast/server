@@ -6,9 +6,10 @@ Defines serializers for the various models in the system.
 """
 
 from marshmallow import Schema, validates_schema, ValidationError
-from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float, Url
+from marshmallow.fields import Integer, Boolean, String, Email, Nested, DateTime, Float, Url, List
 
 from server.models.bike import CalculatedBikeStatus
+from server.models.issue import IssueStatus
 from server.models.reservation import ReservationOutcome
 from server.models.util import RentalUpdateType
 from server.serializer.geojson import GeoJSON, GeoJSONType
@@ -116,10 +117,12 @@ class LatLong(Schema):
 class PickupPointData(Schema):
     id = Integer()
     name = String(required=True)
-    bikes = Nested(BikeSchema(), many=True)
-    center = Nested(LatLong())
+    center = List(Float())
     shortage_count = Integer()
     shortage_date = DateTime()
+
+    free_bikes = Integer()
+    """The number of bikes that aren't currently reserved."""
 
 
 class PickupPointSchema(GeoJSON):
@@ -143,6 +146,7 @@ class IssueSchema(Schema):
 
     time = DateTime()
     description = String(required=True)
+    status = EnumField(IssueStatus)
 
     @validates_schema
     def assert_url_included_with_foreign_key(self, data):
@@ -164,7 +168,7 @@ class ReservationSchema(CreateReservationSchema):
 
     made_at = DateTime()
     ended_at = DateTime()
-    outcome = EnumField(ReservationOutcome)
+    status = EnumField(ReservationOutcome)
 
     user = Nested(UserSchema())
     user_id = Integer()

@@ -19,14 +19,14 @@ from datetime import datetime
 from typing import Dict, Union, Tuple, List
 
 from shapely.geometry import Point
-from tortoise.query_utils import Prefetch, Q
+from tortoise.query_utils import Prefetch
 
 from server.events import EventHub, EventList
 from server.models import Bike, Rental, User, RentalUpdate, LocationUpdate
 from server.models.issue import IssueStatus, Issue
 from server.models.util import RentalUpdateType
 from server.pricing import get_price
-from server.service.access.rentals import get_rental_with_distance, get_rentals, unfinished_rentals
+from server.service.access.rentals import get_rental_with_distance, unfinished_rentals
 from server.service.payment import PaymentManager, CustomerError
 from server.service.rebuildable import Rebuildable
 
@@ -122,7 +122,8 @@ class RentalManager(Rebuildable):
             del self._active_rentals[user.id]
             await rental.save()
             await self._publish_event(rental, RentalUpdateType.RETURN)
-            self.hub.emit(RentalEvent.rental_ended, user, rental.bike, current_location.location, rental.price, distance)
+            self.hub.emit(RentalEvent.rental_ended, user, rental.bike, current_location.location, rental.price,
+                          distance)
         else:
             raise Exception("Couldn't charge card!")
 
@@ -192,16 +193,15 @@ class RentalManager(Rebuildable):
 
         return await get_price(rental.start_time, datetime.now())
 
-    async def get_available_bikes(self, bike_ids: List[int]) -> List[Bike]:
+    async def get_available_bikes_out_of(self, bike_ids: List[int]) -> List[Bike]:
         """Given a list of bike ids, checks if they are free or not and returns the ones that are free."""
-        rental_ids = [rental_id for rental_id, bike_id in self._active_rentals.values()]
-        if not bike_ids:
+        used_bikes = {bike_id for rental_id, bike_id in self._active_rentals.values()}
+        available_bikes = set(bike_ids) - used_bikes
+
+        if not available_bikes:
             return []
 
-        query = Bike.filter(id__in=bike_ids)
-
-        if rental_ids:
-            query = query.filter(rentals__id__not_in=rental_ids)
+        query = Bike.filter(id__in=available_bikes)
 
         return await query.prefetch_related(
             Prefetch("location_updates", queryset=LocationUpdate.all().limit(100)),

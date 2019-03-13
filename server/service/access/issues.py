@@ -2,8 +2,7 @@
 Issues
 ======
 """
-from collections import defaultdict
-from typing import Union, Tuple, List, Dict, Set
+from typing import Union, Tuple, List
 
 from tortoise.query_utils import Prefetch
 
@@ -52,7 +51,8 @@ async def get_broken_bikes() -> List[Tuple[Bike, List[Issue]]]:
      a dictionary mapping the identifier to its bike,
      and a dictionary mapping the identifier to its list of issues
     """
-    active_issues: List[Issue] = await Issue.filter(status__not=IssueStatus.CLOSED, bike_id__not_isnull=True).prefetch_related(
+    active_issues: List[Issue] = await Issue.filter(status__not=IssueStatus.CLOSED,
+                                                    bike_id__not_isnull=True).prefetch_related(
         'bike', 'bike__state_updates', Prefetch("bike__issues", queryset=Issue.filter(status__not=IssueStatus.CLOSED))
     )
 

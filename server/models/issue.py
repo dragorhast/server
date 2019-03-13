@@ -31,7 +31,8 @@ class Issue(Model):
             "user_id": self.user_id,
             "user_url": router["user"].url_for(id=str(self.user_id)).path,
             "time": self.time,
-            "description": self.description
+            "description": self.description,
+            "status": self.status
         }
 
         if self.bike_id is not None:

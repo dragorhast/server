@@ -11,7 +11,6 @@ from server.app import build_app
 from server.monitor import Tap2GoMonitor
 from server.version import __version__, name
 
-
 if __name__ == '__main__':
     logger.info(f'Starting {name} %s!', __version__)
     app = build_app("spatialite://db.sqlite3")

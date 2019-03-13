@@ -112,8 +112,8 @@ async def delete_bike(bike, master_key) -> None:
 
 async def get_bike_in_circulation(bike: Bike) -> bool:
     """Checks whether the given bike is in circulation or not."""
-    bike_state = await bike.state_updates\
-        .filter(state__in=(BikeUpdateType.IN_CIRCULATION, BikeUpdateType.OUT_OF_CIRCULATION))\
+    bike_state = await bike.state_updates \
+        .filter(state__in=(BikeUpdateType.IN_CIRCULATION, BikeUpdateType.OUT_OF_CIRCULATION)) \
         .first()
 
     return bike_state is not None and bike_state.state is BikeUpdateType.IN_CIRCULATION

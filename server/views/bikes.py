@@ -10,8 +10,6 @@ from typing import List
 
 from aiohttp import web, WSMessage
 from aiohttp_apispec import docs
-from marshmallow import fields
-from marshmallow.fields import Nested
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
@@ -26,7 +24,7 @@ from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsC
 from server.permissions.users import UserCanPay
 from server.serializer import JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
-from server.serializer.fields import Many, BytesField
+from server.serializer.fields import Many
 from server.serializer.json_rpc import JsonRPCRequest, JsonRPCResponse
 from server.serializer.misc import MasterKeySchema, BikeRegisterSchema, BikeModifySchema
 from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
@@ -120,7 +118,8 @@ class BrokenBikesView(BaseView):
             "status": JSendStatus.SUCCESS,
             "data": {
                 "bikes": [
-                    bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager, issues=issues)
+                    bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager,
+                                   issues=issues)
                     for bike, issues in broken_bikes
                 ]
             }
@@ -310,7 +309,7 @@ class BikeRentalsView(BaseView):
         return "rental_created", {
             "status": JSendStatus.SUCCESS,
             "data": {"rental": await rental.serialize(
-                self.rental_manager, self.bike_connection_manager, self.request.app.router,
+                self.rental_manager, self.bike_connection_manager, self.reservation_manager, self.request.app.router,
                 start_location=start_location,
                 current_location=start_location
             )}

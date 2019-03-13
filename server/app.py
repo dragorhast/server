@@ -4,7 +4,6 @@ App
 """
 
 import asyncio
-import os
 
 import sentry_sdk
 import uvloop
@@ -35,7 +34,7 @@ def build_app(db_uri=None):
 
     # decide which payment handler to use
     if stripe_key is None:
-        logger.error("No stripe key provided! Not charging customers.")
+        logger.warn("No stripe key provided! Not charging customers.")
         payment_manager = DummyPaymentManager
     else:
         payment_manager = PaymentManager

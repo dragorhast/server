@@ -3,7 +3,7 @@ Reservations
 ============
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Union, Optional
 
 from server.models import Reservation, PickupPoint, User

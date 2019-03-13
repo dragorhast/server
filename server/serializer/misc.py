@@ -1,6 +1,7 @@
 from marshmallow import Schema
 from marshmallow.fields import Bool, String
 
+from server.models.issue import IssueStatus
 from server.models.util import BikeType
 from server.serializer import BytesField, EnumField
 
@@ -26,4 +27,5 @@ class BikeModifySchema(Schema):
 
 
 class IssueCloseSchema(Schema):
-    resolution = String(required=True)
+    status = EnumField(IssueStatus)
+    message = String()

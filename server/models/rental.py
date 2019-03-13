@@ -56,7 +56,7 @@ class Rental(Model):
         else:
             return None
 
-    async def serialize(self, rental_manager, bike_connection_manager, router=None, *,
+    async def serialize(self, rental_manager, bike_connection_manager, reservation_manager, router=None, *,
                         distance: float = None,
                         start_location: Point = None,
                         current_location: Point = None
@@ -97,6 +97,7 @@ class Rental(Model):
             }
 
         if current_location:
-            data["current_location"] = get_serialized_location_for_bike(self.bike, bike_connection_manager)
+            data["current_location"] = get_serialized_location_for_bike(self.bike, bike_connection_manager,
+                                                                        reservation_manager)
 
         return data

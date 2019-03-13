@@ -61,7 +61,7 @@ class ReservationSourcer:
         while is_within_reservation_time(self._rental_heap[0]):
             time, pickup = heapq.heappop(self._rental_heap)
 
-            if await self._reservation_manager.pickup_bike_surplus(pickup) < 0:
+            if self._reservation_manager.pickup_bike_surplus(pickup) < 0:
                 self._shortages.add((time, pickup))
 
     async def _cull_shortages(self):
@@ -72,7 +72,7 @@ class ReservationSourcer:
         """
         for pickup, shortage in self.shortages().items():
             stored_shortage_amount, closest_date = shortage
-            surplus = await self._reservation_manager.pickup_bike_surplus(pickup)
+            surplus = self._reservation_manager.pickup_bike_surplus(pickup)
             actual_storage_amount = -surplus
 
             if stored_shortage_amount > actual_storage_amount:

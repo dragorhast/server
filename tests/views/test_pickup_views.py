@@ -27,9 +27,9 @@ class TestPickupsView:
         await bike_connection_manager.update_location(bike1, location=random_pickup_point.area.centroid)
         await bike_connection_manager.update_location(bike2, location=Point(100, 100))
 
-        resp = await client.get(f'/api/v1/pickups/{random_pickup_point.id}/bikes')
+        response = await client.get(f'/api/v1/pickups/{random_pickup_point.id}/bikes')
         schema = JSendSchema.of(bikes=Many(BikeSchema()))
-        data = schema.load(await resp.json())
+        data = schema.load(await response.json())
 
         assert data["status"] == JSendStatus.SUCCESS
         assert len(data["data"]["bikes"]) == 1
@@ -58,16 +58,16 @@ class TestPickupReservationsView:
     async def test_get_pickup_reservations(self, client, random_pickup_point, reservation_manager, random_admin):
         await reservation_manager.reserve(random_admin, random_pickup_point,
                                           datetime.now(timezone.utc) + timedelta(hours=4))
-        resp = await client.get(
+        response = await client.get(
             f'/api/v1/pickups/{random_pickup_point.id}/reservations',
             headers={"Authorization": f"Bearer {random_admin.firebase_id}"}
         )
-        response_data = JSendSchema.of(reservations=Many(ReservationSchema())).load(await resp.json())
+        response_data = JSendSchema.of(reservations=Many(ReservationSchema())).load(await response.json())
         assert len(response_data["data"]["reservations"]) == 1
 
     async def test_create_pickup_reservation(self, client, random_pickup_point, reservation_manager, random_user):
         request_data = CreateReservationSchema().dump({
-            "reserved_for": datetime.now() + timedelta(hours=4)
+            "reserved_for": datetime.now(timezone.utc) + timedelta(hours=4)
         })
 
         response = await client.post(

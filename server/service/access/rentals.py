@@ -6,9 +6,8 @@ from datetime import datetime
 from typing import Union, Optional, Tuple, List, AsyncIterable
 
 from shapely.geometry import LineString
-from tortoise.query_utils import Prefetch
 
-from server.models import Bike, Rental, User, RentalUpdate
+from server.models import Bike, Rental, User
 from server.models.util import RentalUpdateType
 
 

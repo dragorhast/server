@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 from firebase_admin import initialize_app
-from firebase_admin.auth import set_custom_user_claims, get_user
+from firebase_admin.auth import set_custom_user_claims
 from firebase_admin.credentials import Certificate
 
 from server.models import User
