@@ -75,6 +75,6 @@ class BaseView(View, CorsViewMixin):
     def enable_cors(cls, cors: CorsConfig):
         """Enables CORS on the view."""
         try:
-            cors.add(cls.route)
+            cors.add(cls.route, webview=True)
         except AttributeError as error:
             raise ViewConfigurationError("No route assigned. Please register the route first.") from error

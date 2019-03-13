@@ -92,6 +92,7 @@ async def review_issue(issue: Union[Issue, int]):
 
     issue.status = IssueStatus.CLOSED
     await issue.save()
+    return issue
 
 
 async def close_issue(issue: Union[Issue, int], resolution: str) -> Issue:
