@@ -62,14 +62,7 @@ def register_views(app: Application, base: str):
     :param app: The app to register the views to.
     :param base: The base URL.
     """
-    cors = aiohttp_cors.setup(app, defaults={
-        "*": aiohttp_cors.ResourceOptions(
-            allow_credentials=True,
-            expose_headers="*",
-            allow_headers="*",
-            allow_methods="*",
-        )
-    })
+    cors = aiohttp_cors.setup(app)
 
     for view in views:
         logger.info("Registered %s at %s", view.__name__, base + view.url)

@@ -44,8 +44,10 @@ class BaseView(View, CorsViewMixin):
 
     cors_config = {
         "*": ResourceOptions(
-            allow_methods='*',
-            allow_headers=('Authorization',)
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+            allow_methods="*",
         )
     }
 
