@@ -3,12 +3,14 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Dict, List
 
+from server import logger
 from server.models import StatisticsReport
 from server.service.manager.rental_manager import RentalManager, RentalEvent
 from server.service.manager.reservation_manager import ReservationManager, ReservationEvent
+from server.service.rebuildable import Rebuildable
 
 
-class StatisticsReporter:
+class StatisticsReporter(Rebuildable):
 
     def __init__(self, rental_manager: RentalManager, reservation_manager: ReservationManager):
         self._rental_manager = rental_manager
@@ -85,7 +87,7 @@ class StatisticsReporter:
 
         for day in dates:
             data_days.append({
-                "date": day,
+                "date": day.isoformat(),
                 "incomplete": day == day.today(),
                 "rentals_started": self._rentals_started[day],
                 "rentals_ended": self._rentals_ended[day],
@@ -112,7 +114,7 @@ class StatisticsReporter:
             month = day.replace(day=1)
             if month not in data:
                 data[month] = {
-                    "date": month, "rentals_started": 0, "rentals_ended": 0, "reservations_started": 0,
+                    "date": month.isoformat(), "rentals_started": 0, "rentals_ended": 0, "reservations_started": 0,
                     "reservations_cancelled": 0, "distance_travelled": 0, "revenue": 0
                 }
 
@@ -137,7 +139,7 @@ class StatisticsReporter:
             year = day.replace(month=1, day=1)
             if year not in data:
                 data[year] = {
-                    "date": year, "rentals_started": 0, "rentals_ended": 0, "reservations_started": 0,
+                    "date": year.isoformat(), "rentals_started": 0, "rentals_ended": 0, "reservations_started": 0,
                     "reservations_cancelled": 0, "distance_travelled": 0, "revenue": 0
                 }
 
