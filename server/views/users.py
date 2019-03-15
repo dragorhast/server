@@ -124,7 +124,7 @@ class UserPaymentView(BaseView):
         if user.can_pay:
             raise web.HTTPOk
         else:
-            raise web.HTTPNotFound
+            raise web.HTTPNoContent
 
     @with_user
     @docs(summary="Add Or Replace Payment Details")
