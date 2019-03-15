@@ -1,7 +1,11 @@
+from collections import Counter
+from datetime import timedelta
 from re import fullmatch
 
 from aiohttp_apispec import docs
 
+from server.models import Issue
+from server.models.issue import IssueStatus
 from server.serializer import JSendStatus, returns, JSendSchema
 from server.views.base import BaseView
 
@@ -82,4 +86,46 @@ class DailyReportView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": data
+        }
+
+
+class CurrentReportView(BaseView):
+    url = f"/report/current"
+
+    @docs(summary="Get Current Report")
+    @returns(JSendSchema())
+    async def get(self):
+        """
+        Retrieves some statistics about the system as it is now.
+        """
+
+        current_rentals = len(self.rental_manager._active_rentals)
+        current_reservations = len(self.reservation_manager.reservations)
+        connected_bikes = len(self.bike_connection_manager._bike_connections)
+        active_bikes = Counter(self.bike_connection_manager._bike_locked.values())[False]
+        current_shortages = 0
+        for count, date in self.reservation_sourcer.shortages().values():
+            current_shortages += count
+
+        active_issues = 0
+        closed_issues = 0
+        issue_time = timedelta()
+        async for issue in Issue.all():
+            if issue.status != IssueStatus.CLOSED:
+                active_issues += 1
+            else:
+                closed_issues += 1
+                issue_time += issue.closed_at - issue.opened_at
+
+        return {
+            "status": JSendStatus.SUCCESS,
+            "data": {
+                "current_rentals": current_rentals,
+                "current_reservations": current_reservations,
+                "current_shortages": current_shortages,
+                "connected_bikes": connected_bikes,
+                "active_bikes": active_bikes,
+                "active_issues": active_issues,
+                "average_issue_resolution_time": issue_time / closed_issues if closed_issues > 0 else None,
+            }
         }

@@ -32,7 +32,7 @@ from aiohttp.abc import Application
 
 from server import logger
 from server.views.base import BaseView
-from server.views.reports import AnnualReportView, MonthlyReportView, DailyReportView
+from server.views.reports import AnnualReportView, MonthlyReportView, DailyReportView, CurrentReportView
 from .bikes import BikeView, BikesView, BikeRentalsView, BikeSocketView, BikeIssuesView, BrokenBikesView, LowBikesView
 from .issues import IssuesView, IssueView
 from .misc import redoc, logo
@@ -51,7 +51,7 @@ views: List[Type[BaseView]] = [
     MeView, UserView, UsersView, UserIssuesView, UserRentalsView, UserCurrentRentalView, UserReservationsView,
     UserPaymentView,
     UserCurrentReservationView, UserEndCurrentRentalView,
-    AnnualReportView, MonthlyReportView, DailyReportView
+    AnnualReportView, MonthlyReportView, DailyReportView, CurrentReportView
 ]
 
 
