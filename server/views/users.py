@@ -351,7 +351,7 @@ class UserIssuesView(BaseView):
     @requires(UserMatchesToken() | UserIsAdmin())
     @expects(IssueSchema(only=('description', 'bike_identifier')))
     @returns(
-        JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time'))))
+        JSendSchema.of(issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'opened_at'))))
     async def post(self, user):
         issue_data = {
             "description": self.request["data"]["description"],

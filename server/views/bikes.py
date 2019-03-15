@@ -338,7 +338,7 @@ class BikeIssuesView(BaseView):
     @docs(summary="Open A New Issue About Bike")
     @expects(IssueSchema(only=('description',)))
     @returns(JSendSchema.of(
-        issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time')))
+        issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'opened_at')))
     )
     async def post(self, user, bike):
         issue = await open_issue(

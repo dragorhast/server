@@ -144,7 +144,8 @@ class IssueSchema(Schema):
     bike_identifier = BytesField(as_string=True, allow_none=True)
     bike_url = Url(relative=True, allow_none=True)
 
-    time = DateTime()
+    opened_at = DateTime()
+    closed_at = DateTime()
     description = String(required=True)
     status = EnumField(IssueStatus)
 
