@@ -47,8 +47,9 @@ def build_app(db_uri=None):
         verifier = FirebaseVerifier("dragorhast-420")
 
     # keep a track of all open bike connections
+    app['payment_manager'] = payment_manager(stripe_key)
     app['bike_location_manager'] = BikeConnectionManager()
-    app['rental_manager'] = RentalManager(payment_manager(stripe_key))
+    app['rental_manager'] = RentalManager(app['payment_manager'])
     app['reservation_manager'] = ReservationManager(app['bike_location_manager'], app['rental_manager'])
     app['reservation_sourcer'] = ReservationSourcer(app['reservation_manager'])
     app['statistics_reporter'] = StatisticsReporter(app['rental_manager'], app['reservation_manager'])
