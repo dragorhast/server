@@ -105,6 +105,8 @@ class UserView(BaseView):
     @docs(summary="Delete A User")
     @requires(UserMatchesToken() | UserIsAdmin())
     async def delete(self, user: User):
+        if user.can_pay:
+            await self.payment_manager.delete_customer(user)
         await delete_user(user)
         raise web.HTTPNoContent
 
