@@ -18,6 +18,7 @@ from json import JSONDecodeError
 from typing import Optional, Tuple, Union
 
 from aiohttp import web
+from aiohttp.web_exceptions import HTTPException
 from aiohttp.web_urldispatcher import View
 from aiohttp_apispec.decorators import default_apispec
 from apispec.ext.marshmallow import OpenAPIConverter, resolver
@@ -123,8 +124,8 @@ def expects(schema: Optional[Schema], into="data"):
 
 
 def returns(
-    schema: Optional[Schema] = None, return_code: HTTPStatus = HTTPStatus.OK,
-    **named_schema: Union[Schema, Tuple[Optional[Schema], HTTPStatus]]
+    schema: Optional[Schema] = None, return_code: HTTPException = web.HTTPOk,
+    **named_schema: Union[Schema, Tuple[Optional[Schema], HTTPException]]
 ):
     """
     A decorator that asserts a the data returned
@@ -173,7 +174,10 @@ def returns(
 
             try:
                 matched_schema, matched_return_code = named_schema[schema_name]
-                return web.json_response(matched_schema.dump(response_data), status=matched_return_code)
+                if matched_schema is not None:
+                    return web.json_response(matched_schema.dump(response_data), status=matched_return_code.status_code)
+                else:
+                    raise matched_return_code
             except (ValidationError, KeyError) as err:
                 response_schema = JSendSchema()
                 response_data = response_schema.dump({
@@ -197,7 +201,7 @@ def returns(
             if associated_schema is not None:
                 spec["content"] = {"application/json": {"schema": associated_schema}}
 
-            new_func.__apispec__["responses"][str(int(return_code))] = spec
+            new_func.__apispec__["responses"][str(return_code.status_code)] = spec
 
         return new_func
 

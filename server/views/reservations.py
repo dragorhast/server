@@ -8,6 +8,7 @@ To create a new reservation, go through the pickup point.
 """
 from http import HTTPStatus
 
+from aiohttp import web
 from aiohttp_apispec import docs
 
 from server.models.reservation import Reservation
@@ -69,7 +70,7 @@ class ReservationView(BaseView):
     @docs(summary="Delete A Reservation")
     @requires(UserIsAdmin() | UserOwnsReservation())
     @returns(
-        already_ended=(JSendSchema(), HTTPStatus.BAD_REQUEST),
+        already_ended=(JSendSchema(), web.HTTPBadRequest),
         cancelled=JSendSchema.of(reservation=ReservationSchema()),
     )
     async def delete(self, reservation: Reservation, user):

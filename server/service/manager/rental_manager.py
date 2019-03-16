@@ -16,7 +16,7 @@ This object handles everything needed for bike rentals.
 """
 
 from datetime import datetime
-from typing import Dict, Union, Tuple, List
+from typing import Dict, Union, Tuple, List, Optional
 
 from shapely.geometry import Point
 from tortoise.query_utils import Prefetch
@@ -144,14 +144,18 @@ class RentalManager(Rebuildable):
         active_rental_ids = [rental_id for rental_id, bike_id in self._active_rentals.values()]
         return await Rental.filter(id__in=active_rental_ids).prefetch_related('updates', 'bike')
 
-    async def active_rental(self, user: Union[User, int], *, with_locations=False) -> Union[Rental, Tuple]:
+    async def active_rental(self, user: Union[User, int], *, with_locations=False) -> Optional[Union[Rental, Tuple]]:
         """Gets the active rental for a given user."""
         if isinstance(user, int):
             user_id = user
         if isinstance(user, User):
             user_id = user.id
 
-        rental_id, bike_id = self._active_rentals[user_id]
+        rental_id, bike_id = self._active_rentals.get(user_id, (None, None))
+
+        if rental_id is None:
+            return None
+
         rental = await Rental.filter(id=rental_id).first().prefetch_related('updates', 'bike')
         if with_locations:
             locations = await LocationUpdate.filter(bike_id=bike_id,

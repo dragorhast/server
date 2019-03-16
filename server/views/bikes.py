@@ -68,7 +68,7 @@ class BikesView(BaseView):
     @docs(summary="Register New Bike")
     @expects(BikeRegisterSchema())
     @returns(
-        bad_key=(JSendSchema(), HTTPStatus.BAD_REQUEST),
+        bad_key=(JSendSchema(), web.HTTPBadRequest),
         registered=JSendSchema.of(bike=BikeSchema(only=('identifier', 'available')))
     )
     async def post(self):
@@ -185,7 +185,7 @@ class BikeView(BaseView):
     @docs(summary="Delete A Bike")
     @expects(MasterKeySchema())
     @returns(
-        bad_master=(JSendSchema(), HTTPStatus.BAD_REQUEST)
+        bad_master=(JSendSchema(), web.HTTPBadRequest)
     )
     async def delete(self, bike: Bike):
         """Deletes a bike by its id."""

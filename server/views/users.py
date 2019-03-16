@@ -52,7 +52,7 @@ class UsersView(BaseView):
     @docs(summary="Create A User")
     @requires(ValidToken())
     @expects(UserSchema(only=('first', 'email')))
-    @returns(JSendSchema.of(user=UserSchema()), HTTPStatus.CREATED)
+    @returns(JSendSchema.of(user=UserSchema()), web.HTTPBadRequest)
     async def post(self):
         """
         Anyone who has already authenticated with firebase can then create a user in the system.
@@ -140,8 +140,9 @@ class UserPaymentView(BaseView):
     @with_user
     @docs(summary="Delete Payment Details")
     @returns(
-        active_rental=JSendSchema.of(rental=RentalSchema(), message=String()),
-        deleted=(None, HTTPStatus.NO_CONTENT),
+        active_rental=JSendSchema.of(rental=RentalSchema(), message=String(), url=Url(relative=True)),
+        no_details=(None, web.HTTPNotFound),
+        deleted=(None, web.HTTPNoContent),
     )
     async def delete(self, user: User):
 
@@ -152,11 +153,14 @@ class UserPaymentView(BaseView):
                 "status": JSendStatus.FAIL,
                 "data": {
                     "message": "You cannot delete your payment details with an active rental.",
-                    "url": self.request.app.router["rental"].url_for(id=rental.id).path
+                    "url": self.request.app.router["rental"].url_for(id=str(rental.id)).path
                 }
             }
+        elif not user.can_pay:
+            return "no_details", None
         else:
             await self.payment_manager.delete_customer(user)
+            return "deleted", None
 
 
 class UserRentalsView(BaseView):
@@ -193,7 +197,7 @@ class UserCurrentRentalView(BaseView):
     @docs(summary="Get Current Rental For User")
     @requires(UserMatchesToken() | UserIsAdmin())
     @returns(
-        no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
+        no_rental=(JSendSchema(), web.HTTPNotFound),
         rental_exists=JSendSchema.of(rental=CurrentRentalSchema(only=(
             'id', 'bike_identifier', 'bike_url', 'user_id', 'user_url', 'start_time',
             'is_active', 'estimated_price', 'start_location', 'current_location'
@@ -233,8 +237,8 @@ class UserEndCurrentRentalView(BaseView):
     @docs(summary="End Rental For User")
     @requires(UserMatchesToken() | UserIsAdmin())
     @returns(
-        no_rental=(JSendSchema(), HTTPStatus.NOT_FOUND),
-        invalid_action=(JSendSchema(), HTTPStatus.NOT_FOUND),
+        no_rental=(JSendSchema(), web.HTTPNotFound),
+        invalid_action=(JSendSchema(), web.HTTPNotFound),
         rental_completed=JSendSchema.of(rental=RentalSchema(), action=String(), receipt_url=Url()),
     )
     async def patch(self, user: User):

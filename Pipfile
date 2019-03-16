@@ -49,7 +49,7 @@ python-jose = "*"
 cryptography = "*"
 aiomonitor = "*"
 firebase-admin = "*"
-asyncio-stripe = "*"
+asyncio-stripe = {git = "https://github.com/arlyon/asyncio_stripe.git",ref = "patch-1"}
 
 [requires]
 python_version = "3.6"
