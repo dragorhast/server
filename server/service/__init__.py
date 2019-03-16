@@ -10,9 +10,7 @@ that they may be reused by anyone program that needs to access it.
 It is designed to represent the business logic.
 """
 
-from .manager.bike_connection_manager import BikeConnectionManager
 from .manager.rental_manager import InactiveRentalError, ActiveRentalError, RentalManager
-from .manager.reservation_manager import ReservationManager
 from .ticket_store import TicketStore, TooManyTicketError, BikeConnectionTicket
 
 MASTER_KEY = 0xdeadbeef.to_bytes(4, "big")

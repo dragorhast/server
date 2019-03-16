@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "29b6f04111302aba88834d963af6a18e25dc36ee668f39998a75d8c4052dcc54"
+            "sha256": "e2bbd563096a9658b6d7718185fe362e4f2a25c9ba138dbf2d57e25f88ee4cca"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -460,6 +460,15 @@
             ],
             "index": "pypi",
             "version": "==19.9.0"
+        },
+        "haversine": {
+            "hashes": [
+                "sha256:145b5941d9438fbea0ce67cbc1b786a94c8618bfde07272a6a568464e7f73cd9",
+                "sha256:1cff54bc5fc04a42e53a55d08199865fbdd6f8e7c8874e66193e7e4d8227735b",
+                "sha256:c40cd6359c91d9516d279144c1af968b069e9e87aebc957d4fa56c113678cca6"
+            ],
+            "index": "pypi",
+            "version": "==2.0.0"
         },
         "hyperion-cli": {
             "hashes": [

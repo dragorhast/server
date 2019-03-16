@@ -4,12 +4,13 @@ Bike Related Views
 
 Handles all the bike CRUD
 """
-from http import HTTPStatus
 from json import JSONDecodeError
 from typing import List
 
 from aiohttp import web, WSMessage
 from aiohttp_apispec import docs
+from marshmallow.fields import Float
+from more_itertools import chunked
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
@@ -39,7 +40,7 @@ from server.service.manager.reservation_manager import ReservationError, Collect
 from server.views.base import BaseView
 from server.views.decorators import match_getter, GetFrom, Optional
 
-BIKE_IDENTIFIER_REGEX = "(?!connect|broken|low)[^{}/]+"
+BIKE_IDENTIFIER_REGEX = "(?!connect|broken|low|closest)[^{}/]+"
 
 
 class BikesView(BaseView):
@@ -227,6 +228,37 @@ class BikeView(BaseView):
                 "bike": bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager,
                                        include_location=True)}
         }
+
+
+class ClosestBikeView(BaseView):
+    """
+    Gets or updates a single bike.
+    """
+    url = f"/bikes/closest"
+    name = "closest_bike"
+
+    @docs(summary="Get The Closest Bike")
+    @returns(JSendSchema.of(bike=BikeSchema(exclude=("public_key",)), distance=Float()))
+    async def get(self):
+        """Gets a single bike by its id."""
+        lat = self.request.query["lat"]
+        long = self.request.query["lng"]
+        user_location = Point(float(long), float(lat))
+        bike, distance = await self.bike_connection_manager.closest_available_bike(user_location, self.rental_manager, self.reservation_manager)
+
+        if bike is None:
+            raise web.HTTPNotFound
+        else:
+            return {
+                "status": JSendStatus.SUCCESS,
+                "data": {
+                    "bike": bike.serialize(self.bike_connection_manager, self.rental_manager,
+                                           self.reservation_manager),
+                    "distance": distance
+                }
+            }
+
+
 
 
 class BikeRentalsView(BaseView):
