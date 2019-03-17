@@ -41,5 +41,10 @@ class User(Model):
         """Whether the customer can be charged."""
         return self.stripe_id is not None
 
+    @property
+    def is_admin(self):
+        """Whether the user is an admin."""
+        return self.type is UserType.MANAGER or self.type is UserType.OPERATOR
+
     def __str__(self):
         return f"[{self.id}] {self.first} ({self.email})"

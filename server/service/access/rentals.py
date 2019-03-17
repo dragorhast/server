@@ -11,7 +11,7 @@ from server.models import Bike, Rental, User
 from server.models.util import RentalUpdateType
 
 
-async def get_rentals_for_bike(bike: Union[int, Bike]):
+async def get_rentals_for_bike(bike: Union[int, Bike]) -> List[Rental]:
     """
     Gets rentals for a given bike.
 

@@ -4,6 +4,7 @@ Bike Related Views
 
 Handles all the bike CRUD
 """
+from functools import partial
 from json import JSONDecodeError
 from typing import List
 
@@ -259,8 +260,6 @@ class ClosestBikeView(BaseView):
             }
 
 
-
-
 class BikeRentalsView(BaseView):
     """
     Gets the rentals for a single bike.
@@ -278,8 +277,8 @@ class BikeRentalsView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"rentals": [
-                await rental.serialize(self.rental_manager, self.request.app.router)
-                for rental in (await get_rentals_for_bike(bike=bike))
+                await rental.serialize(self.rental_manager, self.bike_connection_manager, self.reservation_manager, self.request.app.router)
+                for rental in await get_rentals_for_bike(bike=bike)
             ]}
         }
 
@@ -350,7 +349,7 @@ class BikeRentalsView(BaseView):
 
 class BikeIssuesView(BaseView):
     url = f"/bikes/{{identifier:{BIKE_IDENTIFIER_REGEX}}}/issues"
-    with_issues = match_getter(get_issues, 'issues', bike=('identifier', str))
+    with_issues = match_getter(partial(get_issues, is_active=True), 'issues', bike=('identifier', str))
     with_bike = match_getter(get_bike, 'bike', identifier=('identifier', str))
     with_user = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
 

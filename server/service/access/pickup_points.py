@@ -3,7 +3,7 @@ Pickup Points
 =============
 """
 
-from typing import Optional
+from typing import Optional, List
 
 from shapely.geometry import Point
 from tortoise.contrib.gis.functions.comparison import Within
@@ -14,7 +14,7 @@ from server.models.pickup_point import PickupPoint
 async def get_pickup_points(
     *,
     name: str = None
-):
+) -> List[PickupPoint]:
     """
     Gets the pickup points matching the given interface.
 

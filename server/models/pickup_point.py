@@ -36,8 +36,8 @@ class PickupPoint(Model):
             }
         }
 
-        if shortage_count or shortage_date:
-            data["shortage_count"] = shortage_count
-            data["shortage_date"] = shortage_date
+        if shortage_count is not None or shortage_date is not None:
+            data["properties"]["shortage_count"] = shortage_count
+            data["properties"]["shortage_date"] = shortage_date
 
         return data

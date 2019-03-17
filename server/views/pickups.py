@@ -21,7 +21,7 @@ from server.service.access.reservations import get_reservations
 from server.service.access.users import get_user
 from server.service.manager.reservation_manager import ReservationError
 from server.views.base import BaseView
-from server.views.decorators import match_getter, GetFrom
+from server.views.decorators import match_getter, GetFrom, Optional
 
 PICKUP_IDENTIFIER_REGEX = "(?!shortages)[^{}/]+"
 
@@ -32,15 +32,22 @@ class PickupsView(BaseView):
     """
     url = "/pickups"
     name = "pickups"
+    with_optional_user = match_getter(get_user, Optional("user"), firebase_id=Optional(GetFrom.AUTH_HEADER))
 
     @docs(summary="Get All Pickup Points")
+    @with_optional_user
     @returns(JSendSchema.of(pickups=Many(PickupPointSchema())))
-    async def get(self):
+    async def get(self, user: User):
+        pickups = {pickup: (None, None) for pickup in await get_pickup_points()}
+
+        if user.is_admin:
+            pickups.update(self.reservation_sourcer.shortages())
+
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"pickups": [
-                pickup.serialize(self.reservation_manager)
-                for pickup in await get_pickup_points()
+                pickup.serialize(self.reservation_manager, count, date)
+                for pickup, (count, date) in pickups.items()
             ]}
         }
 
