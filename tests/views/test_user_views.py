@@ -21,6 +21,7 @@ class TestUsersView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert any(user["id"] == random_admin.id for user in response_data["data"]["users"])
+        assert response.status == 200
 
     async def test_create_user(self, client: TestClient):
         """Assert that you can create a user."""
@@ -37,6 +38,7 @@ class TestUsersView:
         assert request_data["first"] == response_data["data"]["user"]["first"]
         assert request_data["email"] == response_data["data"]["user"]["email"]
         assert response_data["data"]["user"]["firebase_id"] == "deadbeef"
+        assert response.status == 200
 
     async def test_create_user_invalid_firebase(self, client: TestClient):
         """Assert that supplying an invalid firebase key gives a descriptive error."""
@@ -75,6 +77,7 @@ class TestUserView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["user"]["first"] == random_user.first
+        assert response.status == 200
 
     async def test_get_user_bad_credentials(self, client, random_user):
         """Assert that providing invalid credentials fails."""
@@ -94,6 +97,7 @@ class TestUserView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["user"]["first"] == random_user.first
+        assert response.status == 200
 
     async def test_put_user(self, client: TestClient, random_user):
         """Assert that an authenticated user can replace their entire profile."""

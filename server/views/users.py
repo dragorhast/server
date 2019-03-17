@@ -52,7 +52,7 @@ class UsersView(BaseView):
     @docs(summary="Create A User")
     @requires(ValidToken())
     @expects(UserSchema(only=('first', 'email')))
-    @returns(JSendSchema.of(user=UserSchema()), web.HTTPBadRequest)
+    @returns(JSendSchema.of(user=UserSchema()))
     async def post(self):
         """
         Anyone who has already authenticated with firebase can then create a user in the system.
