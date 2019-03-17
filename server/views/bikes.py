@@ -57,14 +57,19 @@ class BikesView(BaseView):
         bikes=Many(BikeSchema(exclude=("public_key",)))))
     async def get(self, user):
         """Gets all the bikes from the system."""
+        bikes = [bike.serialize(
+            self.bike_connection_manager,
+            self.rental_manager,
+            self.reservation_manager,
+            include_location=user is not None and user.type is not UserType.USER
+        ) for bike in await get_bikes()]
+
+        if self.request.query.get("available") == "true":
+            bikes = (bike for bike in bikes if bike["status"] == "available")
+
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"bikes": [bike.serialize(
-                self.bike_connection_manager,
-                self.rental_manager,
-                self.reservation_manager,
-                include_location=user is not None and user.type is not UserType.USER
-            ) for bike in await get_bikes()]}
+            "data": {"bikes": bikes}
         }
 
     @docs(summary="Register New Bike")
