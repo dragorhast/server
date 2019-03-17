@@ -3,6 +3,7 @@ from datetime import timedelta
 from re import fullmatch
 
 from aiohttp_apispec import docs
+from marshmallow import fields
 
 from server.models import Issue
 from server.models.issue import IssueStatus
@@ -93,7 +94,15 @@ class CurrentReportView(BaseView):
     url = f"/report/current"
 
     @docs(summary="Get Current Report")
-    @returns(JSendSchema())
+    @returns(JSendSchema.of(
+        current_rentals=fields.Integer(),
+        current_reservations=fields.Integer(),
+        current_shortages=fields.Integer(),
+        connected_bikes=fields.Integer(),
+        active_bikes=fields.Integer(),
+        active_issues=fields.Integer(),
+        average_issue_resolution_time=fields.TimeDelta()
+    ))
     async def get(self):
         """
         Retrieves some statistics about the system as it is now.

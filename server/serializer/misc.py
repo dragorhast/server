@@ -28,4 +28,4 @@ class BikeModifySchema(Schema):
 
 class IssueUpdateSchema(Schema):
     status = EnumField(IssueStatus, required=True)
-    resolution = String()
+    resolution = String(allow_none=True)

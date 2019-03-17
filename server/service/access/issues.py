@@ -95,7 +95,7 @@ async def update_issue(issue: Union[Issue, int], status: IssueStatus, resolution
     if status is IssueStatus.CLOSED:
         issue.closed_at = datetime.now()
     if resolution is not None:
-        issue.resolution = resolution
+        issue.resolution = resolution if not resolution == "" else None
 
     await issue.save()
     return issue
