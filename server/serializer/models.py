@@ -147,6 +147,7 @@ class IssueSchema(Schema):
     opened_at = DateTime()
     closed_at = DateTime()
     description = String(required=True)
+    resolution = String(allow_none=True)
     status = EnumField(IssueStatus)
 
     @validates_schema

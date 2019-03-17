@@ -33,6 +33,7 @@ class Issue(Model):
             "user_url": router["user"].url_for(id=str(self.user_id)).path,
             "opened_at": self.opened_at,
             "description": self.description,
+            "resolution": self.resolution,
             "status": self.status
         }
 

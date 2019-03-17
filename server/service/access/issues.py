@@ -3,7 +3,7 @@ Issues
 ======
 """
 from datetime import datetime
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Optional
 
 from tortoise.query_utils import Prefetch
 
@@ -87,21 +87,15 @@ async def open_issue(user: Union[User, int], description: str, bike: Bike = None
     return issue
 
 
-async def review_issue(issue: Union[Issue, int]):
+async def update_issue(issue: Union[Issue, int], status: IssueStatus, resolution: Optional[str]) -> Issue:
     if isinstance(issue, int):
         issue = await Issue.filter(id=issue).first()
 
-    issue.status = IssueStatus.CLOSED
-    await issue.save()
-    return issue
+    issue.status = status
+    if status is IssueStatus.CLOSED:
+        issue.closed_at = datetime.now()
+    if resolution is not None:
+        issue.resolution = resolution
 
-
-async def close_issue(issue: Union[Issue, int], resolution: str) -> Issue:
-    if isinstance(issue, int):
-        issue = await Issue.filter(id=issue).first()
-
-    issue.status = IssueStatus.CLOSED
-    issue.closed_at = datetime.now()
-    issue.resolution = resolution
     await issue.save()
     return issue

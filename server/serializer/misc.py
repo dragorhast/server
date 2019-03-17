@@ -26,6 +26,6 @@ class BikeModifySchema(Schema):
     in_circulation = Bool()
 
 
-class IssueCloseSchema(Schema):
-    status = EnumField(IssueStatus)
-    message = String()
+class IssueUpdateSchema(Schema):
+    status = EnumField(IssueStatus, required=True)
+    resolution = String()
