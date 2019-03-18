@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e2bbd563096a9658b6d7718185fe362e4f2a25c9ba138dbf2d57e25f88ee4cca"
+            "sha256": "e31282b8f7ed46c0db021b7b6eefe4cd218dc15a5d92855edc48844a992a6d11"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -99,11 +99,11 @@
         },
         "apispec": {
             "hashes": [
-                "sha256:57a7b81fd19fff0663a7e5ffd196eaea79b5364151ed2b65533be36d55e0229c",
-                "sha256:b45def53903516e67e8584ee41f34bc60c3e4acace6892b69340293ea20f3caa"
+                "sha256:9300142aa93e0c020e6b223a196cd2103ac4a61bcceea7dba894c0959b72e327",
+                "sha256:bcfe21887ba7c6e94c4be00f10564478a0d9109bb8e574aae97442909fd69b31"
             ],
             "index": "pypi",
-            "version": "==1.0.0"
+            "version": "==1.1.0"
         },
         "argh": {
             "hashes": [
@@ -128,7 +128,7 @@
         },
         "asyncio-stripe": {
             "git": "https://github.com/arlyon/asyncio_stripe.git",
-            "ref": "2695c430b00c7891bf6d298310ec3586f032a92a"
+            "ref": "990c2e0fc6fd69e79871eef277d809ecd8df1db2"
         },
         "asyncpg": {
             "hashes": [
@@ -600,6 +600,14 @@
             ],
             "index": "pypi",
             "version": "==3.0.0rc4"
+        },
+        "more-itertools": {
+            "hashes": [
+                "sha256:0125e8f60e9e031347105eb1682cef932f5e97d7b9a1a28d9bf00c22a5daef40",
+                "sha256:590044e3942351a1bdb1de960b739ff4ce277960f2425ad4509446dbace8d9d1"
+            ],
+            "index": "pypi",
+            "version": "==6.0.0"
         },
         "msgpack": {
             "hashes": [
@@ -1250,7 +1258,7 @@
                 "sha256:0125e8f60e9e031347105eb1682cef932f5e97d7b9a1a28d9bf00c22a5daef40",
                 "sha256:590044e3942351a1bdb1de960b739ff4ce277960f2425ad4509446dbace8d9d1"
             ],
-            "markers": "python_version > '2.7'",
+            "index": "pypi",
             "version": "==6.0.0"
         },
         "mypy": {

@@ -51,6 +51,7 @@ aiomonitor = "*"
 firebase-admin = "*"
 asyncio-stripe = {git = "https://github.com/arlyon/asyncio_stripe.git",ref = "patch-1"}
 haversine = "*"
+more-itertools = "*"
 
 [requires]
 python_version = "3.6"

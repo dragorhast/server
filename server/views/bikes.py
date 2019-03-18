@@ -226,7 +226,7 @@ class BikeView(BaseView):
             await self.bike_connection_manager.set_locked(bike.id, self.request["data"]["locked"])
 
         if user.type is not UserType.USER and "in_circulation" in self.request["data"]:
-            await set_bike_in_circulation(bike, self.request["data"]["in_circulation"])
+            bike = await set_bike_in_circulation(bike, self.request["data"]["in_circulation"])
 
         return {
             "status": JSendStatus.SUCCESS,

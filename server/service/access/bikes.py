@@ -114,18 +114,24 @@ async def get_bike_in_circulation(bike: Bike) -> bool:
     """Checks whether the given bike is in circulation or not."""
     bike_state = await bike.state_updates \
         .filter(state__in=(BikeUpdateType.IN_CIRCULATION, BikeUpdateType.OUT_OF_CIRCULATION)) \
+        .order_by('-id') \
         .first()
 
     return bike_state is not None and bike_state.state is BikeUpdateType.IN_CIRCULATION
 
 
-async def set_bike_in_circulation(bike: Bike, in_circulation: bool):
+async def set_bike_in_circulation(bike: Bike, in_circulation: bool) -> Bike:
     """
     Sets the bike state to the provided value, given it isn't already in that state.
 
     :param bike: The bike to set
     :param in_circulation: True if it is in circulation or False for out
     """
-    if in_circulation is not await get_bike_in_circulation(bike):
+    current_circulation = await get_bike_in_circulation(bike)
+    if in_circulation != current_circulation:
         new_state = BikeUpdateType.IN_CIRCULATION if in_circulation else BikeUpdateType.OUT_OF_CIRCULATION
-        await BikeStateUpdate.create(bike=bike, state=new_state)
+        update = await BikeStateUpdate.create(bike=bike, state=new_state)
+        if isinstance(bike.state_updates.related_objects, list):
+            bike.state_updates.related_objects.append(update)
+
+    return bike
