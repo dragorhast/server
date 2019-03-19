@@ -40,7 +40,7 @@ class PickupsView(BaseView):
     async def get(self, user: User):
         pickups = {pickup: (None, None) for pickup in await get_pickup_points()}
 
-        if user.is_admin:
+        if user is not None and user.is_admin:
             pickups.update(self.reservation_sourcer.shortages())
 
         return {
