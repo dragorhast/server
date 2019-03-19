@@ -476,6 +476,10 @@ class BikeSocketView(BaseView):
                             ticket.bike.id, valid_data["id"], valid_data["result"])
         finally:
             logger.info("Bike %s disconnected", ticket.bike.id)
+            await socket.close()
+            del self.bike_connection_manager._bike_connections[ticket.bike.id]
+            del ticket
+            del socket
 
         return socket
 
