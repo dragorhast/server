@@ -492,10 +492,9 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        bike = [bike for bike in await get_bikes() if bike.public_key == public_key]
-        if not bike:
+        bike = await get_bike(public_key=public_key)
+        if bike is None:
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
-        bike = bike[0]
 
         challenge = self.open_tickets.add_ticket(self.request.remote, bike)
         return web.Response(body=challenge)
