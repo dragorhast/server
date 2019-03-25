@@ -68,8 +68,11 @@ async def create_ticket(session, bike: Bike):
     :raises AuthError:
     """
     async with session.post(URL + "/connect", data=bike.public_key.encode(RawEncoder)) as resp:
-        if resp.status != 200 and resp.reason == "Identity not recognized.":
-            raise AuthError("public key not on server")
+        if resp.status != 200:
+            if resp.reason == "Identity not recognized.":
+                raise AuthError("public key not on server")
+            else:
+                raise Exception(await resp.text())
         return await resp.read()
 
 

@@ -11,7 +11,6 @@ from typing import List
 from aiohttp import web, WSMessage
 from aiohttp_apispec import docs
 from marshmallow.fields import Float
-from more_itertools import chunked
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
@@ -250,7 +249,8 @@ class ClosestBikeView(BaseView):
         lat = self.request.query["lat"]
         long = self.request.query["lng"]
         user_location = Point(float(long), float(lat))
-        bike, distance = await self.bike_connection_manager.closest_available_bike(user_location, self.rental_manager, self.reservation_manager)
+        bike, distance = await self.bike_connection_manager.closest_available_bike(user_location, self.rental_manager,
+                                                                                   self.reservation_manager)
 
         if bike is None:
             raise web.HTTPNotFound
@@ -282,7 +282,8 @@ class BikeRentalsView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"rentals": [
-                await rental.serialize(self.rental_manager, self.bike_connection_manager, self.reservation_manager, self.request.app.router)
+                await rental.serialize(self.rental_manager, self.bike_connection_manager, self.reservation_manager,
+                                       self.request.app.router)
                 for rental in await get_rentals_for_bike(bike=bike)
             ]}
         }
@@ -480,8 +481,6 @@ class BikeSocketView(BaseView):
             del self.bike_connection_manager._bike_connections[ticket.bike.id]
             del ticket
             del socket
-
-        return socket
 
     @docs(summary="Create Bike Ticket")
     async def post(self):

@@ -54,7 +54,7 @@ def random_bike_factory(database):
     async def create_bike(bike_connection_manager):
         bike = await Bike.create(public_key_hex=fake.sha1())
         await bike_connection_manager.update_location(bike, Point(0, 0))
-        await bike.fetch_related("location_updates")
+        await bike.fetch_related("location_updates", "issues", "state_updates")
         return bike
 
     return create_bike

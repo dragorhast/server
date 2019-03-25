@@ -98,10 +98,10 @@ class RentalManager(Rebuildable):
 
         await self._publish_event(rental, RentalUpdateType.RENT)
         self._active_rentals[user.id] = (rental.id, bike.id)
+        await rental.fetch_related("updates")
+
         current_location = await LocationUpdate.filter(bike=bike).first()
-
         self.hub.emit(RentalEvent.rental_started, user, bike, current_location.location)
-
         return rental, current_location.location if current_location is not None else None
 
     async def finish(self, user: User, *, extra_cost=0.0) -> Tuple[Rental, str]:

@@ -93,7 +93,9 @@ async def register_bike(public_key: Union[str, bytes], master_key: Union[str, by
             raise BadKeyError("Bike with that shortened key exists.")
         return existing
 
-    return await Bike.create(public_key_hex=public_key.hex())
+    bike = await Bike.create(public_key_hex=public_key.hex())
+    await bike.fetch_related("location_updates", "state_updates", "issues")
+    return bike
 
 
 async def delete_bike(bike, master_key) -> None:
