@@ -61,6 +61,7 @@ server = "python -m server"
 test = "python -m pytest --cov=server tests"
 lint = "python -m mypy"
 docs = "sphinx-build docs/source docs/build"
+bikes = "python -m fakebike"
 auto-docs = "sphinx-autobuild docs/source docs/build"
 
 [pipenv]
