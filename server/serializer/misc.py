@@ -7,7 +7,7 @@ from server.serializer import BytesField, EnumField
 
 
 class PaymentSourceSchema(Schema):
-    token = String()
+    token = String(required=True)
 
 
 class MasterKeySchema(Schema):
