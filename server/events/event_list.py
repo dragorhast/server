@@ -13,15 +13,17 @@ class EventListMeta(type):
         except NoSuchEventError:
             return False
 
-    def __getattr__(self, item):
-        """
-        Intercepts getattribute and raises if the event does not exist.
-
-        .. note:: Python checks for the existence of `_subs_tree` which will fail
-            so we need to ignore in that case.
-        """
-        if item not in ("_subs_tree",):
-            raise NoSuchEventError()
+    # def __getattr__(self, item):
+    #     """
+    #     Intercepts getattribute and raises if the event does not exist.
+    #
+    #     .. note:: Python checks for the existence of `_subs_tree` which will fail
+    #         so we need to ignore in that case.
+    #     """
+    #     if item not in ("_subs_tree",):
+    #         raise NoSuchEventError(item)
+    #     else:
+    #         super().__getattr__(item)
 
 
 class EventList(metaclass=EventListMeta):

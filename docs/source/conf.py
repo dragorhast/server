@@ -193,7 +193,7 @@ autodoc_default_options = {
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'aiohttp': ('https://aiohttp.readthedocs.io/en/stable/', None),
+    'aiohttp': ('https://docs.aiohttp.org/en/stable/', None),
     'tortoise': ('https://tortoise-orm.readthedocs.io/en/latest/', None),
     'marshmallow': ('https://marshmallow.readthedocs.io/en/latest/', None)
 }

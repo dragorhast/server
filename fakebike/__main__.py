@@ -163,16 +163,16 @@ async def start_session(bike: Bike):
                 continue
 
 
-def websocket_handler(loop):
+def websocket_handler(loop, coroutines):
     asyncio.set_event_loop(loop)
     loop.run_until_complete(gather(*coroutines))
 
 
-if __name__ == '__main__':
+def run():
     coroutines = [start_session(bike) for bike in bikes.values()]
     loop = asyncio.get_event_loop()
 
-    threading.Thread(target=websocket_handler, args=(loop,)).start()
+    threading.Thread(target=websocket_handler, args=(loop, coroutines)).start()
 
     event = threading.Event()
     try:
@@ -180,3 +180,6 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         END_EVENT.set()
 
+
+if __name__ == '__main__':
+    run()

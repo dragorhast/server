@@ -20,7 +20,6 @@ from typing import Optional, Tuple, Union
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPException
 from aiohttp.web_urldispatcher import View
-from aiohttp_apispec.decorators import default_apispec
 from apispec.ext.marshmallow import OpenAPIConverter, resolver
 from marshmallow import Schema, ValidationError
 
@@ -52,6 +51,9 @@ def expects(schema: Optional[Schema], into="data"):
     # if schema is none, then bypass the decorator
     if schema is None:
         return lambda x: x
+
+    if callable(schema):
+        schema = schema()
 
     # assert the schema is of the right type
     if not isinstance(schema, Schema):
@@ -105,18 +107,19 @@ def expects(schema: Optional[Schema], into="data"):
             # if everything passes, execute the original function
             return await original_function(self, **kwargs)
 
-        # set up the apispec documentation on the new function
-        if hasattr(original_function, "__apispec__"):
-            new_func.__apispec__ = original_function.__apispec__
+        # Set up the apispec documentation on the new function
+        if not hasattr(original_function, "__apispec__"):
+            new_func.__apispec__ = {"schemas": [], "responses": {}, "parameters": []}
         else:
-            new_func.__apispec__ = default_apispec()
+            new_func.__apispec__ = original_function.__apispec__
 
-        new_func.__apispec__["requestBody"] = {
-            "required": True,
-            "content": {"application/json": {
-                "schema": schema
-            }}
-        }
+        if not hasattr(original_function, "__schemas__"):
+            new_func.__schemas__ = []
+        else:
+            new_func.__schemas__ = original_function.__schemas__
+
+        new_func.__apispec__["schemas"].append({"schema": schema, "options": {}})
+        new_func.__schemas__.append({"schema": schema, "locations": {"body": {"required": True}}})
 
         return new_func
 
@@ -154,6 +157,9 @@ def returns(
     if schema is None and not named_schema:
         return lambda x: x
 
+    if callable(schema):
+        schema = schema()
+
     # add the schema passed via the args to the named_schema
     if schema is not None:
         named_schema[None] = schema
@@ -187,19 +193,27 @@ def returns(
                 })
                 return web.json_response(response_data, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
-        # set up the apispec documentation on the new function
-        if hasattr(original_function, "__apispec__"):
-            new_func.__apispec__ = original_function.__apispec__
+        # Set up the apispec documentation on the new function
+        if not hasattr(original_function, "__apispec__"):
+            new_func.__apispec__ = {"schemas": [], "responses": {}, "parameters": []}
         else:
-            new_func.__apispec__ = default_apispec()
+            new_func.__apispec__ = original_function.__apispec__
+
+        if not hasattr(original_function, "__schemas__"):
+            new_func.__schemas__ = []
+        else:
+            new_func.__schemas__ = original_function.__schemas__
 
         for description, associated_schema in named_schema.items():
             associated_schema, return_code = associated_schema
 
-            spec = {"description": description if description is not None else "default"}
+            spec = {}
+
+            if description is not None:
+                spec["description"] = description
 
             if associated_schema is not None:
-                spec["content"] = {"application/json": {"schema": associated_schema}}
+                spec["schema"] = associated_schema
 
             new_func.__apispec__["responses"][str(return_code.status_code)] = spec
 

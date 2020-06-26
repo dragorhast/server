@@ -63,13 +63,13 @@ class EnumField(fields.Field):
     A field that serializes an :class:`~enum.Enum` to a :class:`str` and back.
     """
 
-    def __init__(self, enum_type: Type[Enum], *args, use_name=False, as_string=False, **kwargs):
+    def __init__(self, enum_type: Type[Enum], *args, default=None, use_name=False, as_string=False, **kwargs):
         """
         :param enum_type: the :class:`~enum.Enum` (or :class:`~enum.IntEnum`) subclass
         :param use_name: use enum's property name instead of value when serialize
         :param as_string: serialize value as string
         """
-        super().__init__(*args, **kwargs, validate=OneOf(enum_type))
+        super().__init__(*args, **kwargs, default=default, validate=OneOf(enum_type))
         if not issubclass(enum_type, Enum):
             raise ValidationError(f"Expected enum type, got {type(enum_type)} instead")
         self._enum_type = enum_type

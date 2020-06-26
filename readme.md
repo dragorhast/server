@@ -12,6 +12,14 @@ The server repository contains the APIs for the other components (mobile app, ha
 the pricing module to determine the correct prices for each rental. This server provides a range of endpoints
 that facilitate all the functionality of the app from rental bookings to admin management.
 
+## Prerequisites
+
+This project depends on a geospatial database. If you wish to use sqlite, you will need spatialite. On macOS:
+
+```bash
+brew install libspatialite
+```
+
 ## Installation
 
 Installing the server is easy. Assuming you have a recent version of python (3.6 or above) then

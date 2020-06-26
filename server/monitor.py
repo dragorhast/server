@@ -1,7 +1,6 @@
 import asyncio
 
 from aiomonitor import Monitor
-from firebase_admin.auth import AuthError
 
 from server.models.user import UserType
 from server.service.access.bikes import get_bikes, get_bike, set_bike_in_circulation
@@ -24,7 +23,7 @@ class Tap2GoMonitor(Monitor):
         try:
             fetch = asyncio.run_coroutine_threadsafe(set_user_admin(user_id, user_type), self._loop)
             user = fetch.result()
-        except AuthError as e:
+        except Exception as e:
             self._sout.write(f"{e}\n")
         else:
             self._sout.write(f"User {user} set to level {user_type.value}.\n")

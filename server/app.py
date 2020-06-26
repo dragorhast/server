@@ -65,7 +65,8 @@ def build_app(db_uri=None):
     app.router.add_get("/logo.svg", logo)
 
     setup_aiohttp_apispec(
-        app=app, title=name, version=__version__, url=f"{api_root}/docs",
+        app=app, title=name, version=__version__, url=f"{api_root}/schema",
+        swagger_path=api_root,
         servers=[{"url": "http://api.tap2go.co.uk"}],
         info={"x-logo": {
             "url": "/logo.svg",

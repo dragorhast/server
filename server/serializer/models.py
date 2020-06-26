@@ -24,14 +24,14 @@ class BikeSchema(Schema):
     rented = Boolean()
     broken = Boolean()
     in_circulation = Boolean()
-    status = EnumField(CalculatedBikeStatus)
+    status = EnumField(CalculatedBikeStatus, default=CalculatedBikeStatus.AVAILABLE)
     battery = Float()
     locked = Boolean()
     current_location = Nested(GeoJSON(GeoJSONType.FEATURE))
     open_issues = Nested('IssueSchema', many=True, exclude=('bike',))
 
     @validates_schema
-    def assert_current_location_on_available_bikes(self, data):
+    def assert_current_location_on_available_bikes(self, data, **kwargs):
         """Assert that anything marked available has a current location."""
         if "available" in data and data["available"]:
             if "current_location" not in data:
@@ -48,7 +48,7 @@ class UserSchema(Schema):
     email = Email(required=True)
 
     @validates_schema
-    def assert_strip_id_valid(self, data):
+    def assert_strip_id_valid(self, data, **kwargs):
         if "stripe_id" not in data or data["stripe_id"] is None:
             return True
 
@@ -81,7 +81,7 @@ class RentalSchema(Schema):
     distance = Float()
 
     @validates_schema
-    def assert_end_time_with_price(self, data):
+    def assert_end_time_with_price(self, data, **kwargs):
         """
         Asserts that when a rental is complete both the price and end time are included.
         """
@@ -93,7 +93,7 @@ class RentalSchema(Schema):
             raise ValidationError("Rental should have one of either price or estimated_price.")
 
     @validates_schema
-    def assert_url_included_with_foreign_key(self, data):
+    def assert_url_included_with_foreign_key(self, data, **kwargs):
         """
         Asserts that when a user_id or bike_id is sent that a user_url or bike_url is sent with it.
         """
@@ -148,10 +148,10 @@ class IssueSchema(Schema):
     closed_at = DateTime()
     description = String(required=True)
     resolution = String(allow_none=True)
-    status = EnumField(IssueStatus)
+    status = EnumField(IssueStatus, default=IssueStatus.OPEN)
 
     @validates_schema
-    def assert_url_included_with_foreign_key(self, data):
+    def assert_url_included_with_foreign_key(self, data, **kwargs):
         """
         Asserts that when a user_id or bike_id is sent that a user_url or bike_url is sent with it.
         """
@@ -170,7 +170,7 @@ class ReservationSchema(CreateReservationSchema):
 
     made_at = DateTime()
     ended_at = DateTime()
-    status = EnumField(ReservationOutcome)
+    status = EnumField(ReservationOutcome, default=ReservationOutcome.OPEN)
 
     user = Nested(UserSchema())
     user_id = Integer()

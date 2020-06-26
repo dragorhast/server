@@ -10,9 +10,12 @@ from typing import Union, Any, Dict, Tuple
 from aiohttp import web
 from aiohttp.web_request import Request
 from aiohttp.web_urldispatcher import View
-from aiohttp_apispec.decorators import default_apispec
+from apispec.ext.marshmallow import OpenAPIConverter, resolver
 
 from server.serializer import JSendStatus, JSendSchema
+
+
+converter = OpenAPIConverter("3.0.2", resolver, None)
 
 
 class Optional:
@@ -152,20 +155,27 @@ def match_getter(getter_function, *injection_parameters: Union[str, Optional],
 
     def setup_apispec(new_func, original_function):
         """Set up the apispec documentation on the new function"""
-        if hasattr(original_function, "__apispec__"):
-            new_func.__apispec__ = original_function.__apispec__
+        if not hasattr(original_function, "__apispec__"):
+            new_func.__apispec__ = {"schemas": [], "responses": {}, "parameters": []}
         else:
-            new_func.__apispec__ = default_apispec()
+            new_func.__apispec__ = original_function.__apispec__
+
+        if not hasattr(original_function, "__schemas__"):
+            new_func.__schemas__ = []
+        else:
+            new_func.__schemas__ = original_function.__schemas__
+
+        json_schema = converter.schema2jsonschema(JSendSchema(only=("status", "data")))
 
         new_func.__apispec__["responses"]["404"] = {
             "description": "resource_missing",
-            "content": {"application/json": {"schema": JSendSchema(only=("status", "data"))}}
+            "content": {"application/json": {"schema": json_schema}}
         }
 
         if "400" not in new_func.__apispec__["responses"]:
             new_func.__apispec__["responses"]["400"] = {
                 "description": "request_errors",
-                "content": {"application/json": {"schema": JSendSchema(only=("status", "data"))}}
+                "content": {"application/json": {"schema": json_schema}}
             }
 
     return attach_instance

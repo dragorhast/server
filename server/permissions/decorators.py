@@ -8,7 +8,6 @@ from http import HTTPStatus
 
 from aiohttp import web
 from aiohttp.web_urldispatcher import View
-from aiohttp_apispec.decorators import default_apispec
 
 from server.permissions.permission import RoutePermissionError, Permission
 from server.serializer import JSendSchema, JSendStatus
@@ -19,7 +18,7 @@ def add_apispec_permission(original_function, new_func, permission):
     if hasattr(original_function, "__apispec__"):
         new_func.__apispec__ = original_function.__apispec__
     else:
-        new_func.__apispec__ = default_apispec()
+        new_func.__apispec__ = {"responses": {}, "parameters": []}
 
     if "security" not in new_func.__apispec__:
         new_func.__apispec__["security"] = []

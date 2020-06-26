@@ -17,7 +17,7 @@ class MasterKeySchema(Schema):
 class BikeRegisterSchema(MasterKeySchema):
     """The schema of the bike register request."""
     public_key = BytesField(required=True, description="The public key of the bike.")
-    type = EnumField(BikeType, description="The type of bike.")
+    type = EnumField(BikeType, description="The type of bike.", default=BikeType.ROAD)
 
 
 class BikeModifySchema(Schema):
@@ -27,5 +27,5 @@ class BikeModifySchema(Schema):
 
 
 class IssueUpdateSchema(Schema):
-    status = EnumField(IssueStatus, required=True)
+    status = EnumField(IssueStatus, required=True, default=IssueStatus.OPEN)
     resolution = String(allow_none=True)
