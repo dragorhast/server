@@ -30,7 +30,7 @@ class GeometryType(str, Enum):
 
 
 class Geometry(Schema):
-    type = EnumField(GeometryType)
+    type = EnumField(GeometryType, default=GeometryType.POINT)
     coordinates = Raw()
 
 
@@ -40,20 +40,20 @@ class GeoJSON(Schema):
         super().__init__(*args, **kwargs)
         self.feature_type = feature_type
 
-    type = EnumField(GeoJSONType)
+    type = EnumField(GeoJSONType, default=GeometryType.POINT)
     properties = Dict()
     features = Nested('self', many=True)
     geometry = Nested(Geometry)
 
     @validates_schema
-    def assert_correct_fields_included(self, data):
+    def assert_correct_fields_included(self, data, **kwargs):
         if data["type"] == GeoJSONType.FEATURE and "geometry" not in data:
             raise ValidationError("All features must have geometry associated with it.")
         if data["type"] == GeoJSONType.FEATURE_COLLECTION and "features" not in data:
             raise ValidationError("All feature collections must have a list of features.")
 
     @validates_schema
-    def assert_correct_type(self, data):
+    def assert_correct_type(self, data, **kwargs):
         if self.feature_type is not None and data["type"] != self.feature_type:
             raise ValidationError(f"Supplied schema is type {data['type']}, not {self.feature_type}.")
 

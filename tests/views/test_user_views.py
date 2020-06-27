@@ -1,7 +1,7 @@
 from datetime import timezone, datetime, timedelta
 
 from aiohttp.test_utils import TestClient
-from marshmallow.fields import String
+from marshmallow.fields import String, Url
 from shapely.geometry import Point
 
 from server.models import User
@@ -21,6 +21,7 @@ class TestUsersView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert any(user["id"] == random_admin.id for user in response_data["data"]["users"])
+        assert response.status == 200
 
     async def test_create_user(self, client: TestClient):
         """Assert that you can create a user."""
@@ -37,6 +38,7 @@ class TestUsersView:
         assert request_data["first"] == response_data["data"]["user"]["first"]
         assert request_data["email"] == response_data["data"]["user"]["email"]
         assert response_data["data"]["user"]["firebase_id"] == "deadbeef"
+        assert response.status == 200
 
     async def test_create_user_invalid_firebase(self, client: TestClient):
         """Assert that supplying an invalid firebase key gives a descriptive error."""
@@ -46,10 +48,10 @@ class TestUsersView:
             "first": "Alex",
             "email": "test@test.com"
         })
-        response = await client.post('/api/v1/users', json=request_data, headers={"Authorization": "Bearer invalid"})
+        response = await client.post('/api/v1/users', json=request_data, headers={"Authorization": "Bearer "})
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("Not a valid hex string" in error for error in response_data["data"]["errors"])
+        assert any("Invalid" == error for error in response_data["data"]["errors"])
 
     async def test_create_user_bad_schema(self, client: TestClient):
         """Assert that creating a user with a bad schema gives a descriptive error."""
@@ -75,6 +77,7 @@ class TestUserView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["user"]["first"] == random_user.first
+        assert response.status == 200
 
     async def test_get_user_bad_credentials(self, client, random_user):
         """Assert that providing invalid credentials fails."""
@@ -94,6 +97,7 @@ class TestUserView:
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.SUCCESS
         assert response_data["data"]["user"]["first"] == random_user.first
+        assert response.status == 200
 
     async def test_put_user(self, client: TestClient, random_user):
         """Assert that an authenticated user can replace their entire profile."""
@@ -192,7 +196,7 @@ class TestUserCurrentRentalView:
         rental, location = await rental_manager.create(random_user, random_bike)
         await bike_connection_manager.update_location(random_bike, Point(100, 0))
 
-        response_schema = JSendSchema.of(rental=RentalSchema(), action=String())
+        response_schema = JSendSchema.of(rental=RentalSchema(), action=String(), receipt_url=Url(allow_none=True))
         response = await client.patch(
             '/api/v1/users/me/rentals/current/complete',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
@@ -211,7 +215,7 @@ class TestUserCurrentRentalView:
     async def test_cancel_current_rental(self, client: TestClient, random_user, random_bike, rental_manager):
         """Assert that a user can cancel their rental."""
         rental, location = await rental_manager.create(random_user, random_bike)
-        response_schema = JSendSchema.of(rental=RentalSchema(), action=String())
+        response_schema = JSendSchema.of(rental=RentalSchema(), action=String(), receipt_url=Url(allow_none=True))
         response = await client.patch(
             '/api/v1/users/me/rentals/current/cancel',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
@@ -329,11 +333,11 @@ class TestMeView:
 
     async def test_get_me_invalid_auth(self, client: TestClient, random_user):
         """Assert that an invalid token returns an appropriate error."""
-        response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer bad_token"})
+        response = await client.get('/api/v1/users/me', headers={"Authorization": "Bearer "})
         response_schema = JSendSchema()
         response_data = response_schema.load(await response.json())
         assert response_data["status"] == JSendStatus.FAIL
-        assert any("valid hex string" in error for error in response_data["data"]["errors"])
+        assert any("Invalid" == error for error in response_data["data"]["errors"])
 
     async def test_get_me_missing_user(self, client: TestClient):
         """Assert that calling me gives a descriptive error."""

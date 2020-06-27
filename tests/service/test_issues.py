@@ -1,5 +1,5 @@
 from server.models.issue import Issue, IssueStatus
-from server.service.access.issues import get_issues, open_issue, close_issue, get_broken_bikes
+from server.service.access.issues import get_issues, open_issue, update_issue, get_broken_bikes
 
 
 class TestIssues:
@@ -28,12 +28,12 @@ class TestIssues:
 
     async def test_close_issue(self, random_user):
         issue = await Issue.create(user=random_user, description="Uh oh!")
-        await close_issue(issue, resolution="Fixed!")
+        await update_issue(issue, IssueStatus.CLOSED, resolution="Fixed!")
         assert await Issue.filter(status=IssueStatus.CLOSED).count() == 1
 
     async def test_close_issue_by_id(self, random_user):
         issue = await Issue.create(user=random_user, description="Uh oh!")
-        await close_issue(issue.id, resolution="Fixed!")
+        await update_issue(issue.id, IssueStatus.CLOSED, resolution="Fixed!")
         assert await Issue.filter(status=IssueStatus.CLOSED).count() == 1
 
     async def test_get_broken_bikes(self, random_bike_factory, random_user, bike_connection_manager):

@@ -34,7 +34,7 @@ def resolve_id(target: Union[Model, int]):
         raise TypeError(f"Target {target} is neither a Model or an int.")
 
 
-def get_serialized_location_for_bike(bike, bike_connection_manager) -> Optional[Dict]:
+def get_serialized_location_for_bike(bike, bike_connection_manager, reservation_manager) -> Optional[Dict]:
     """Gets the serialized location for a bike."""
 
     recent_location = bike_connection_manager.most_recent_location(bike)
@@ -47,7 +47,7 @@ def get_serialized_location_for_bike(bike, bike_connection_manager) -> Optional[
         "type": GeoJSONType.FEATURE,
         "geometry": mapping(location),
         "properties": {
-            "pickup_point": pickup_point.serialize() if pickup_point is not None else None
+            "pickup_point": pickup_point.serialize(reservation_manager) if pickup_point is not None else None
         }
     }
 

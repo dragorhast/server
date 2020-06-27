@@ -56,7 +56,7 @@ class TestRegistry:
 
     async def test_missing_event(self):
         """Assert that getting a non-existent event on an event list raises an error."""
-        with pytest.raises(NoSuchEventError):
+        with pytest.raises(AttributeError):
             ExampleEvents.bad_event
 
     async def test_event_on_emitter(self):

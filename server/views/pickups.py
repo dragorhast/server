@@ -16,13 +16,12 @@ from server.serializer import JSendSchema, JSendStatus
 from server.serializer.decorators import returns, expects
 from server.serializer.fields import Many
 from server.serializer.models import PickupPointSchema, BikeSchema, ReservationSchema, CreateReservationSchema
-from server.service.access.bikes import get_bikes
 from server.service.access.pickup_points import get_pickup_points, get_pickup_point
 from server.service.access.reservations import get_reservations
 from server.service.access.users import get_user
 from server.service.manager.reservation_manager import ReservationError
 from server.views.base import BaseView
-from server.views.decorators import match_getter, Optional, GetFrom
+from server.views.decorators import match_getter, GetFrom, Optional
 
 PICKUP_IDENTIFIER_REGEX = "(?!shortages)[^{}/]+"
 
@@ -33,13 +32,23 @@ class PickupsView(BaseView):
     """
     url = "/pickups"
     name = "pickups"
+    with_optional_user = match_getter(get_user, Optional("user"), firebase_id=Optional(GetFrom.AUTH_HEADER))
 
     @docs(summary="Get All Pickup Points")
+    @with_optional_user
     @returns(JSendSchema.of(pickups=Many(PickupPointSchema())))
-    async def get(self):
+    async def get(self, user: User):
+        pickups = {pickup: (None, None) for pickup in await get_pickup_points()}
+
+        if user is not None and user.is_admin:
+            pickups.update(self.reservation_sourcer.shortages())
+
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"pickups": [pickup.serialize() for pickup in await get_pickup_points()]}
+            "data": {"pickups": [
+                pickup.serialize(self.reservation_manager, count, date)
+                for pickup, (count, date) in pickups.items()
+            ]}
         }
 
     @docs(summary="Create A Pickup Point")
@@ -60,16 +69,18 @@ class PickupView(BaseView):
     @docs(summary="Get A Pickup Point")
     @returns(JSendSchema.of(pickup=PickupPointSchema()))
     async def get(self, pickup):
+        pickup_data = pickup.serialize(self.reservation_manager)
+
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"pickup": pickup.serialize()}
+            "data": {"pickup": pickup_data}
         }
 
     @with_pickup
     @with_user
     @docs(summary="Delete A Pickup Point")
     @requires(UserIsAdmin())
-    async def delete(self, pickup: PickupPoint, user):
+    async def delete(self, pickup: PickupPoint, user: User):
         await pickup.delete()
         raise web.HTTPNoContent
 
@@ -89,7 +100,7 @@ class PickupBikesView(BaseView):
             "status": JSendStatus.SUCCESS,
             "data": {"bikes": [
                 bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager) for bike in
-                await get_bikes(bike_ids=self.bike_connection_manager.bikes_in(pickup.area))
+                await self.reservation_manager.available_bikes(pickup)
             ]}
         }
 
@@ -111,7 +122,7 @@ class PickupReservationsView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"reservations": [
-                reservation.serialize(self.request.app.router)
+                reservation.serialize(self.request.app.router, self.reservation_manager)
                 for reservation in await get_reservations(*reservation_ids)
             ]}
         }
@@ -141,7 +152,7 @@ class PickupReservationsView(BaseView):
         else:
             return "success", {
                 "status": JSendStatus.SUCCESS,
-                "data": {"reservation": reservation.serialize(self.request.app.router)}
+                "data": {"reservation": reservation.serialize(self.request.app.router, self.reservation_manager)}
             }
 
 
@@ -160,5 +171,6 @@ class PickupShortagesView(BaseView):
         shortages = self.reservation_sourcer.shortages()
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"pickups": [pickup.serialize(count, date) for pickup, (count, date) in shortages.items()]}
+            "data": {"pickups": [pickup.serialize(self.reservation_manager, count, date) for pickup, (count, date) in
+                                 shortages.items()]}
         }

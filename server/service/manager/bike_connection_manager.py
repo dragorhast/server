@@ -24,6 +24,8 @@ from weakref import WeakValueDictionary
 
 from aiohttp import WSCloseCode
 from aiohttp.web_ws import WebSocketResponse
+from haversine import haversine
+from more_itertools import chunked
 from shapely.geometry import Point, Polygon
 from tortoise.query_utils import Prefetch
 
@@ -31,6 +33,7 @@ from server import logger
 from server.models import Bike, LocationUpdate, PickupPoint, Issue
 from server.models.issue import IssueStatus
 from server.models.util import resolve_id
+from server.service.access.bikes import get_bikes
 from server.service.access.pickup_points import get_pickup_at
 
 
@@ -192,3 +195,24 @@ class BikeConnectionManager:
         """
         bike_id = resolve_id(target)
         await self._pending_commands[bike_id][command_id].resolve(result)
+
+    async def closest_available_bike(self, user_location, rental_manager, reservation_manager):
+
+        def haversine_distance(p1, p2):
+            return haversine((p1.y, p1.x), (p2.y, p2.x), unit='mi')
+
+        # sort bikes based on their distance to the lat and long
+        closest_bikes = (
+            (bid, point) for bid, (point, _, _) in
+            sorted(self._bike_locations.items(), key=lambda x: haversine_distance(user_location, x[1][0]))
+        )
+
+        for bike_chunk in chunked(closest_bikes, 10):
+            bikes, locations = zip(*bike_chunk)
+            for bike, location in zip(await get_bikes(bike_ids=bikes), locations):
+                connected = self.is_connected(bike)
+                rented = not rental_manager.is_available(bike, reservation_manager)
+                if connected and not rented:
+                    return bike, haversine_distance(user_location, location)
+
+        return None, None

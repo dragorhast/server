@@ -2,8 +2,8 @@
 Issues
 ======
 """
-from collections import defaultdict
-from typing import Union, Tuple, List, Dict, Set
+from datetime import datetime
+from typing import Union, Tuple, List, Optional
 
 from tortoise.query_utils import Prefetch
 
@@ -52,7 +52,8 @@ async def get_broken_bikes() -> List[Tuple[Bike, List[Issue]]]:
      a dictionary mapping the identifier to its bike,
      and a dictionary mapping the identifier to its list of issues
     """
-    active_issues: List[Issue] = await Issue.filter(status__not=IssueStatus.CLOSED, bike_id__not_isnull=True).prefetch_related(
+    active_issues: List[Issue] = await Issue.filter(status__not=IssueStatus.CLOSED,
+                                                    bike_id__not_isnull=True).prefetch_related(
         'bike', 'bike__state_updates', Prefetch("bike__issues", queryset=Issue.filter(status__not=IssueStatus.CLOSED))
     )
 
@@ -86,19 +87,15 @@ async def open_issue(user: Union[User, int], description: str, bike: Bike = None
     return issue
 
 
-async def review_issue(issue: Union[Issue, int]):
+async def update_issue(issue: Union[Issue, int], status: IssueStatus, resolution: Optional[str]) -> Issue:
     if isinstance(issue, int):
         issue = await Issue.filter(id=issue).first()
 
-    issue.status = IssueStatus.CLOSED
-    await issue.save()
+    issue.status = status
+    if status is IssueStatus.CLOSED:
+        issue.closed_at = datetime.now()
+    if resolution is not None:
+        issue.resolution = resolution if not resolution == "" else None
 
-
-async def close_issue(issue: Union[Issue, int], resolution: str) -> Issue:
-    if isinstance(issue, int):
-        issue = await Issue.filter(id=issue).first()
-
-    issue.status = IssueStatus.CLOSED
-    issue.resolution = resolution
     await issue.save()
     return issue

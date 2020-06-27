@@ -4,14 +4,13 @@ Bike Related Views
 
 Handles all the bike CRUD
 """
-from http import HTTPStatus
+from functools import partial
 from json import JSONDecodeError
 from typing import List
 
 from aiohttp import web, WSMessage
 from aiohttp_apispec import docs
-from marshmallow import fields
-from marshmallow.fields import Nested
+from marshmallow.fields import Float
 from nacl.encoding import RawEncoder
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
@@ -23,9 +22,10 @@ from server.models.bike import Bike
 from server.models.user import UserType
 from server.permissions import requires, UserIsAdmin, UserIsRentingBike, BikeIsConnected, BikeNotInUse, BikeNotBroken, \
     UserMatchesToken
+from server.permissions.users import UserCanPay
 from server.serializer import JSendStatus, JSendSchema
 from server.serializer.decorators import returns, expects
-from server.serializer.fields import Many, BytesField
+from server.serializer.fields import Many
 from server.serializer.json_rpc import JsonRPCRequest, JsonRPCResponse
 from server.serializer.misc import MasterKeySchema, BikeRegisterSchema, BikeModifySchema
 from server.serializer.models import CurrentRentalSchema, IssueSchema, BikeSchema, RentalSchema
@@ -40,7 +40,7 @@ from server.service.manager.reservation_manager import ReservationError, Collect
 from server.views.base import BaseView
 from server.views.decorators import match_getter, GetFrom, Optional
 
-BIKE_IDENTIFIER_REGEX = "(?!connect|broken|low)[^{}/]+"
+BIKE_IDENTIFIER_REGEX = "(?!connect|broken|low|closest)[^{}/]+"
 
 
 class BikesView(BaseView):
@@ -56,20 +56,25 @@ class BikesView(BaseView):
         bikes=Many(BikeSchema(exclude=("public_key",)))))
     async def get(self, user):
         """Gets all the bikes from the system."""
+        bikes = [bike.serialize(
+            self.bike_connection_manager,
+            self.rental_manager,
+            self.reservation_manager,
+            include_location=user is not None and user.type is not UserType.USER
+        ) for bike in await get_bikes()]
+
+        if self.request.query.get("available") == "true":
+            bikes = (bike for bike in bikes if bike["status"] == "available")
+
         return {
             "status": JSendStatus.SUCCESS,
-            "data": {"bikes": [bike.serialize(
-                self.bike_connection_manager,
-                self.rental_manager,
-                self.reservation_manager,
-                include_location=user is not None and user.type is not UserType.USER
-            ) for bike in await get_bikes()]}
+            "data": {"bikes": bikes}
         }
 
     @docs(summary="Register New Bike")
     @expects(BikeRegisterSchema())
     @returns(
-        bad_key=(JSendSchema(), HTTPStatus.BAD_REQUEST),
+        bad_key=(JSendSchema(), web.HTTPBadRequest),
         registered=JSendSchema.of(bike=BikeSchema(only=('identifier', 'available')))
     )
     async def post(self):
@@ -119,7 +124,8 @@ class BrokenBikesView(BaseView):
             "status": JSendStatus.SUCCESS,
             "data": {
                 "bikes": [
-                    bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager, issues=issues)
+                    bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager,
+                                   issues=issues)
                     for bike, issues in broken_bikes
                 ]
             }
@@ -185,7 +191,7 @@ class BikeView(BaseView):
     @docs(summary="Delete A Bike")
     @expects(MasterKeySchema())
     @returns(
-        bad_master=(JSendSchema(), HTTPStatus.BAD_REQUEST)
+        bad_master=(JSendSchema(), web.HTTPBadRequest)
     )
     async def delete(self, bike: Bike):
         """Deletes a bike by its id."""
@@ -219,7 +225,7 @@ class BikeView(BaseView):
             await self.bike_connection_manager.set_locked(bike.id, self.request["data"]["locked"])
 
         if user.type is not UserType.USER and "in_circulation" in self.request["data"]:
-            await set_bike_in_circulation(bike, self.request["data"]["in_circulation"])
+            bike = await set_bike_in_circulation(bike, self.request["data"]["in_circulation"])
 
         return {
             "status": JSendStatus.SUCCESS,
@@ -227,6 +233,36 @@ class BikeView(BaseView):
                 "bike": bike.serialize(self.bike_connection_manager, self.rental_manager, self.reservation_manager,
                                        include_location=True)}
         }
+
+
+class ClosestBikeView(BaseView):
+    """
+    Gets or updates a single bike.
+    """
+    url = f"/bikes/closest"
+    name = "closest_bike"
+
+    @docs(summary="Get The Closest Bike")
+    @returns(JSendSchema.of(bike=BikeSchema(exclude=("public_key",)), distance=Float()))
+    async def get(self):
+        """Gets a single bike by its id."""
+        lat = self.request.query["lat"]
+        long = self.request.query["lng"]
+        user_location = Point(float(long), float(lat))
+        bike, distance = await self.bike_connection_manager.closest_available_bike(user_location, self.rental_manager,
+                                                                                   self.reservation_manager)
+
+        if bike is None:
+            raise web.HTTPNotFound
+        else:
+            return {
+                "status": JSendStatus.SUCCESS,
+                "data": {
+                    "bike": bike.serialize(self.bike_connection_manager, self.rental_manager,
+                                           self.reservation_manager),
+                    "distance": distance
+                }
+            }
 
 
 class BikeRentalsView(BaseView):
@@ -246,15 +282,16 @@ class BikeRentalsView(BaseView):
         return {
             "status": JSendStatus.SUCCESS,
             "data": {"rentals": [
-                await rental.serialize(self.rental_manager, self.request.app.router)
-                for rental in (await get_rentals_for_bike(bike=bike))
+                await rental.serialize(self.rental_manager, self.bike_connection_manager, self.reservation_manager,
+                                       self.request.app.router)
+                for rental in await get_rentals_for_bike(bike=bike)
             ]}
         }
 
     @with_bike
     @with_user
     @docs(summary="Start A New Rental")
-    @requires(UserMatchesToken() & BikeNotInUse() & BikeNotBroken(max_issues=3))
+    @requires(UserMatchesToken() & UserCanPay() & BikeNotInUse() & BikeNotBroken(max_issues=1))
     @returns(
         rental_created=JSendSchema.of(rental=CurrentRentalSchema(exclude=('user', 'bike', 'events'))),
         active_rental=JSendSchema(),
@@ -275,7 +312,7 @@ class BikeRentalsView(BaseView):
                 rental, start_location = await self.reservation_manager.claim(user, bike)
             except CollectionError:
                 # they can try and rent it normally
-                reservations = None
+                reservations = []
             except ReservationError as e:
                 return "reservation_error", {
                     "status": JSendStatus.FAIL,
@@ -309,7 +346,7 @@ class BikeRentalsView(BaseView):
         return "rental_created", {
             "status": JSendStatus.SUCCESS,
             "data": {"rental": await rental.serialize(
-                self.rental_manager, self.bike_connection_manager, self.request.app.router,
+                self.rental_manager, self.bike_connection_manager, self.reservation_manager, self.request.app.router,
                 start_location=start_location,
                 current_location=start_location
             )}
@@ -318,7 +355,7 @@ class BikeRentalsView(BaseView):
 
 class BikeIssuesView(BaseView):
     url = f"/bikes/{{identifier:{BIKE_IDENTIFIER_REGEX}}}/issues"
-    with_issues = match_getter(get_issues, 'issues', bike=('identifier', str))
+    with_issues = match_getter(partial(get_issues, is_active=True), 'issues', bike=('identifier', str))
     with_bike = match_getter(get_bike, 'bike', identifier=('identifier', str))
     with_user = match_getter(get_user, "user", firebase_id=GetFrom.AUTH_HEADER)
 
@@ -338,7 +375,7 @@ class BikeIssuesView(BaseView):
     @docs(summary="Open A New Issue About Bike")
     @expects(IssueSchema(only=('description',)))
     @returns(JSendSchema.of(
-        issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'time')))
+        issue=IssueSchema(only=('id', 'user_id', 'user_url', 'bike_identifier', 'description', 'opened_at')))
     )
     async def post(self, user, bike):
         issue = await open_issue(
@@ -440,8 +477,10 @@ class BikeSocketView(BaseView):
                             ticket.bike.id, valid_data["id"], valid_data["result"])
         finally:
             logger.info("Bike %s disconnected", ticket.bike.id)
-
-        return socket
+            await socket.close()
+            del self.bike_connection_manager._bike_connections[ticket.bike.id]
+            del ticket
+            del socket
 
     @docs(summary="Create Bike Ticket")
     async def post(self):
@@ -452,10 +491,9 @@ class BikeSocketView(BaseView):
         verify their identity.
         """
         public_key = await self.request.read()
-        bike = [bike for bike in await get_bikes() if bike.public_key == public_key]
-        if not bike:
+        bike = await get_bike(public_key=public_key)
+        if bike is None:
             raise web.HTTPUnauthorized(reason="Identity not recognized.")
-        bike = bike[0]
 
         challenge = self.open_tickets.add_ticket(self.request.remote, bike)
         return web.Response(body=challenge)

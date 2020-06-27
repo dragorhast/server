@@ -83,8 +83,8 @@ class TestDummyVerifier:
         ("abcd", True),
         (1234, False),
         (None, False),
-        ("xp123", False),
-        ("", True)
+        ("xp123", True),
+        ("", False)
     ])
     async def test_verify(self, loop, dummy_verifier, token, passes: bool):
         try:

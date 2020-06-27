@@ -17,6 +17,7 @@ from server.service.background.stats_reporter import StatisticsReporter
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager
 from server.service.manager.reservation_manager import ReservationManager
+from server.service.payment import PaymentManager
 
 
 class ViewConfigurationError(Exception):
@@ -39,11 +40,14 @@ class BaseView(View, CorsViewMixin):
     reservation_manager: ReservationManager
     reservation_sourcer: ReservationSourcer
     statistics_reporter: StatisticsReporter
+    payment_manager: PaymentManager
 
     cors_config = {
         "*": ResourceOptions(
-            allow_methods='*',
-            allow_headers=('Authorization',)
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+            allow_methods="*",
         )
     }
 
@@ -70,11 +74,12 @@ class BaseView(View, CorsViewMixin):
         cls.reservation_manager = app["reservation_manager"]
         cls.reservation_sourcer = app["reservation_sourcer"]
         cls.statistics_reporter = app["statistics_reporter"]
+        cls.payment_manager = app["payment_manager"]
 
     @classmethod
     def enable_cors(cls, cors: CorsConfig):
         """Enables CORS on the view."""
         try:
-            cors.add(cls.route)
+            cors.add(cls.route, webview=True)
         except AttributeError as error:
             raise ViewConfigurationError("No route assigned. Please register the route first.") from error

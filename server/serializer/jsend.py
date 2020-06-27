@@ -32,13 +32,13 @@ class JSendSchema(Schema):
 
     .. _`JSend Format`: https://labs.omniti.com/labs/jsend
     """
-    status = EnumField(JSendStatus, required=True)
+    status = EnumField(JSendStatus, required=True, default=JSendStatus.SUCCESS)
     data = fields.Dict()
     message = fields.String()
-    code = fields.Integer()
+    code = fields.Integer(default=200)
 
     @validates_schema
-    def assert_fields(self, data):
+    def assert_fields(self, data, **kwargs):
         """
         Asserts that, according to the specification:
 

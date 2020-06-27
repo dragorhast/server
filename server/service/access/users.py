@@ -2,11 +2,12 @@
 Users
 -----
 """
-import os
 from typing import Union, Optional, List
 
 from tortoise.exceptions import IntegrityError
 
+from server import logger
+from server.config import firebase_key_id, firebase_private_key
 from server.models import User
 from server.models.user import UserType
 from server.service.firebase import FirebaseClaimManager
@@ -30,16 +31,15 @@ def initialize_firebase():
         "token_uri": "https://oauth2.googleapis.com/token",
         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
         "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-ixz3j%40dragorhast-420.iam.gserviceaccount.com",
-        "private_key_id": os.getenv("FIREBASE_KEY_ID"),
-        "private_key": os.getenv("FIREBASE_PRIVATE_KEY")
+        "private_key_id": firebase_key_id,
+        "private_key": firebase_private_key
     }
 
-    try:
+    if firebase_private_key is None:
+        logger.warn("No firebase private key provided! Modifying users will result in an error.")
+    else:
         data["private_key"] = data["private_key"].replace("\\n", "\n")
-    except AttributeError:
-        raise RuntimeError("You must specify the Firebase private key in the environment variables.")
-
-    CLAIM_MANAGER = FirebaseClaimManager(data)
+        CLAIM_MANAGER = FirebaseClaimManager(data)
 
 
 async def get_users(*, name: str = None) -> List[User]:

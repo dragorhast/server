@@ -3,7 +3,7 @@ Rentals
 -------
 """
 from datetime import datetime
-from typing import Union, Optional, Tuple, List
+from typing import Union, Optional, Tuple, List, AsyncIterable
 
 from shapely.geometry import LineString
 
@@ -11,7 +11,7 @@ from server.models import Bike, Rental, User
 from server.models.util import RentalUpdateType
 
 
-async def get_rentals_for_bike(bike: Union[int, Bike]):
+async def get_rentals_for_bike(bike: Union[int, Bike]) -> List[Rental]:
     """
     Gets rentals for a given bike.
 
@@ -28,10 +28,14 @@ async def get_rentals_for_bike(bike: Union[int, Bike]):
     return await Rental.filter(bike__id=bid).prefetch_related('updates', 'bike')
 
 
-async def get_rentals(*, user: User = None):
+async def get_rentals(*, user: User = None) -> List[Rental]:
     if user:
         return await Rental.filter(user=user).prefetch_related('updates', 'bike')
     return await Rental.all().prefetch_related('updates', 'bike')
+
+
+async def unfinished_rentals() -> AsyncIterable:
+    return (x async for x in Rental.all().prefetch_related("updates") if x.outcome is None)
 
 
 async def get_rental(rental_id: int) -> Rental:

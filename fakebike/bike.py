@@ -15,7 +15,7 @@ class Bike:
     seed: bytes
     locked: bool
 
-    def __init__(self, bid, seed, locked=True):
+    def __init__(self, bid, seed, location, locked=True):
         self.bid = bid
         self.seed = seed
         self.signing_key = SigningKey(seed)
@@ -26,6 +26,7 @@ class Bike:
         }
         self.socket: WebSocketResponse = None
         self.battery = random.randint(0, 100)
+        self.location = location
 
     @property
     def public_key(self):
@@ -75,8 +76,8 @@ class Bike:
                     "jsonrpc": "2.0",
                     "method": "location_update",
                     "params": {
-                        "lat": 55.912136271818646,
-                        "long": -3.3224467464697436,
+                        "lat": self.location.y,
+                        "long": self.location.x,
                         "bat": self.battery
                     }
 

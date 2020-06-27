@@ -6,7 +6,7 @@ Permission
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from itertools import chain
-from typing import List, Dict
+from typing import List, Dict, Set
 
 from aiohttp.web_urldispatcher import View
 
@@ -87,9 +87,9 @@ class Permission(ABC):
         """
 
     @property
-    def openapi_security(self) -> List[Dict]:
+    def openapi_security(self) -> List:
         """Returns the required OpenAPI security for the given path."""
-        return [{}]
+        return []
 
 
 class AndPermission(Permission):
@@ -120,18 +120,20 @@ class AndPermission(Permission):
         return self._permissions
 
     @property
-    def openapi_security(self):
+    def openapi_security(self) -> List:
         """.. note:: Not sure how this interacts with nested or..."""
-        security = defaultdict(list)
 
-        # convert the list of permissions into a list of securities
+        # we don't want duplicates
+        security: Dict[str, Set[str]] = defaultdict(set)
+
+        # get the security dictionary for each sub-permission
         security_entries = chain.from_iterable(permission.openapi_security for permission in self._permissions)
 
         # merge the list of security dictionaries into one
         for schema, securities in chain.from_iterable(entry.items() for entry in security_entries):
-            security[schema] += securities
+            security[schema] |= set(securities)
 
-        return [security]
+        return [{k: list(v) for k, v in security.items()}]
 
 
 class OrPermission(Permission):

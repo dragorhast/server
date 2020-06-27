@@ -1,6 +1,7 @@
 import asyncio
 import os
 from datetime import datetime
+from itertools import count
 
 import pytest
 from aiohttp import web
@@ -22,6 +23,7 @@ from server.service.background.stats_reporter import StatisticsReporter
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager
 from server.service.manager.reservation_manager import ReservationManager
+from server.service.payment import DummyPaymentManager
 from server.service.verify_token import DummyVerifier
 from server.signals import register_signals
 from server.views import register_views
@@ -36,8 +38,13 @@ fake.add_provider(misc)
 
 @pytest.fixture
 def random_user_factory(database):
+    user_id = count(1)
+
     async def create_user(is_admin=False):
-        return await User.create(firebase_id=fake.sha1(), first=fake.name(), email=fake.email(), type=UserType.MANAGER if is_admin else UserType.USER)
+        return await User.create(
+            firebase_id=fake.sha1(), first=fake.name(), email=fake.email(),
+            type=UserType.MANAGER if is_admin else UserType.USER, stripe_id="cus_" + hex(next(user_id))
+        )
 
     return create_user
 
@@ -46,8 +53,8 @@ def random_user_factory(database):
 def random_bike_factory(database):
     async def create_bike(bike_connection_manager):
         bike = await Bike.create(public_key_hex=fake.sha1())
-        await bike_connection_manager.update_location(bike, Point(0,0))
-        await bike.fetch_related("location_updates")
+        await bike_connection_manager.update_location(bike, Point(0, 0))
+        await bike.fetch_related("location_updates", "issues", "state_updates")
         return bike
 
     return create_bike
@@ -122,11 +129,12 @@ async def database(_database, loop, database_url):
 @pytest.fixture
 async def client(
     aiohttp_client, database,
-    rental_manager, bike_connection_manager, reservation_manager, reservation_sourcer, statistics_reporter
+    rental_manager, payment_manager, bike_connection_manager, reservation_manager, reservation_sourcer, statistics_reporter
 ) -> TestClient:
     asyncio.get_event_loop().set_debug(True)
     app = web.Application(middlewares=[validate_token_middleware])
 
+    app['payment_manager'] = payment_manager
     app['rental_manager'] = rental_manager
     app['bike_location_manager'] = bike_connection_manager
     app['reservation_manager'] = reservation_manager
@@ -151,8 +159,13 @@ def bike_connection_manager(database):
 
 
 @pytest.fixture
-def rental_manager(database):
-    return RentalManager()
+def payment_manager():
+    return DummyPaymentManager()
+
+
+@pytest.fixture
+def rental_manager(database, payment_manager):
+    return RentalManager(payment_manager)
 
 
 @pytest.fixture

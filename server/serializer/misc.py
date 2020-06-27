@@ -1,8 +1,13 @@
 from marshmallow import Schema
 from marshmallow.fields import Bool, String
 
+from server.models.issue import IssueStatus
 from server.models.util import BikeType
 from server.serializer import BytesField, EnumField
+
+
+class PaymentSourceSchema(Schema):
+    token = String(required=True)
 
 
 class MasterKeySchema(Schema):
@@ -12,7 +17,7 @@ class MasterKeySchema(Schema):
 class BikeRegisterSchema(MasterKeySchema):
     """The schema of the bike register request."""
     public_key = BytesField(required=True, description="The public key of the bike.")
-    type = EnumField(BikeType, description="The type of bike.")
+    type = EnumField(BikeType, description="The type of bike.", default=BikeType.ROAD)
 
 
 class BikeModifySchema(Schema):
@@ -21,5 +26,6 @@ class BikeModifySchema(Schema):
     in_circulation = Bool()
 
 
-class IssueCloseSchema(Schema):
-    resolution = String(required=True)
+class IssueUpdateSchema(Schema):
+    status = EnumField(IssueStatus, required=True, default=IssueStatus.OPEN)
+    resolution = String(allow_none=True)

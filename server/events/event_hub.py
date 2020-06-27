@@ -1,10 +1,10 @@
 from collections import defaultdict
 from inspect import signature, iscoroutinefunction, Signature
-from typing import Type, Union, Callable
+from typing import Type, Union, Callable, List, Dict
 
-from .exceptions import NoSuchEventError, InvalidHandlerError, NoSuchListenerError
 from .event_emitter import EventEmitter, AsyncEventEmitter
 from .event_list import EventList, AsyncEventList
+from .exceptions import NoSuchEventError, InvalidHandlerError, NoSuchListenerError
 
 
 class EventHub:
@@ -12,7 +12,7 @@ class EventHub:
 
     def __init__(self, *events: Type[EventList]):
         self._event_lists = events
-        self._listeners = defaultdict(list)
+        self._listeners: Dict[Callable, List[Callable]] = defaultdict(list)
 
     def add_events(self, *events):
         if any(not issubclass(e, EventList) for e in events):
@@ -63,7 +63,8 @@ class EventHub:
 
             if e_param.annotation is not Signature.empty and h_param.annotation is not Signature.empty:
                 if e_param.annotation is not h_param.annotation:
-                    errors.append(InvalidHandlerError(f"Conflicting annotations for parameter \"{e_name}\".", target, handler))
+                    errors.append(
+                        InvalidHandlerError(f"Conflicting annotations for parameter \"{e_name}\".", target, handler))
 
         if errors:
             raise InvalidHandlerError(errors)
@@ -90,7 +91,7 @@ class AsyncEventHub(EventHub):
 
     def __init__(self, *events: Union[Type[EventList], Type[AsyncEventList]]):
         super().__init__(*events)
-        self._async_listeners = defaultdict(list)
+        self._async_listeners: Dict[Callable, List[Callable]] = defaultdict(list)
 
     async def emit(self, target: Union[Callable, EventEmitter], *args, **kwargs):
         event = self._resolve_event(target)
@@ -143,4 +144,3 @@ class AsyncEventHub(EventHub):
                 else:
                     return EventEmitter(self, event)
         raise NoSuchEventError()
-

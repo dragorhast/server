@@ -20,7 +20,8 @@ class Issue(Model):
     id = fields.IntField(pk=True)
     user = fields.ForeignKeyField("models.User", related_name="issues")
     bike = fields.ForeignKeyField("models.Bike", null=True, related_name="issues")
-    time = fields.DatetimeField(auto_now_add=True)
+    opened_at = fields.DatetimeField(auto_now_add=True)
+    closed_at = fields.DatetimeField(null=True)
     description = fields.TextField()
     resolution = fields.TextField(null=True)
     status = EnumField(IssueStatus, default=IssueStatus.OPEN)
@@ -30,12 +31,17 @@ class Issue(Model):
             "id": self.id,
             "user_id": self.user_id,
             "user_url": router["user"].url_for(id=str(self.user_id)).path,
-            "time": self.time,
-            "description": self.description
+            "opened_at": self.opened_at,
+            "description": self.description,
+            "resolution": self.resolution,
+            "status": self.status
         }
 
         if self.bike_id is not None:
             data["bike_identifier"] = self.bike.identifier
             data["bike_url"] = router["bike"].url_for(identifier=str(self.bike.identifier)).path
+
+        if self.status == IssueStatus.CLOSED:
+            data["closed_at"] = self.closed_at
 
         return data

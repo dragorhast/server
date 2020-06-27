@@ -1,14 +1,15 @@
 import asyncio
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from typing import Generator, Dict, List
+from typing import Dict, List
 
 from server.models import StatisticsReport
 from server.service.manager.rental_manager import RentalManager, RentalEvent
 from server.service.manager.reservation_manager import ReservationManager, ReservationEvent
+from server.service.rebuildable import Rebuildable
 
 
-class StatisticsReporter:
+class StatisticsReporter(Rebuildable):
 
     def __init__(self, rental_manager: RentalManager, reservation_manager: ReservationManager):
         self._rental_manager = rental_manager
@@ -19,12 +20,12 @@ class StatisticsReporter:
         self._reservation_manager.hub.subscribe(ReservationEvent.opened_reservation, self._opened_reservation)
         self._reservation_manager.hub.subscribe(ReservationEvent.cancelled_reservation, self._cancelled_reservation)
 
-        self._rentals_started = defaultdict(int)
-        self._rentals_ended = defaultdict(int)
-        self._reservations_started = defaultdict(int)
-        self._reservations_cancelled = defaultdict(int)
-        self._distance_travelled = defaultdict(float)
-        self._revenue = defaultdict(float)
+        self._rentals_started: Dict[date, int] = defaultdict(int)
+        self._rentals_ended: Dict[date, int] = defaultdict(int)
+        self._reservations_started: Dict[date, int] = defaultdict(int)
+        self._reservations_cancelled: Dict[date, int] = defaultdict(int)
+        self._distance_travelled: Dict[date, float] = defaultdict(float)
+        self._revenue: Dict[date, float] = defaultdict(float)
 
     async def run(self):
         """Sleeps until midnight and then saves a statistics report for that day."""
@@ -68,9 +69,9 @@ class StatisticsReporter:
     def _cancelled_reservation(self, pickup, user, time):
         self._reservations_cancelled[date.today()] += 1
 
-    def daily_report(self, year: int = None, month: int = None, day: int = None) -> List[Dict]:
+    def daily_report(self, year: int = None, month: int = None, day_nr: int = None) -> List[Dict]:
 
-        dates: Generator[date] = (x for x in self._rentals_started.keys())
+        dates = (x for x in self._rentals_started.keys())
 
         if year is not None:
             dates = (x for x in dates if x.year == int(year))
@@ -78,15 +79,15 @@ class StatisticsReporter:
         if month is not None:
             dates = (x for x in dates if x.month == int(month))
 
-        if day is not None:
-            dates = (x for x in dates if x.day == int(day))
+        if day_nr is not None:
+            dates = (x for x in dates if x.day == int(day_nr))
 
         data_days = []
 
         for day in dates:
             data_days.append({
-                "date": day,
-                "incomplete": day == date.today(),
+                "date": day.isoformat(),
+                "incomplete": day == day.today(),
                 "rentals_started": self._rentals_started[day],
                 "rentals_ended": self._rentals_ended[day],
                 "reservations_started": self._reservations_started[day],
@@ -98,7 +99,7 @@ class StatisticsReporter:
         return data_days
 
     def monthly_report(self, year=None, month=None):
-        dates: Generator[date] = (x for x in self._rentals_started.keys())
+        dates = (x for x in self._rentals_started.keys())
 
         if year is not None:
             dates = (x for x in dates if x.year == int(year))
@@ -112,7 +113,7 @@ class StatisticsReporter:
             month = day.replace(day=1)
             if month not in data:
                 data[month] = {
-                    "date": month, "rentals_started": 0, "rentals_ended": 0, "reservations_started": 0,
+                    "date": month.isoformat(), "rentals_started": 0, "rentals_ended": 0, "reservations_started": 0,
                     "reservations_cancelled": 0, "distance_travelled": 0, "revenue": 0
                 }
 
@@ -126,7 +127,7 @@ class StatisticsReporter:
         return list(data.values())
 
     def annual_report(self, year=None):
-        dates: Generator[date] = (x for x in self._rentals_started.keys())
+        dates = (x for x in self._rentals_started.keys())
 
         if year is not None:
             dates = (x for x in dates if x.year == int(year))
@@ -137,7 +138,7 @@ class StatisticsReporter:
             year = day.replace(month=1, day=1)
             if year not in data:
                 data[year] = {
-                    "date": year, "rentals_started": 0, "rentals_ended": 0, "reservations_started": 0,
+                    "date": year.isoformat(), "rentals_started": 0, "rentals_ended": 0, "reservations_started": 0,
                     "reservations_cancelled": 0, "distance_travelled": 0, "revenue": 0
                 }
 

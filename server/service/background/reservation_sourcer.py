@@ -2,7 +2,7 @@ import heapq
 from asyncio import sleep, gather
 from collections import defaultdict
 from datetime import timedelta, datetime, timezone
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, Union
 
 from server.models import PickupPoint
 from server.service.manager.reservation_manager import ReservationManager, ReservationEvent, MINIMUM_RESERVATION_TIME
@@ -25,12 +25,12 @@ class ReservationSourcer:
         self._rental_heap: List[Tuple[datetime, PickupPoint]] = []
         self._shortages: Set[Tuple[datetime, PickupPoint]] = set()
 
-    def shortages(self) -> Dict[PickupPoint, Tuple[int, datetime]]:
+    def shortages(self, pickup: Union[PickupPoint, int] = None) -> Dict[PickupPoint, Tuple[int, datetime]]:
         """
         Gets a dictionary mapping all the pickup points with shortages
         to the number of bikes needed and the time they are needed by.
         """
-        shortages = defaultdict(lambda: (0, datetime.max))
+        shortages: Dict[PickupPoint, Tuple[int, datetime]] = defaultdict(lambda: (0, datetime.max.replace(tzinfo=timezone.utc)))
         for date, pickup in self._shortages:
             count, closest_date = shortages[pickup]
             closest_date = min(closest_date, date)
@@ -55,13 +55,10 @@ class ReservationSourcer:
         the reservation time and add it to the set of shortages
         if there is not a bike at that pickup to claim.
         """
-        if not self._rental_heap:
-            return
-
-        while is_within_reservation_time(self._rental_heap[0]):
+        while self._rental_heap and is_within_reservation_time(self._rental_heap[0]):
             time, pickup = heapq.heappop(self._rental_heap)
 
-            if await self._reservation_manager.pickup_bike_surplus(pickup) < 0:
+            if self._reservation_manager.pickup_bike_surplus(pickup) < 0:
                 self._shortages.add((time, pickup))
 
     async def _cull_shortages(self):
@@ -72,7 +69,7 @@ class ReservationSourcer:
         """
         for pickup, shortage in self.shortages().items():
             stored_shortage_amount, closest_date = shortage
-            surplus = await self._reservation_manager.pickup_bike_surplus(pickup)
+            surplus = self._reservation_manager.pickup_bike_surplus(pickup)
             actual_storage_amount = -surplus
 
             if stored_shortage_amount > actual_storage_amount:
@@ -86,10 +83,6 @@ class ReservationSourcer:
                     self._shortages.remove(shortage)
 
     def opened_reservation(self, pickup, user, time):
-        if time < datetime.now(timezone.utc) + MINIMUM_RESERVATION_TIME:
-            # we know that there is a bike there
-            return
-
         heapq.heappush(self._rental_heap, (time, pickup))
 
     def cancelled_reservation(self, pickup, user, time):

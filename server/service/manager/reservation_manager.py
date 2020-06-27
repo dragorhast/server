@@ -86,7 +86,7 @@ class ReservationManager(Rebuildable):
         """
         if for_time - datetime.now(timezone.utc) < MINIMUM_RESERVATION_TIME:
             # ensure there is a bike there
-            available_bikes = await self._available_bikes(pickup)
+            available_bikes = await self.available_bikes(pickup)
             if len(available_bikes) <= len(self.reservations[pickup.id]):
                 raise ReservationError(
                     f"No available bikes in the requested point, and not enough time to source one (less than {MINIMUM_RESERVATION_TIME}).")
@@ -140,7 +140,7 @@ class ReservationManager(Rebuildable):
                 f"You may only collect a rental in a {RESERVATION_WINDOW} window around {reservation.reserved_for}."
             )
 
-        available_bikes = await self._available_bikes(reservation.pickup_point)
+        available_bikes = await self.available_bikes(reservation.pickup_point)
         if not available_bikes:
             raise ReservationError("No bikes at this pickup point.")
 
@@ -182,16 +182,16 @@ class ReservationManager(Rebuildable):
         bikes = self._bike_connection_manager.bikes_in(pickup.area)
         return len(bikes) <= len(self.reservations[pickup.id])
 
-    async def pickup_bike_surplus(self, pickup_point) -> int:
+    def pickup_bike_surplus(self, pickup_point) -> int:
         """
         Returns how many more free bikes there are than reservations.
 
         A negative value indicates a shortage.
         """
-        available_bike_count = len(await self._available_bikes(pickup_point))
+        available_bike_count = len(self._bike_connection_manager.bikes_in(pickup_point.area))
         bikes_needed_for_reservations = len([
             rid for rid, uid, time in self.reservations[pickup_point.id]
-            if time < datetime.now() + MINIMUM_RESERVATION_TIME
+            if time < datetime.now(timezone.utc) + MINIMUM_RESERVATION_TIME
         ])
 
         return available_bike_count - bikes_needed_for_reservations
@@ -213,10 +213,10 @@ class ReservationManager(Rebuildable):
         reservation.outcome = outcome
         await reservation.save()
 
-    async def _available_bikes(self, pickup_point: PickupPoint) -> List[Bike]:
+    async def available_bikes(self, pickup_point: PickupPoint) -> List[Bike]:
         """Gets the available bikes in a pickup point."""
         bike_ids = self._bike_connection_manager.bikes_in(pickup_point.area)
-        return await self._rental_manager.get_available_bikes(bike_ids)
+        return await self._rental_manager.get_available_bikes_out_of(bike_ids)
 
     def _pickup_containing(self, bike: Bike) -> Optional[PickupPoint]:
         """Gets the pickup point the bike is currently in."""

@@ -12,7 +12,7 @@ from aiohttp_apispec import setup_aiohttp_apispec
 from aiohttp_sentry import SentryMiddleware
 
 from server import server_mode, logger
-from server.config import api_root
+from server.config import api_root, stripe_key
 from server.middleware import validate_token_middleware
 from server.service.access.users import initialize_firebase
 from server.service.background.reservation_sourcer import ReservationSourcer
@@ -20,6 +20,7 @@ from server.service.background.stats_reporter import StatisticsReporter
 from server.service.manager.bike_connection_manager import BikeConnectionManager
 from server.service.manager.rental_manager import RentalManager
 from server.service.manager.reservation_manager import ReservationManager
+from server.service.payment import PaymentManager, DummyPaymentManager
 from server.service.verify_token import FirebaseVerifier, DummyVerifier
 from server.signals import register_signals
 from server.version import __version__, name
@@ -31,13 +32,12 @@ def build_app(db_uri=None):
     app = web.Application(middlewares=[SentryMiddleware(), validate_token_middleware])
     uvloop.install()
 
-    # keep a track of all open bike connections
-    app['bike_location_manager'] = BikeConnectionManager()
-    app['rental_manager'] = RentalManager()
-    app['reservation_manager'] = ReservationManager(app['bike_location_manager'], app['rental_manager'])
-    app['reservation_sourcer'] = ReservationSourcer(app['reservation_manager'])
-    app['statistics_reporter'] = StatisticsReporter(app['rental_manager'], app['reservation_manager'])
-    app['database_uri'] = db_uri if db_uri is not None else 'spatialite://:memory:'
+    # decide which payment handler to use
+    if stripe_key is None:
+        logger.warn("No stripe key provided! Not charging customers.")
+        payment_manager = DummyPaymentManager
+    else:
+        payment_manager = PaymentManager
 
     initialize_firebase()
 
@@ -46,6 +46,14 @@ def build_app(db_uri=None):
     else:
         verifier = FirebaseVerifier("dragorhast-420")
 
+    # keep a track of all open bike connections
+    app['payment_manager'] = payment_manager(stripe_key)
+    app['bike_location_manager'] = BikeConnectionManager()
+    app['rental_manager'] = RentalManager(app['payment_manager'])
+    app['reservation_manager'] = ReservationManager(app['bike_location_manager'], app['rental_manager'])
+    app['reservation_sourcer'] = ReservationSourcer(app['reservation_manager'])
+    app['statistics_reporter'] = StatisticsReporter(app['rental_manager'], app['reservation_manager'])
+    app['database_uri'] = db_uri if db_uri is not None else 'spatialite://:memory:'
     app['token_verifier'] = verifier
 
     # set up the background tasks
@@ -57,7 +65,10 @@ def build_app(db_uri=None):
     app.router.add_get("/logo.svg", logo)
 
     setup_aiohttp_apispec(
-        app=app, title=name, version=__version__, url=f"{api_root}/docs",
+        app=app,
+        title=name,
+        version=__version__,
+        url=f"{api_root}/schema",
         servers=[{"url": "http://api.tap2go.co.uk"}],
         info={"x-logo": {
             "url": "/logo.svg",

@@ -12,12 +12,10 @@ connected bikes.
 from enum import Enum
 from typing import Dict, Any, List
 
-from shapely.geometry import mapping
 from tortoise import Model, fields
 
 from server.models.fields import EnumField
 from server.models.util import BikeType, BikeUpdateType, get_serialized_location_for_bike
-from server.serializer.geojson import GeoJSONType
 
 
 class CalculatedBikeStatus(str, Enum):
@@ -95,7 +93,8 @@ class Bike(Model):
             data["locked"] = bike_connection_manager.is_locked(self.id)
 
         if data["available"] or include_location:
-            data["current_location"] = get_serialized_location_for_bike(self, bike_connection_manager)
+            data["current_location"] = get_serialized_location_for_bike(self, bike_connection_manager,
+                                                                        reservation_manager)
 
         return data
 
@@ -120,3 +119,6 @@ class Bike(Model):
     @property
     def broken(self) -> bool:
         return len(self.issues) > 0
+
+    def __str__(self):
+        return f"[{self.type}] {self.identifier}"
