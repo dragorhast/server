@@ -241,7 +241,7 @@ class UserEndCurrentRentalView(BaseView):
     @returns(
         no_rental=(JSendSchema(), web.HTTPNotFound),
         invalid_action=(JSendSchema(), web.HTTPNotFound),
-        rental_completed=JSendSchema.of(rental=RentalSchema(), action=String(), receipt_url=Url()),
+        rental_completed=JSendSchema.of(rental=RentalSchema(), action=String(), receipt_url=Url(allow_none=True)),
     )
     async def patch(self, user: User):
         """

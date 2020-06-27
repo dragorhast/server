@@ -196,7 +196,7 @@ class TestUserCurrentRentalView:
         rental, location = await rental_manager.create(random_user, random_bike)
         await bike_connection_manager.update_location(random_bike, Point(100, 0))
 
-        response_schema = JSendSchema.of(rental=RentalSchema(), action=String(), receipt_url=Url())
+        response_schema = JSendSchema.of(rental=RentalSchema(), action=String(), receipt_url=Url(allow_none=True))
         response = await client.patch(
             '/api/v1/users/me/rentals/current/complete',
             headers={"Authorization": f"Bearer {random_user.firebase_id}"}
