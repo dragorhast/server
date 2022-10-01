@@ -23,7 +23,7 @@ aiohttp-sentry = "^0.6"
 marshmallow = "^3.5"
 apispec = "^3.3"
 tortoise-orm = {git = "https://github.com/arlyon/tortoise-orm.git", branch = "gis"}
-asyncpg = "^0.20"
+asyncpg = "^0.21"
 aiosqlite = "^0.11"
 contextvars = "^2.4"
 shapely = {version = "^1.7", extras = ["vectorized"]}
